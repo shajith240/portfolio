@@ -1,0 +1,25 @@
+:root {
+  /* Backgrounds */
+  --bg-void:     #1a1a1a;
+  --bg-card:     #242424;
+  --bg-elevated: #2c2c2c;
+
+  /* Borders */
+  --border:      #333333;
+
+  /* Accent */
+  --accent:      #FF4500;
+
+  /* Text */
+  --text-primary: #FFFFFF;
+  --text-muted:   #888888;
+  --text-dim:     #555555;
+
+  /* Motion */
+  --transition:  150ms ease;
+
+  /* Layout */
+  --sidebar-w:   280px;
+  --nav-w:       260px;
+  --radius-card: 10px;
+}
