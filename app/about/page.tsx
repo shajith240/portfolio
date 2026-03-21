@@ -47,14 +47,16 @@ export default function AboutPage() {
             }}
           >
             <img
-              src="https://placehold.co/40x40/242424/555555"
-              alt="Profile"
+              src="/photos/my_photo.jpeg"
+              alt="Shajith Bathina"
               style={{
                 width: "40px",
                 height: "40px",
                 borderRadius: "50%",
                 filter: "grayscale(100%)",
                 flexShrink: 0,
+                objectFit: "cover",
+                objectPosition: "center 10%",
               }}
             />
             <div>
@@ -67,7 +69,7 @@ export default function AboutPage() {
                   lineHeight: 1.2,
                 }}
               >
-                Kalypso (Sachin)
+                Shajith Bathina
               </p>
               <p
                 style={{
@@ -77,7 +79,7 @@ export default function AboutPage() {
                   lineHeight: 1.2,
                 }}
               >
-                Designer based in New Zealand
+                CS Student at IIT(ISM) Dhanbad
               </p>
             </div>
           </div>
@@ -91,9 +93,10 @@ export default function AboutPage() {
               color: "var(--text-secondary)",
             }}
           >
-            Hi, I&apos;m Sachin – most people know me as Kalypso
-            from{" "}
-            <strong style={{ color: "var(--text-primary)" }}>@kalypsodesigns.</strong>
+            I&apos;m a second-year Computer Science student at{" "}
+            <strong style={{ color: "var(--text-primary)" }}>IIT(ISM) Dhanbad.</strong>{" "}
+            I lean toward practical thinking over theory — give me a real problem and I&apos;ll
+            figure it out by building.
           </p>
 
           <p
@@ -104,9 +107,8 @@ export default function AboutPage() {
               color: "var(--text-secondary)",
             }}
           >
-            I help make tech easier to use. Most of my work is building apps,
-            dashboards, and design systems for teams who just want things
-            to work.
+            I work across TypeScript, Python, and Java. My projects range from AI voice agents
+            and automation scripts to full-stack web apps and systems-level experiments.
           </p>
 
           <p
@@ -117,7 +119,7 @@ export default function AboutPage() {
               color: "var(--text-secondary)",
             }}
           >
-            Some things I&apos;ve worked on:
+            Some things I&apos;ve built:
           </p>
 
           <div
@@ -128,10 +130,10 @@ export default function AboutPage() {
               color: "var(--text-secondary)",
             }}
           >
-            <p style={{ margin: 0 }}>• AI-powered waste analytics app (iOS, for Method)</p>
-            <p style={{ margin: 0 }}>• SaaS tools tracking millions of records</p>
-            <p style={{ margin: 0 }}>• UI systems that work across products</p>
-            <p style={{ margin: 0 }}>• RAG systems with custom knowledge bases</p>
+            <p style={{ margin: 0 }}>• SHARPFLOW — TypeScript agency & landing page</p>
+            <p style={{ margin: 0 }}>• IntelliDesk — productivity app</p>
+            <p style={{ margin: 0 }}>• WIFI-AUTOMATION — Python WiFi automation tool</p>
+            <p style={{ margin: 0 }}>• linux-container-runtime — low-level systems project</p>
           </div>
 
           <p
@@ -142,9 +144,7 @@ export default function AboutPage() {
               color: "var(--text-secondary)",
             }}
           >
-            I like figuring out the technical stuff, but my goal is always to
-            make things simple. Always open to chat about design, AI, code,
-            or anything tech.
+            Always open to collaborate on something interesting or just talk tech.
           </p>
 
           {/* Social links */}
@@ -158,19 +158,19 @@ export default function AboutPage() {
               letterSpacing: "0.04em",
             }}
           >
-            <a href="mailto:" style={{ color: "var(--text-primary)", textDecoration: "none", textTransform: "uppercase" }}>
+            <a href="mailto:shajith240@gmail.com" style={{ color: "var(--text-primary)", textDecoration: "none", textTransform: "uppercase" }}>
               Email
             </a>
             <span style={{ color: "var(--text-dim)" }}>/</span>
-            <a href="#" style={{ color: "var(--text-primary)", textDecoration: "none", textTransform: "uppercase" }}>
+            <a href="https://linkedin.com/in/shajith240" target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-primary)", textDecoration: "none", textTransform: "uppercase" }}>
               LinkedIn
             </a>
             <span style={{ color: "var(--text-dim)" }}>/</span>
-            <a href="#" style={{ color: "var(--text-primary)", textDecoration: "none", textTransform: "uppercase" }}>
+            <a href="https://github.com/shajith240" target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-primary)", textDecoration: "none", textTransform: "uppercase" }}>
               Github
             </a>
             <span style={{ color: "var(--text-dim)" }}>/</span>
-            <a href="#" style={{ color: "var(--text-primary)", textDecoration: "none", textTransform: "uppercase" }}>
+            <a href="https://instagram.com/heyshajith" target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-primary)", textDecoration: "none", textTransform: "uppercase" }}>
               Instagram
             </a>
           </div>
