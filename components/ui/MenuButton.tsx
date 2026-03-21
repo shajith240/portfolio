@@ -1,28 +1,30 @@
 "use client";
 
 import { useLayout } from "@/contexts/LayoutContext";
+import { useClickSound } from "@/lib/useClickSound";
 
 export default function MenuButton() {
-  const { isNavOpen, toggleNav } = useLayout();
-
+  const { isNavOpen, toggleNav, isSoundEnabled } = useLayout();
+  const playClick = useClickSound(isSoundEnabled);
   return (
     <button
-      onClick={toggleNav}
+      onClick={() => { playClick(); toggleNav(); }}
       style={{
         position: "fixed",
-        top: "44px",
-        right: "44px",
-        zIndex: 50,
+        top: "32px",
+        right: "32px",
+        zIndex: 100,
         display: "flex",
         alignItems: "center",
         gap: "8px",
         padding: "6px 14px",
         borderRadius: "99px",
-        border: "1px solid #333",
+        border: "1px solid var(--menu-btn-border)",
         background: "transparent",
-        color: "#ddd",
+        color: "var(--menu-btn-text)",
         fontSize: "14px",
         cursor: "pointer",
+        transition: "color 0.22s ease, border-color 0.22s ease",
       }}
     >
       {isNavOpen ? (

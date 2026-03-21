@@ -1,39 +1,73 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 
 interface LayoutContextValue {
   isNavOpen: boolean;
   isSidebarOpen: boolean;
   isSearchOpen: boolean;
+  isSoundEnabled: boolean;
   toggleNav: () => void;
   toggleSidebar: () => void;
   openSearch: () => void;
   closeSearch: () => void;
+  toggleSound: () => void;
+  closeSidebars: () => void;
 }
 
 const LayoutContext = createContext<LayoutContextValue>({
-  isNavOpen: true,
-  isSidebarOpen: true,
+  isNavOpen: false,
+  isSidebarOpen: false,
   isSearchOpen: false,
+  isSoundEnabled: true,
   toggleNav: () => {},
   toggleSidebar: () => {},
   openSearch: () => {},
   closeSearch: () => {},
+  toggleSound: () => {},
+  closeSidebars: () => {},
 });
 
 export function LayoutProvider({ children }: { children: ReactNode }) {
-  const [isNavOpen, setIsNavOpen] = useState(true);
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+
+  /*
+    Sidebar is open by default only on the home route.
+    This ensures SSR output matches client initial render on every page —
+    eliminating the hydration mismatch on the sidebar transform attribute.
+  */
+  const [isNavOpen, setIsNavOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+
+  /*
+    Route change handler — close both panels on any sub-page.
+    On home, reopen the sidebar so navigating back feels natural.
+  */
+  useEffect(() => {
+    if (isHome) {
+      setIsSidebarOpen(true);
+    } else {
+      setIsNavOpen(false);
+      setIsSidebarOpen(false);
+    }
+  }, [isHome]);
 
   const toggleNav = useCallback(() => setIsNavOpen((v) => !v), []);
   const toggleSidebar = useCallback(() => setIsSidebarOpen((v) => !v), []);
   const openSearch = useCallback(() => setIsSearchOpen(true), []);
   const closeSearch = useCallback(() => setIsSearchOpen(false), []);
+  const toggleSound = useCallback(() => setIsSoundEnabled((v) => !v), []);
+  const closeSidebars = useCallback(() => { setIsNavOpen(false); setIsSidebarOpen(false); }, []);
 
   return (
-    <LayoutContext.Provider value={{ isNavOpen, isSidebarOpen, isSearchOpen, toggleNav, toggleSidebar, openSearch, closeSearch }}>
+    <LayoutContext.Provider value={{
+      isNavOpen, isSidebarOpen, isSearchOpen, isSoundEnabled,
+      toggleNav, toggleSidebar, openSearch, closeSearch, toggleSound, closeSidebars,
+    }}>
       {children}
     </LayoutContext.Provider>
   );

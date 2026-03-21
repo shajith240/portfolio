@@ -1,0 +1,129 @@
+/* ═══════════════════════════════════════════════════════════════
+   GLASS SYSTEM — themeable glassmorphism for kalyp.so portfolio.
+   All color values reference CSS variables from globals-tokens.css.
+   Light/dark switching happens automatically via data-theme on <html>.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── PAGE BACKGROUND ── */
+.glass-page {
+  min-height: 100%;
+  width: 100%;
+  position: relative;
+  overflow-y: auto;
+  scrollbar-width: none;
+  background: var(--glass-page-bg);
+}
+
+.glass-page::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── GLASS CARD ── */
+/* Apple material — adapts: dark glass / light frosted card */
+.glass-card {
+  background: var(--glass-card-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-radius: 18px;
+  border: 1px solid var(--glass-card-border);
+  box-shadow: var(--glass-card-shadow);
+}
+
+/* ── GLASS CARD — ELEVATED (hero/featured cards) ── */
+.glass-card-elevated {
+  background: var(--glass-elevated-bg);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border-radius: 20px;
+  border: 1px solid var(--glass-elevated-border);
+  box-shadow: var(--glass-elevated-shadow);
+}
+
+/* ── GLASS CARD — ACCENT (orange-tinted) ── */
+.glass-card-accent {
+  background: var(--glass-accent-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-radius: 18px;
+  border: 1px solid var(--glass-accent-border);
+  box-shadow: var(--glass-accent-shadow);
+}
+
+/* ── GLASS SEPARATOR ── */
+.glass-divider {
+  height: 1px;
+  background: var(--glass-divider-gradient);
+  border: none;
+  margin: 0;
+}
+
+/* ── TAB BAR ── */
+.glass-tabs {
+  background: var(--glass-tabs-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-tabs-border);
+  border-radius: 999px;
+  padding: 4px;
+  display: inline-flex;
+  gap: 2px;
+  box-shadow: var(--glass-tabs-shadow);
+}
+
+.glass-tab-active {
+  background: #FF4500;
+  color: white;
+  border-radius: 999px;
+  padding: 7px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(255, 69, 0, 0.4);
+  font-family: system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.glass-tab-inactive {
+  background: transparent;
+  color: var(--glass-tab-text);
+  border-radius: 999px;
+  padding: 7px 20px;
+  font-size: 13px;
+  font-weight: 400;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  transition: color 150ms ease;
+  font-family: system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.glass-tab-inactive:hover {
+  color: var(--glass-tab-text-hover);
+}
+
+/* ── TYPOGRAPHY ON GLASS ── */
+.glass-value {
+  color: var(--glass-value-color);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.glass-label {
+  color: var(--glass-label-color);
+  font-size: 10px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+}
+
+.glass-secondary {
+  color: var(--glass-secondary-color);
+  font-size: 13px;
+}

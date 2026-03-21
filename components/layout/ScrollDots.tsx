@@ -12,8 +12,6 @@ interface ScrollDotsProps {
 
 export default function ScrollDots({ count, activeIndex, onDotClick }: ScrollDotsProps) {
   const { isSidebarOpen } = useLayout();
-  // When open: float 8px outside sidebar right edge (20 + 360 + 8 = 388px)
-  // When closed: sit 8px from the left edge of the screen
   const leftPos = isSidebarOpen ? 388 : 8;
 
   return (
@@ -30,9 +28,10 @@ export default function ScrollDots({ count, activeIndex, onDotClick }: ScrollDot
         gap: "8px",
         alignItems: "center",
         padding: "12px 6px",
-        backgroundColor: "#0D0D0D",
-        border: "1px solid #2a2a2a",
+        backgroundColor: "var(--dots-bg)",
+        border: "1px solid var(--dots-border)",
         borderRadius: "20px",
+        transition: "background-color 0.22s ease, border-color 0.22s ease",
       }}
     >
       {Array.from({ length: count }).map((_, i) => {
@@ -45,7 +44,7 @@ export default function ScrollDots({ count, activeIndex, onDotClick }: ScrollDot
               width: "4px",
               height: isActive ? "20px" : "4px",
               borderRadius: "3px",
-              backgroundColor: isActive ? "#FF4500" : "#333333",
+              backgroundColor: isActive ? "var(--dot-active)" : "var(--dot-inactive)",
               border: "none",
               padding: 0,
               cursor: "pointer",

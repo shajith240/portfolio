@@ -1,25 +1,416 @@
-:root {
-  /* Backgrounds */
-  --bg-void:     #1a1a1a;
-  --bg-card:     #242424;
-  --bg-elevated: #2c2c2c;
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS — single source of truth for all theme values
+   Both dark (default) and light theme definitions live here.
+   Light theme activates via [data-theme="light"] on <html>.
+   ═══════════════════════════════════════════════════════════════ */
 
-  /* Borders */
-  --border:      #333333;
+:root,
+[data-theme="dark"] {
+  /* ── Core backgrounds ──────────────────────────────── */
+  --bg-page:     #000000;   /* true canvas background */
+  --bg-void:     #1a1a1a;   /* panel / sidebar fill */
+  --bg-card:     #242424;   /* card surface */
+  --bg-elevated: #2c2c2c;   /* hover / elevated state */
+  --bg-hover:    rgba(255, 255, 255, 0.04);
 
-  /* Accent */
-  --accent:      #FF4500;
+  /* ── Borders ───────────────────────────────────────── */
+  --border:        #333333;
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.12);
 
-  /* Text */
-  --text-primary: #FFFFFF;
-  --text-muted:   #888888;
-  --text-dim:     #555555;
+  /* ── Accent ────────────────────────────────────────── */
+  --accent: #FF4500;
 
-  /* Motion */
-  --transition:  150ms ease;
+  /* ── Text hierarchy ────────────────────────────────── */
+  --text-primary:   #FFFFFF;
+  --text-secondary: #CCCCCC;
+  --text-muted:     #888888;
+  --text-dim:       #555555;
+  --text-ghost:     rgba(255, 255, 255, 0.28);
+  --text-phantom:   rgba(255, 255, 255, 0.18);
 
-  /* Layout */
+  /* ── Motion ────────────────────────────────────────── */
+  --transition: 150ms ease;
+
+  /* ── Layout ────────────────────────────────────────── */
   --sidebar-w:   280px;
   --nav-w:       260px;
   --radius-card: 10px;
+
+  /* ── Shadows (none in dark — flat aesthetic) ───────── */
+  --shadow-card:     none;
+  --shadow-elevated: none;
+  --shadow-modal:
+    0 56px 112px rgba(0, 0, 0, 0.86),
+    0 16px 32px  rgba(0, 0, 0, 0.60),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  /* ── InfoCard ──────────────────────────────────────── */
+  --card-gradient:  linear-gradient(150deg, #111111 0%, #0c0c0c 50%, #080808 100%);
+  --card-border:    rgba(255, 255, 255, 0.07);
+  --specular-rest:  rgba(255, 255, 255, 0);
+  --specular-hover: rgba(255, 255, 255, 0.05);
+  --card-shadow-rest:
+    0 2px 8px  rgba(0, 0, 0, 0.40),
+    inset 0  1px 0 rgba(255, 255, 255, 0.048),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.30);
+  --card-shadow-hover:
+    0 16px 40px rgba(0, 0, 0, 0.72),
+    0  4px 12px rgba(0, 0, 0, 0.48),
+    inset 0  1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.40);
+
+  /* ── Sidebar panel ─────────────────────────────────── */
+  --sidebar-bg:     linear-gradient(170deg, #080808 0%, #050505 100%);
+  --sidebar-border: rgba(255, 255, 255, 0.05);
+  --sidebar-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 0 1px rgba(0, 0, 0, 0.5);
+  --sidebar-toggle-bg: #1C1C1C;
+
+  /* ── RightNav ──────────────────────────────────────── */
+  --nav-bg:     #1a1a1a;
+  --nav-border: #333333;
+
+  /* ── Icon wrapper (LeftSidebar cards) ──────────────── */
+  --icon-bg-start: #161616;
+  --icon-bg-end:   #0e0e0e;
+  --icon-border:   rgba(255, 255, 255, 0.07);
+  --icon-shadow:
+    inset 0  1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.20),
+    0 2px 4px rgba(0, 0, 0, 0.22);
+  --icon-stroke: rgba(255, 255, 255, 0.50);
+
+  /* ── Command palette ───────────────────────────────── */
+  --palette-bg:           rgba(8, 8, 8, 0.98);
+  --palette-backdrop:     rgba(0, 0, 0, 0.68);
+  --palette-border:       rgba(255, 255, 255, 0.07);
+  --palette-divider:      rgba(255, 255, 255, 0.03);
+  --palette-row-hover:    rgba(255, 255, 255, 0.038);
+  --palette-row-active:   rgba(255, 255, 255, 0.07);
+  --palette-footer-bg:    rgba(0, 0, 0, 0.30);
+  --palette-input-color:  rgba(255, 255, 255, 0.85);
+  --palette-caret:        rgba(255, 69, 0, 0.8);
+  --palette-magnifier:    rgba(255, 255, 255, 0.22);
+  --palette-hint-label:   rgba(255, 255, 255, 0.18);
+  --palette-text-active:  #FFFFFF;
+  --palette-text-hover:   rgba(255, 255, 255, 0.92);
+  --palette-text-default: rgba(255, 255, 255, 0.62);
+  --palette-text-hint:    rgba(255, 255, 255, 0.22);
+  --palette-section-lbl:  rgba(255, 255, 255, 0.18);
+  --palette-hairline:     rgba(255, 255, 255, 0.03);
+  --palette-clear-bg:     rgba(255, 255, 255, 0.08);
+  --palette-clear-border: rgba(255, 255, 255, 0.09);
+  --palette-clear-color:  rgba(255, 255, 255, 0.35);
+  --palette-close-bg:     rgba(255, 255, 255, 0.05);
+  --palette-close-border: rgba(255, 255, 255, 0.08);
+  --palette-close-color:  rgba(255, 255, 255, 0.30);
+  --palette-icon-bg:      rgba(255, 255, 255, 0.04);
+  --palette-icon-bg-hl:   rgba(255, 255, 255, 0.08);
+  --palette-icon-color:   rgba(255, 255, 255, 0.22);
+  --palette-icon-color-hl: rgba(255, 255, 255, 0.65);
+  --palette-icon-border:  rgba(255, 255, 255, 0.05);
+  --palette-icon-brd-hl:  rgba(255, 255, 255, 0.10);
+  --palette-footer-label: rgba(255, 255, 255, 0.14);
+  --palette-no-results:   rgba(255, 255, 255, 0.22);
+
+  /* ── Kbd badge ─────────────────────────────────────── */
+  --kbd-bg:     rgba(255, 255, 255, 0.06);
+  --kbd-border: rgba(255, 255, 255, 0.10);
+  --kbd-color:  rgba(255, 255, 255, 0.32);
+
+  /* ── DragPill ──────────────────────────────────────── */
+  --drag-bg:          rgba(14, 14, 14, 0.92);
+  --drag-border:      rgba(255, 255, 255, 0.11);
+  --drag-text:        rgba(255, 255, 255, 0.38);
+  --drag-icon-stroke: rgba(255, 255, 255, 0.35);
+  --drag-icon-legs:   rgba(255, 255, 255, 0.25);
+  --drag-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.40),
+    inset 0  1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.30);
+  --arrow-btn-bg:       rgba(255, 255, 255, 0.07);
+  --arrow-btn-border:   rgba(255, 255, 255, 0.12);
+  --arrow-btn-hover-bg: rgba(255, 255, 255, 0.12);
+  --arrow-chevron:      rgba(255, 255, 255, 0.75);
+
+  /* ── BottomToolbar ─────────────────────────────────── */
+  --toolbar-btn-bg:        #1a1a1a;
+  --toolbar-btn-border:    #333333;
+  --toolbar-search-bg:     #242424;
+  --toolbar-search-border: rgba(255, 255, 255, 0.12);
+  --toolbar-pill-active:   #2c2c2c;
+  --toolbar-icon-active:   rgba(255, 255, 255, 0.70);
+  --toolbar-icon-inactive: #444444;
+  --toolbar-search-text:   #888888;
+
+  /* ── ScrollDots ────────────────────────────────────── */
+  --dots-bg:     #0D0D0D;
+  --dots-border: #2a2a2a;
+  --dot-inactive: #333333;
+  --dot-active:   #FF4500;
+
+  /* ── Skills page ────────────────────────────────────── */
+  --frost-overlay-bg:    rgba(8, 8, 8, 0.86);
+  --search-glass-bg:     rgba(255, 255, 255, 0.08);
+  --search-glass-border: rgba(255, 255, 255, 0.12);
+  --search-glass-icon:   rgba(255, 255, 255, 0.40);
+  --icon-text-shadow:    0 1px 6px rgba(0, 0, 0, 0.90);
+
+  /* ── PageBreadcrumb ────────────────────────────────── */
+  --breadcrumb-link:       rgba(255, 255, 255, 0.38);
+  --breadcrumb-link-hover: rgba(255, 255, 255, 0.72);
+  --breadcrumb-sep:        rgba(255, 255, 255, 0.16);
+  --breadcrumb-current:    rgba(255, 255, 255, 0.55);
+
+  /* ── MenuButton ────────────────────────────────────── */
+  --menu-btn-border: #333333;
+  --menu-btn-text:   #dddddd;
+
+  /* ── Canvas / page backgrounds ─────────────────────── */
+  --canvas-bg:          #000000;
+  --card-label-primary: #888888;
+  --card-label-sub:     #555555;
+  --stack-card-bg:      #242424;
+
+  /* ── glass-system.css variables ────────────────────── */
+  --glass-page-bg:
+    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(255, 69, 0, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(255, 69, 0, 0.03) 0%, transparent 50%),
+    linear-gradient(160deg, #1a1a1a 0%, #161616 40%, #141414 100%);
+  --glass-card-bg:      rgba(255, 255, 255, 0.04);
+  --glass-card-border:  rgba(255, 255, 255, 0.08);
+  --glass-card-shadow:
+    inset 0  1px 0 rgba(255, 255, 255, 0.10),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.20),
+    0  8px 32px rgba(0, 0, 0, 0.40),
+    0  2px  8px rgba(0, 0, 0, 0.30);
+  --glass-elevated-bg:     rgba(255, 255, 255, 0.06);
+  --glass-elevated-border: rgba(255, 255, 255, 0.10);
+  --glass-elevated-shadow:
+    inset 0  1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 16px 48px rgba(0, 0, 0, 0.50),
+    0  4px 12px rgba(0, 0, 0, 0.35);
+  --glass-accent-bg:     rgba(255, 69, 0, 0.08);
+  --glass-accent-border: rgba(255, 69, 0, 0.15);
+  --glass-accent-shadow:
+    inset 0 1px 0 rgba(255, 69, 0, 0.12),
+    0  8px 32px rgba(255, 69, 0, 0.08),
+    0  2px  8px rgba(0, 0, 0, 0.30);
+  --glass-divider-gradient:
+    linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 20%, rgba(255, 255, 255, 0.08) 80%, transparent 100%);
+  --glass-tabs-bg:        rgba(255, 255, 255, 0.05);
+  --glass-tabs-border:    rgba(255, 255, 255, 0.08);
+  --glass-tabs-shadow:    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --glass-tab-text:       rgba(255, 255, 255, 0.45);
+  --glass-tab-text-hover: rgba(255, 255, 255, 0.70);
+  --glass-value-color:    #FFFFFF;
+  --glass-label-color:    rgba(255, 255, 255, 0.35);
+  --glass-secondary-color: rgba(255, 255, 255, 0.55);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LIGHT THEME — Apple HIG-grade premium warm-white palette.
+   Warm off-white base (not clinical white) — like high-quality
+   paper. Cards float as pure white on warm gray background.
+   Shadow system replaces the dark theme's flat/inset aesthetic.
+   Orange accent (#FF4500) is unchanged — reads beautifully on
+   warm white with excellent contrast.
+   ═══════════════════════════════════════════════════════════════ */
+
+[data-theme="light"] {
+  /* ── Core backgrounds ──────────────────────────────── */
+  --bg-page:     #EEECE8;   /* warm parchment — the "stone" base */
+  --bg-void:     #F5F3EE;   /* panel surfaces — slightly lighter */
+  --bg-card:     #FFFFFF;   /* pure white cards float on warm base */
+  --bg-elevated: #FBFAF7;   /* elevated card surface */
+  --bg-hover:    rgba(0, 0, 0, 0.025);
+
+  /* ── Borders ───────────────────────────────────────── */
+  --border:        rgba(0, 0, 0, 0.09);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-strong: rgba(0, 0, 0, 0.13);
+
+  /* ── Accent ────────────────────────────────────────── */
+  --accent: #FF4500;  /* unchanged — great on warm white */
+
+  /* ── Text hierarchy ────────────────────────────────── */
+  --text-primary:   #0F0F0D;              /* near-black, slightly warm */
+  --text-secondary: #3C3930;              /* warm dark gray */
+  --text-muted:     #7A746C;              /* warm mid-gray */
+  --text-dim:       #B8B0A6;              /* warm light gray */
+  --text-ghost:     rgba(15, 15, 13, 0.28);
+  --text-phantom:   rgba(15, 15, 13, 0.18);
+
+  /* ── Shadows (Apple HIG elevation levels) ──────────── */
+  --shadow-card:
+    0 1px 3px  rgba(0, 0, 0, 0.06),
+    0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  --shadow-elevated:
+    0  8px 28px rgba(0, 0, 0, 0.10),
+    0  2px  8px rgba(0, 0, 0, 0.06),
+    0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  --shadow-modal:
+    0 40px 80px rgba(0, 0, 0, 0.18),
+    0 12px 24px rgba(0, 0, 0, 0.09),
+    0  0  0 0.5px rgba(0, 0, 0, 0.10);
+
+  /* ── InfoCard ──────────────────────────────────────── */
+  --card-gradient:  linear-gradient(150deg, #FFFFFF 0%, #FBFAF7 50%, #F6F4EF 100%);
+  --card-border:    rgba(0, 0, 0, 0.07);
+  --specular-rest:  rgba(255, 100, 0, 0);
+  --specular-hover: rgba(255, 100, 0, 0.05);
+  --card-shadow-rest:
+    0 1px 3px  rgba(0, 0, 0, 0.06),
+    0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  --card-shadow-hover:
+    0 12px 36px rgba(0, 0, 0, 0.12),
+    0  4px 12px rgba(0, 0, 0, 0.07),
+    0 0 0 0.5px rgba(0, 0, 0, 0.08);
+
+  /* ── Sidebar panel ─────────────────────────────────── */
+  --sidebar-bg:     linear-gradient(170deg, rgba(248, 246, 242, 0.97) 0%, rgba(242, 240, 234, 0.97) 100%);
+  --sidebar-border: rgba(0, 0, 0, 0.07);
+  --sidebar-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.07),
+    0 8px 24px rgba(0, 0, 0, 0.07);
+  --sidebar-toggle-bg: #EDEBE6;
+
+  /* ── RightNav ──────────────────────────────────────── */
+  --nav-bg:     #F8F6F2;
+  --nav-border: rgba(0, 0, 0, 0.09);
+
+  /* ── Icon wrapper ──────────────────────────────────── */
+  --icon-bg-start: #F8F7F3;
+  --icon-bg-end:   #EFEDE8;
+  --icon-border:   rgba(0, 0, 0, 0.09);
+  --icon-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.90),
+    0 1px 3px rgba(0, 0, 0, 0.08);
+  --icon-stroke: rgba(0, 0, 0, 0.40);
+
+  /* ── Command palette ───────────────────────────────── */
+  --palette-bg:           rgba(252, 251, 247, 0.98);
+  --palette-backdrop:     rgba(180, 175, 162, 0.28);
+  --palette-border:       rgba(0, 0, 0, 0.08);
+  --palette-divider:      rgba(0, 0, 0, 0.05);
+  --palette-row-hover:    rgba(0, 0, 0, 0.04);
+  --palette-row-active:   rgba(0, 0, 0, 0.07);
+  --palette-footer-bg:    rgba(0, 0, 0, 0.02);
+  --palette-input-color:  #0F0F0D;
+  --palette-caret:        rgba(255, 69, 0, 0.9);
+  --palette-magnifier:    rgba(0, 0, 0, 0.28);
+  --palette-hint-label:   rgba(0, 0, 0, 0.18);
+  --palette-text-active:  #0F0F0D;
+  --palette-text-hover:   rgba(15, 15, 13, 0.88);
+  --palette-text-default: rgba(15, 15, 13, 0.62);
+  --palette-text-hint:    rgba(15, 15, 13, 0.32);
+  --palette-section-lbl:  rgba(0, 0, 0, 0.22);
+  --palette-hairline:     rgba(0, 0, 0, 0.05);
+  --palette-clear-bg:     rgba(0, 0, 0, 0.07);
+  --palette-clear-border: rgba(0, 0, 0, 0.09);
+  --palette-clear-color:  rgba(0, 0, 0, 0.40);
+  --palette-close-bg:     rgba(0, 0, 0, 0.05);
+  --palette-close-border: rgba(0, 0, 0, 0.08);
+  --palette-close-color:  rgba(0, 0, 0, 0.35);
+  --palette-icon-bg:      rgba(0, 0, 0, 0.04);
+  --palette-icon-bg-hl:   rgba(0, 0, 0, 0.07);
+  --palette-icon-color:   rgba(0, 0, 0, 0.28);
+  --palette-icon-color-hl: rgba(0, 0, 0, 0.65);
+  --palette-icon-border:  rgba(0, 0, 0, 0.07);
+  --palette-icon-brd-hl:  rgba(0, 0, 0, 0.11);
+  --palette-footer-label: rgba(0, 0, 0, 0.22);
+  --palette-no-results:   rgba(0, 0, 0, 0.28);
+
+  /* ── Kbd badge ─────────────────────────────────────── */
+  --kbd-bg:     rgba(0, 0, 0, 0.05);
+  --kbd-border: rgba(0, 0, 0, 0.10);
+  --kbd-color:  rgba(0, 0, 0, 0.35);
+
+  /* ── DragPill ──────────────────────────────────────── */
+  --drag-bg:          rgba(252, 250, 246, 0.94);
+  --drag-border:      rgba(0, 0, 0, 0.09);
+  --drag-text:        rgba(0, 0, 0, 0.38);
+  --drag-icon-stroke: rgba(0, 0, 0, 0.32);
+  --drag-icon-legs:   rgba(0, 0, 0, 0.22);
+  --drag-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  --arrow-btn-bg:       rgba(0, 0, 0, 0.06);
+  --arrow-btn-border:   rgba(0, 0, 0, 0.09);
+  --arrow-btn-hover-bg: rgba(0, 0, 0, 0.10);
+  --arrow-chevron:      rgba(0, 0, 0, 0.55);
+
+  /* ── BottomToolbar ─────────────────────────────────── */
+  --toolbar-btn-bg:        #EDEBE5;
+  --toolbar-btn-border:    rgba(0, 0, 0, 0.10);
+  --toolbar-search-bg:     #FFFFFF;
+  --toolbar-search-border: rgba(0, 0, 0, 0.12);
+  --toolbar-pill-active:   rgba(0, 0, 0, 0.08);
+  --toolbar-icon-active:   rgba(0, 0, 0, 0.65);
+  --toolbar-icon-inactive: rgba(0, 0, 0, 0.28);
+  --toolbar-search-text:   #7A746C;
+
+  /* ── ScrollDots ────────────────────────────────────── */
+  --dots-bg:     #EDEBE5;
+  --dots-border: rgba(0, 0, 0, 0.09);
+  --dot-inactive: rgba(0, 0, 0, 0.18);
+  --dot-active:   #FF4500;
+
+  /* ── Skills page ────────────────────────────────────── */
+  --frost-overlay-bg:    rgba(238, 236, 232, 0.88);
+  --search-glass-bg:     rgba(0, 0, 0, 0.04);
+  --search-glass-border: rgba(0, 0, 0, 0.09);
+  --search-glass-icon:   rgba(0, 0, 0, 0.32);
+  --icon-text-shadow:    none;
+
+  /* ── PageBreadcrumb ────────────────────────────────── */
+  --breadcrumb-link:       rgba(0, 0, 0, 0.38);
+  --breadcrumb-link-hover: rgba(0, 0, 0, 0.72);
+  --breadcrumb-sep:        rgba(0, 0, 0, 0.18);
+  --breadcrumb-current:    rgba(0, 0, 0, 0.55);
+
+  /* ── MenuButton ────────────────────────────────────── */
+  --menu-btn-border: rgba(0, 0, 0, 0.12);
+  --menu-btn-text:   rgba(15, 15, 13, 0.72);
+
+  /* ── Canvas / page backgrounds ─────────────────────── */
+  --canvas-bg:          #EEECE8;
+  --card-label-primary: #7A746C;
+  --card-label-sub:     #B8B0A6;
+  --stack-card-bg:      #F0EDE8;
+
+  /* ── glass-system.css variables ────────────────────── */
+  --glass-page-bg:
+    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(255, 69, 0, 0.03) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(255, 69, 0, 0.02) 0%, transparent 50%),
+    linear-gradient(160deg, #EEECE8 0%, #E9E6E1 40%, #E5E2DC 100%);
+  --glass-card-bg:      rgba(255, 255, 255, 0.78);
+  --glass-card-border:  rgba(0, 0, 0, 0.07);
+  --glass-card-shadow:
+    0px 2px 4px  rgba(0, 0, 0, 0.08),
+    0px 4px 16px rgba(0, 0, 0, 0.06);
+  --glass-elevated-bg:     rgba(255, 255, 255, 0.90);
+  --glass-elevated-border: rgba(0, 0, 0, 0.08);
+  --glass-elevated-shadow:
+    0  8px 32px rgba(0, 0, 0, 0.10),
+    0 0 0 0.5px rgba(0, 0, 0, 0.07);
+  --glass-accent-bg:     rgba(255, 69, 0, 0.06);
+  --glass-accent-border: rgba(255, 69, 0, 0.14);
+  --glass-accent-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.60),
+    0 4px 16px rgba(255, 69, 0, 0.08),
+    0 0 0 0.5px rgba(255, 69, 0, 0.14);
+  --glass-divider-gradient:
+    linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.07) 20%, rgba(0, 0, 0, 0.07) 80%, transparent 100%);
+  --glass-tabs-bg:        rgba(0, 0, 0, 0.04);
+  --glass-tabs-border:    rgba(0, 0, 0, 0.08);
+  --glass-tabs-shadow:    inset 0 1px 0 rgba(255, 255, 255, 0.60);
+  --glass-tab-text:       rgba(0, 0, 0, 0.42);
+  --glass-tab-text-hover: rgba(0, 0, 0, 0.68);
+  --glass-value-color:    #0F0F0D;
+  --glass-label-color:    rgba(0, 0, 0, 0.35);
+  --glass-secondary-color: rgba(0, 0, 0, 0.55);
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useState } from "react";
 import { NAV_ITEMS } from "@/data/nav";
 import { useLayout } from "@/contexts/LayoutContext";
@@ -59,7 +59,7 @@ function NavItem({
         >
           <div key={String(isNavOpen)}>
             <motion.span
-              animate={{ color: isActive ? "#FF4500" : hovered ? "#FF4500" : "#FFFFFF" }}
+              animate={{ color: isActive ? "#FF4500" : hovered ? "#FF4500" : "var(--text-primary)" }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               style={{ display: "block" }}
             >
@@ -130,11 +130,12 @@ export default function RightNav() {
         zIndex: 40,
         width: "480px",
         height: "calc(100vh - 40px)",
-        backgroundColor: "#1a1a1a",
+        backgroundColor: "var(--nav-bg)",
         borderRadius: "24px",
-        border: "1px solid #333333",
+        border: "1px solid var(--nav-border)",
         display: "flex",
         alignItems: "center",
+        transition: "background-color 0.22s ease, border-color 0.22s ease",
       }}
     >
       <motion.ul

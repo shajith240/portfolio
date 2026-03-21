@@ -8,6 +8,7 @@ import DragPill from "@/components/ui/DragPill";
 import ScrollDots from "@/components/layout/ScrollDots";
 import BottomToolbar from "@/components/ui/BottomToolbar";
 import { useLayout } from "@/contexts/LayoutContext";
+import { PROJECTS } from "@/data/projects";
 
 interface CardData {
   id: number;
@@ -17,12 +18,13 @@ interface CardData {
   image?: string;
 }
 
-const INITIAL_CARDS: CardData[] = [
-  { id: 1, type: "music", title: "Zone mode — workout", sub: "concept" },
-  { id: 2, type: "image", title: "Music player concepts", sub: "UI design", image: "https://placehold.co/800x600/242424/555555" },
-  { id: 3, type: "image", title: "Dashboard UI", sub: "product design", image: "https://placehold.co/800x600/242424/555555" },
-  { id: 4, type: "image", title: "Portfolio Site", sub: "web design", image: "https://placehold.co/800x600/242424/555555" },
-];
+const INITIAL_CARDS: CardData[] = PROJECTS.map((p) => ({
+  id: p.id,
+  type: p.type === "featured" ? "music" : "image",
+  title: p.title,
+  sub: p.sub,
+  image: p.image || undefined,
+}));
 
 const DRAG_THRESHOLD = 80;
 const TOTAL_DOTS = 8;
@@ -106,22 +108,19 @@ export default function Home() {
 
   const cardVariants = {
     enter: (dir: number) => ({
-      scaleY: 0.78,
-      scaleX: 1.06,
-      y: dir === 0 ? 0 : dir < 0 ? 28 : -28,
+      scale: 0.94,
+      y: dir === 0 ? 0 : dir < 0 ? 36 : -36,
       opacity: 0,
     }),
     center: {
-      scaleY: 1,
-      scaleX: 1,
+      scale: 1,
       y: 0,
       opacity: 1,
       zIndex: 10,
     },
     exit: (dir: number) => ({
-      scaleY: 0.74,
-      scaleX: 1.07,
-      y: dir < 0 ? "-68%" : "68%",
+      scale: 0.94,
+      y: dir < 0 ? "-65%" : "65%",
       opacity: 0,
       zIndex: 0,
     }),
@@ -129,9 +128,9 @@ export default function Home() {
 
   return (
     <>
-      <DragPill ml={ml} mr={mr} />
+      <DragPill ml={ml} mr={mr} onNext={moveToEnd} onPrev={moveToFront} />
       <ScrollDots count={TOTAL_DOTS} activeIndex={dotIndex} onDotClick={handleDotClick} ml={ml} />
-      <BottomToolbar ml={ml} mr={mr} />
+      <BottomToolbar />
 
       {/* Canvas */}
       <motion.div
@@ -142,7 +141,8 @@ export default function Home() {
           top: 0,
           bottom: 0,
           overflow: "hidden",
-          backgroundColor: "#1a1a1a",
+          background: "var(--canvas-bg)",
+        transition: "background 0.22s ease",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -169,7 +169,7 @@ export default function Home() {
                   inset: 0,
                   borderRadius: "20px",
                   overflow: "hidden",
-                  backgroundColor: "#242424",
+                  backgroundColor: "var(--stack-card-bg)",
                   transform: `scale(${1 - offset * 0.03}) translateY(${offset * 12}px)`,
                   zIndex: 10 - offset,
                   opacity: 0,
@@ -188,10 +188,9 @@ export default function Home() {
               animate="center"
               exit="exit"
               transition={{
-                scaleY: { type: "spring", stiffness: 520, damping: 20, mass: 0.7 },
-                scaleX: { type: "spring", stiffness: 520, damping: 20, mass: 0.7 },
-                y:      { type: "spring", stiffness: 600, damping: 32 },
-                opacity:{ duration: 0.12 },
+                scale:  { type: "spring", stiffness: 480, damping: 30, mass: 0.7 },
+                y:      { type: "spring", stiffness: 520, damping: 32 },
+                opacity:{ duration: 0.14 },
               }}
               drag="y"
               dragConstraints={{ top: 0, bottom: 0 }}
@@ -229,10 +228,10 @@ export default function Home() {
               textAlign: "center",
             }}
           >
-            <p style={{ fontSize: "16px", color: "#888888", fontWeight: 500, margin: 0 }}>
+            <p style={{ fontSize: "16px", color: "var(--card-label-primary)", fontWeight: 500, margin: 0, transition: "color 0.22s ease" }}>
               {frontCard.title}
             </p>
-            <p style={{ fontSize: "13px", color: "#555555", margin: "4px 0 0 0" }}>
+            <p style={{ fontSize: "13px", color: "var(--card-label-sub)", margin: "4px 0 0 0", transition: "color 0.22s ease" }}>
               {frontCard.sub}
             </p>
           </div>
