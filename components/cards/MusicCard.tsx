@@ -1,5 +1,7 @@
+/* Music card icons — use CSS variables for stroke colors */
+
 const RepeatIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 0.22s ease" }}>
     <polyline points="17 1 21 5 17 9" />
     <path d="M3 11V9a4 4 0 0 1 4-4h14" />
     <polyline points="7 23 3 19 7 15" />
@@ -8,7 +10,7 @@ const RepeatIcon = () => (
 );
 
 const HeartIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition: "stroke 0.22s ease" }}>
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
   </svg>
 );
@@ -37,15 +39,18 @@ export default function MusicCard({
       style={{
         width: "100%",
         height: "100%",
-        backgroundColor: "#242424",
+        backgroundColor: "var(--bg-card)",
         borderRadius: "20px",
         display: "flex",
         flexDirection: "column",
         padding: "16px",
         overflow: "hidden",
+        border: "1px solid var(--border-subtle)",
+        boxShadow: "var(--shadow-card)",
+        transition: "background-color 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease",
       }}
     >
-      {/* Album art — fills remaining space */}
+      {/* Album art */}
       <div style={{ flex: 1, minHeight: 0, borderRadius: "12px", overflow: "hidden" }}>
         <img
           src={image}
@@ -63,12 +68,12 @@ export default function MusicCard({
         />
       </div>
 
-      {/* Bottom section — fixed height */}
+      {/* Bottom section */}
       <div style={{ flexShrink: 0, paddingTop: "16px" }}>
-        <p style={{ fontSize: "22px", fontWeight: 700, color: "#FFFFFF", margin: "0 0 4px 0" }}>
+        <p style={{ fontSize: "22px", fontWeight: 700, color: "var(--text-primary)", margin: "0 0 4px 0", transition: "color 0.22s ease" }}>
           {title}
         </p>
-        <p style={{ fontSize: "14px", color: "#888888", margin: 0 }}>
+        <p style={{ fontSize: "14px", color: "var(--text-muted)", margin: 0, transition: "color 0.22s ease" }}>
           {artist}
         </p>
 
@@ -105,10 +110,11 @@ export default function MusicCard({
         <div
           style={{
             height: "4px",
-            backgroundColor: "#333333",
+            backgroundColor: "var(--border)",
             borderRadius: "999px",
             marginTop: "12px",
             overflow: "hidden",
+            transition: "background-color 0.22s ease",
           }}
         >
           <div

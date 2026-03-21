@@ -12,7 +12,7 @@ export default function AboutPage() {
 
   return (
     <>
-      <BottomToolbar ml={ml} mr={mr} />
+      <BottomToolbar />
 
       {/* Canvas */}
       <motion.div
@@ -23,7 +23,7 @@ export default function AboutPage() {
           top: 0,
           bottom: 0,
           overflow: "hidden",
-          backgroundColor: "#1a1a1a",
+          background: "transparent",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -63,7 +63,7 @@ export default function AboutPage() {
                   margin: 0,
                   fontSize: "15px",
                   fontWeight: 700,
-                  color: "#FFFFFF",
+                  color: "var(--text-primary)",
                   lineHeight: 1.2,
                 }}
               >
@@ -88,12 +88,12 @@ export default function AboutPage() {
               margin: "0 0 16px 0",
               fontSize: "14px",
               lineHeight: "1.65",
-              color: "#CCCCCC",
+              color: "var(--text-secondary)",
             }}
           >
             Hi, I&apos;m Sachin – most people know me as Kalypso
             from{" "}
-            <strong style={{ color: "#FFFFFF" }}>@kalypsodesigns.</strong>
+            <strong style={{ color: "var(--text-primary)" }}>@kalypsodesigns.</strong>
           </p>
 
           <p
@@ -101,7 +101,7 @@ export default function AboutPage() {
               margin: "0 0 16px 0",
               fontSize: "14px",
               lineHeight: "1.65",
-              color: "#CCCCCC",
+              color: "var(--text-secondary)",
             }}
           >
             I help make tech easier to use. Most of my work is building apps,
@@ -114,7 +114,7 @@ export default function AboutPage() {
               margin: "0 0 8px 0",
               fontSize: "14px",
               lineHeight: "1.65",
-              color: "#CCCCCC",
+              color: "var(--text-secondary)",
             }}
           >
             Some things I&apos;ve worked on:
@@ -125,7 +125,7 @@ export default function AboutPage() {
               margin: "0 0 16px 0",
               fontSize: "14px",
               lineHeight: "1.8",
-              color: "#CCCCCC",
+              color: "var(--text-secondary)",
             }}
           >
             <p style={{ margin: 0 }}>• AI-powered waste analytics app (iOS, for Method)</p>
@@ -139,7 +139,7 @@ export default function AboutPage() {
               margin: "0 0 32px 0",
               fontSize: "14px",
               lineHeight: "1.65",
-              color: "#CCCCCC",
+              color: "var(--text-secondary)",
             }}
           >
             I like figuring out the technical stuff, but my goal is always to
@@ -158,19 +158,19 @@ export default function AboutPage() {
               letterSpacing: "0.04em",
             }}
           >
-            <a href="mailto:" style={{ color: "#FFFFFF", textDecoration: "none", textTransform: "uppercase" }}>
+            <a href="mailto:" style={{ color: "var(--text-primary)", textDecoration: "none", textTransform: "uppercase" }}>
               Email
             </a>
-            <span style={{ color: "#444444" }}>/</span>
-            <a href="#" style={{ color: "#FFFFFF", textDecoration: "none", textTransform: "uppercase" }}>
+            <span style={{ color: "var(--text-dim)" }}>/</span>
+            <a href="#" style={{ color: "var(--text-primary)", textDecoration: "none", textTransform: "uppercase" }}>
               LinkedIn
             </a>
-            <span style={{ color: "#444444" }}>/</span>
-            <a href="#" style={{ color: "#FFFFFF", textDecoration: "none", textTransform: "uppercase" }}>
+            <span style={{ color: "var(--text-dim)" }}>/</span>
+            <a href="#" style={{ color: "var(--text-primary)", textDecoration: "none", textTransform: "uppercase" }}>
               Github
             </a>
-            <span style={{ color: "#444444" }}>/</span>
-            <a href="#" style={{ color: "#FFFFFF", textDecoration: "none", textTransform: "uppercase" }}>
+            <span style={{ color: "var(--text-dim)" }}>/</span>
+            <a href="#" style={{ color: "var(--text-primary)", textDecoration: "none", textTransform: "uppercase" }}>
               Instagram
             </a>
           </div>

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skills — iOS Icon Preview v2</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #1a1a1a;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  color: white;
+}
+
+/* ── Squircle ── */
+.squircle {
+  width: 60px;
+  height: 60px;
+  border-radius: 26%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.22),
+    inset 0 -1px 0 rgba(0,0,0,0.18),
+    inset 1px 0 rgba(255,255,255,0.07),
+    inset -1px 0 rgba(0,0,0,0.07),
+    0 4px 12px rgba(0,0,0,0.3),
+    0 2px 4px rgba(0,0,0,0.2);
+}
+/* Specular top-left highlight */
+.squircle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    ellipse 80% 60% at 25% 15%,
+    rgba(255,255,255,0.22) 0%,
+    rgba(255,255,255,0.06) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 3;
+}
+.squircle svg {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+}
+
+/* ── Icon backgrounds ── */
+.ic-js    { background: linear-gradient(135deg, #FFE033 0%, #F0C200 50%, #C89800 100%); }
+.ic-ts    { background: linear-gradient(135deg, #4A8FE0 0%, #3178C6 50%, #1A5FAA 100%); }
+.ic-py    { background: linear-gradient(160deg, #4B8EC8 0%, #3070A0 45%, #F0C030 100%); }
+.ic-c     { background: linear-gradient(135deg, #7A7A7A 0%, #484848 50%, #2A2A2A 100%); }
+.ic-cpp   { background: linear-gradient(135deg, #3A8FD4 0%, #00599C 45%, #003F6E 100%); }
+.ic-react {
+  background:
+    radial-gradient(ellipse 60% 60% at center, rgba(97,218,251,0.12) 0%, transparent 70%),
+    linear-gradient(135deg, #23272F 0%, #1A1D23 100%);
+}
+.ic-next {
+  background: linear-gradient(135deg, #1A1A1A 0%, #111111 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.28),
+    inset 0 -1px 0 rgba(0,0,0,0.22),
+    inset 1px 0 rgba(255,255,255,0.10),
+    inset -1px 0 rgba(0,0,0,0.10),
+    0 4px 12px rgba(0,0,0,0.4),
+    0 2px 4px rgba(0,0,0,0.3);
+}
+.ic-next::after {
+  background: radial-gradient(
+    ellipse 80% 60% at 25% 15%,
+    rgba(255,255,255,0.28) 0%,
+    rgba(255,255,255,0.08) 40%,
+    transparent 70%
+  ) !important;
+}
+.ic-tail  { background: linear-gradient(135deg, #38C5F5 0%, #0EA5E9 45%, #0369A1 100%); }
+.ic-node  { background: linear-gradient(135deg, #5DB85D 0%, #339933 45%, #1F6B1F 100%); }
+.ic-git   { background: linear-gradient(135deg, #F47458 0%, #F05032 45%, #C0392B 100%); }
+.ic-linux {
+  background:
+    linear-gradient(135deg, rgba(255,220,100,0.06) 0%, transparent 50%),
+    linear-gradient(135deg, #3A3A3A 0%, #222222 100%);
+}
+.ic-vsc   { background: linear-gradient(135deg, #2DAEF5 0%, #007ACC 45%, #005F9E 100%); }
+.ic-mongo { background: linear-gradient(135deg, #5CB85C 0%, #47A248 50%, #2D6B2D 100%); }
+.ic-pg    { background: linear-gradient(135deg, #5E8FB5 0%, #336791 45%, #1F4A6B 100%); }
+
+/* ── App icon ── */
+.app-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.app-icon:hover  { transform: scale(1.20) translateY(-5px); }
+.app-icon:active { transform: scale(0.92); transition-duration: 80ms; transition-timing-function: ease-in; }
+
+.icon-label { font-size: 11px; color: #666; text-align: center; font-weight: 400; }
+.section-label { font-size: 10px; font-weight: 500; color: #444; text-transform: uppercase; letter-spacing: 0.12em; }
+.icon-grid { display: flex; flex-wrap: wrap; gap: 20px; }
+
+/* ── Learning rows ── */
+.learning-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  background: #242424; border: 1px solid #333; border-radius: 10px;
+}
+.learning-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.dot-active {
+  background: #FF4500;
+  box-shadow: 0 0 6px rgba(255,69,0,0.6), 0 0 12px rgba(255,69,0,0.2);
+  animation: pulse 2s infinite;
+}
+.dot-queued { background: #333; }
+.learning-text { font-size: 12px; color: #888; }
+.learning-tag { font-size: 10px; color: #555; font-family: monospace; margin-left: auto; }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+</style>
+</head>
+<body>
+
+<!-- Hidden SVG filters -->
+<svg style="position:absolute;width:0;height:0">
+  <defs>
+    <filter id="icon-noise">
+      <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feBlend in="SourceGraphic" mode="overlay" result="blend"/>
+      <feComposite in="blend" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="react-glow">
+      <feGaussianBlur stdDeviation="0.8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+</svg>
+
+<div style="padding: 40px 32px 48px; display: flex; flex-direction: column; gap: 36px; max-width: 480px;">
+
+  <!-- Languages -->
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div class="section-label">Languages</div>
+    <div class="icon-grid">
+
+      <!-- JavaScript -->
+      <div class="app-icon">
+        <div class="squircle ic-js">
+          <svg viewBox="0 0 30 30" fill="none" width="30" height="30">
+            <rect x="2" y="2" width="26" height="26" rx="5" fill="rgba(0,0,0,0.35)"/>
+            <line x1="10" y1="7" x2="16" y2="7" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <path d="M13,7 L13,20 Q13,24 9,24" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
+            <path d="M22,10 Q22,7 19,7 Q16,7 16,10 Q16,13 19,13 Q22,13 22,16 Q22,20 19,20 Q16,20 16,17" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
+          </svg>
+        </div>
+        <span class="icon-label">JavaScript</span>
+      </div>
+
+      <!-- TypeScript -->
+      <div class="app-icon">
+        <div class="squircle ic-ts">
+          <svg viewBox="0 0 30 30" fill="none" width="30" height="30">
+            <rect x="2" y="2" width="26" height="26" rx="5" fill="rgba(0,0,0,0.3)"/>
+            <line x1="5" y1="8" x2="15" y2="8" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <line x1="10" y1="8" x2="10" y2="22" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <path d="M23,11 Q23,8 20.5,8 Q18,8 18,11 Q18,13.5 20.5,13.5 Q23,13.5 23,16.5 Q23,20 20.5,20 Q18,20 18,17" stroke="white" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          </svg>
+        </div>
+        <span class="icon-label">TypeScript</span>
+      </div>
+
+      <!-- Python -->
+      <div class="app-icon">
+        <div class="squircle ic-py">
+          <svg viewBox="0 0 30 30" fill="none" width="30" height="30">
+            <path d="M15,3 C11,3 8,5 8,9 L8,13 L15,13 L15,14 L6,14 C3,14 2,17 2,19 C2,22 3,24 6,24 L8,24 L8,21 C8,18 10,17 15,17 C20,17 22,18 22,21 L22,24 L24,24 C27,24 28,22 28,19 C28,16 27,14 24,14 L22,14 L22,13 L15,13 L15,8 L17,8 L17,5 C16.5,3.5 15.8,3 15,3 Z"
+              fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.9)" stroke-width="1" stroke-linejoin="round"/>
+            <path d="M15,3 C11,3 8,5 8,9 L8,13 L15,13 L15,8 L17,8 L17,5 C16.5,3.5 15.8,3 15,3 Z" fill="rgba(255,255,255,0.7)"/>
+            <path d="M15,17 C10,17 8,18 8,21 L8,24 L15,24 L15,19 L13,19 L13,22 C13.5,23.5 14.2,24 15,24 C19,24 22,22 22,19 L22,17 L15,17 Z" fill="rgba(240,192,48,0.85)"/>
+            <circle cx="12" cy="9.5" r="1.2" fill="rgba(60,120,180,0.9)"/>
+            <circle cx="18" cy="20.5" r="1.2" fill="rgba(200,150,20,0.9)"/>
+          </svg>
+        </div>
+        <span class="icon-label">Python</span>
+      </div>
+
+      <!-- C -->
+      <div class="app-icon">
+        <div class="squircle ic-c">
+          <svg viewBox="0 0 30 30" fill="none" width="30" height="30">
+            <path d="M22,9 Q18,4 13,4 Q6,4 6,15 Q6,26 13,26 Q18,26 22,21" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          </svg>
+        </div>
+        <span class="icon-label">C</span>
+      </div>
+
+      <!-- C++ -->
+      <div class="app-icon">
+        <div class="squircle ic-cpp">
+          <svg viewBox="0 0 30 30" fill="none" width="30" height="30">
+            <path d="M14,7 Q9,7 7,11 Q5,15 7,19 Q9,23 14,23" stroke="white" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+            <line x1="19" y1="12" x2="19" y2="19" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <line x1="16" y1="15.5" x2="22" y2="15.5" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <line x1="25" y1="12" x2="25" y2="19" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <line x1="22" y1="15.5" x2="28" y2="15.5" stroke="white" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="icon-label">C++</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Frontend -->
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div class="section-label">Frontend</div>
+    <div class="icon-grid">
+
+      <!-- React -->
+      <div class="app-icon">
+        <div class="squircle ic-react">
+          <svg viewBox="0 0 30 30" fill="none" width="30" height="30">
+            <g filter="url(#react-glow)">
+              <circle cx="15" cy="15" r="2.5" fill="#61DAFB"/>
+              <ellipse cx="15" cy="15" rx="12" ry="4.5" stroke="rgba(97,218,251,0.9)" stroke-width="1.2" fill="none"/>
+              <ellipse cx="15" cy="15" rx="12" ry="4.5" stroke="rgba(97,218,251,0.9)" stroke-width="1.2" fill="none" transform="rotate(60 15 15)"/>
+              <ellipse cx="15" cy="15" rx="12" ry="4.5" stroke="rgba(97,218,251,0.9)" stroke-width="1.2" fill="none" transform="rotate(120 15 15)"/>
+            </g>
+          </svg>
+        </div>
+        <span class="icon-label">React</span>
+      </div>
+
+      <!-- Next.js -->
+      <div class="app-icon">
+        <div class="squircle ic-next">
+          <svg viewBox="0 0 30 30" fill="none" width="30" height="30">
+            <path d="M7,22 L7,8 L22,22 L22,8" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+        <span class="icon-label">Next.js</span>
+      </div>
+
+      <!-- Tailwind -->
+      <div class="app-icon">
+        <div class="squircle ic-tail">
+          <svg viewBox="0 0 30 30" fill="none" width="30" height="30">
+            <path d="M15,8 C12,8 10,9.5 9,12.5 C10,11 11.5,10.5 13,11 C13.8,11.25 14.5,12 15.2,12.8 C16.4,14.2 18,16 21,16 C24,16 26,14.5 27,11.5 C26,13 24.5,13.5 23,13 C22.2,12.75 21.5,12 20.8,11.2 C19.6,9.8 18,8 15,8 Z" fill="white"/>
+            <path d="M9,16 C6,16 4,17.5 3,20.5 C4,19 5.5,18.5 7,19 C7.8,19.25 8.5,20 9.2,20.8 C10.4,22.2 12,24 15,24 C18,24 20,22.5 21,19.5 C20,21 18.5,21.5 17,21 C16.2,20.75 15.5,20 14.8,19.2 C13.6,17.8 12,16 9,16 Z" fill="white"/>
+          </svg>
+        </div>
+        <span class="icon-label">Tailwind</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Tools & DevOps -->
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div class="section-label">Tools & DevOps</div>
+    <div class="icon-grid">
+
+      <!-- Node.js -->
+      <div class="app-icon">
+        <div class="squircle ic-node">
+          <svg viewBox="0 0 30 30" fill="none" width="30" height="30">
+            <path d="M15,3 L25,8.5 L25,21.5 L15,27 L5,21.5 L5,8.5 Z" stroke="white" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
+            <path d="M10,20 L10,10 L20,20 L20,10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+        <span class="icon-label">Node.js</span>
+      </div>
+
+      <!-- Git -->
+      <div class="app-icon">
+        <div class="squircle ic-git">
+          <svg viewBox="0 0 30 30" fill="none" width="30" height="30">
+            <circle cx="15" cy="15" r="2.5" fill="white"/>
+            <circle cx="23" cy="8" r="2.5" fill="white"/>
+            <circle cx="15" cy="24" r="2.5" fill="white"/>
+            <line x1="15" y1="17.5" x2="15" y2="21.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M15,12.5 L15,10 Q15,6 19,6 L20.5,6" stroke="white" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+            <line x1="15" y1="12.5" x2="15" y2="17.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="icon-label">Git</span>
+      </div>
+
+      <!-- Linux -->
+      <div class="app-icon">
+        <div class="squircle ic-linux">
+          <svg viewBox="0 0 30 30" fill="none" width="30" height="30">
+            <ellipse cx="15" cy="18" rx="7" ry="9" fill="rgba(255,255,255,0.9)"/>
+            <ellipse cx="15" cy="20" rx="4" ry="6" fill="rgba(255,220,100,0.25)"/>
+            <ellipse cx="15" cy="8" rx="5" ry="5.5" fill="rgba(255,255,255,0.9)"/>
+            <circle cx="13" cy="7" r="1.2" fill="#222"/>
+            <circle cx="17" cy="7" r="1.2" fill="#222"/>
+            <path d="M13.5,10 L15,11.5 L16.5,10 Z" fill="rgba(255,165,0,0.9)"/>
+            <path d="M11,26 L9,28 M19,26 L21,28" stroke="rgba(255,165,0,0.8)" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="icon-label">Linux</span>
+      </div>
+
+      <!-- VS Code -->
+      <div class="app-icon">
+        <div class="squircle ic-vsc">
+          <svg viewBox="0 0 30 30" fill="none" width="30" height="30">
+            <path d="M22,4 L14,14 L22,24 L27,21 L27,9 Z" fill="white" opacity="0.9"/>
+            <path d="M22,4 L10,14 L22,24 L14,19 L8,24 L3,21 L3,9 L8,6 L14,11 Z" fill="white" opacity="0.5"/>
+            <path d="M3,9 L8,6 L14,11 L14,14 L8,18 L3,21 Z" fill="white" opacity="0.9"/>
+          </svg>
+        </div>
+        <span class="icon-label">VS Code</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Databases -->
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div class="section-label">Databases</div>
+    <div class="icon-grid">
+
+      <!-- MongoDB -->
+      <div class="app-icon">
+        <div class="squircle ic-mongo">
+          <svg viewBox="0 0 30 30" fill="none" width="30" height="30">
+            <path d="M15,3 C15,3 22,10 22,17 C22,21.5 18.5,25 15,26 C11.5,25 8,21.5 8,17 C8,10 15,3 15,3 Z" fill="rgba(255,255,255,0.9)"/>
+            <line x1="15" y1="22" x2="15" y2="28" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="icon-label">MongoDB</span>
+      </div>
+
+      <!-- PostgreSQL -->
+      <div class="app-icon">
+        <div class="squircle ic-pg">
+          <svg viewBox="0 0 30 30" fill="none" width="30" height="30">
+            <ellipse cx="15" cy="9" rx="9" ry="3" stroke="white" stroke-width="1.5" fill="none"/>
+            <path d="M6,9 L6,18" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M24,9 L24,18" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+            <ellipse cx="15" cy="18" rx="9" ry="3" stroke="white" stroke-width="1.5" fill="none"/>
+            <path d="M6,13.5 Q15,16.5 24,13.5" stroke="white" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.5"/>
+          </svg>
+        </div>
+        <span class="icon-label">PostgreSQL</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Currently Learning -->
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div class="section-label">Currently learning</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div class="learning-row">
+        <div class="learning-dot dot-active"></div>
+        <span class="learning-text">Framer Motion — advanced gestures & layout animations</span>
+        <span class="learning-tag">active</span>
+      </div>
+      <div class="learning-row">
+        <div class="learning-dot dot-active" style="animation-delay:0.5s"></div>
+        <span class="learning-text">Next.js App Router — server components & streaming</span>
+        <span class="learning-tag">active</span>
+      </div>
+      <div class="learning-row">
+        <div class="learning-dot dot-queued"></div>
+        <span class="learning-text">Docker — containerizing dev environments</span>
+        <span class="learning-tag">queued</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
