@@ -8,26 +8,15 @@ import { useLayout } from "@/contexts/LayoutContext";
 
 /* ── Data ──────────────────────────────────────────────────────────── */
 
-const NOTES = [
-  {
-    id: 1,
-    title: "QR Tool + MCP Server",
-    excerpt: "I built a QR code generator that works two ways: as a web app with 10 custom styles and colours, and as an MCP server so AI assistants can generate QR codes directly.",
-    image: "/photos/qr-note.png",
-    fallback: "https://placehold.co/480x260/111111/333333",
-    tag: "Tools",
-    href: "#",
-  },
-  {
-    id: 2,
-    title: "Method AI: Crafting an AI-Powered Recycling Assistant for Modern Workplaces",
-    excerpt: "Designed and launched Method AI—an intelligent, location-aware recycling assistant that helps office workers dispose of waste correctly in real time.",
-    image: "/photos/method-note.png",
-    fallback: "https://placehold.co/480x260/111111/333333",
-    tag: "AI",
-    href: "#",
-  },
-];
+const NOTES: {
+  id: number;
+  title: string;
+  excerpt: string;
+  image: string;
+  fallback: string;
+  tag: string;
+  href: string;
+}[] = [];
 
 const ALL_TAGS = ["ALL", ...Array.from(new Set(NOTES.map((n) => n.tag)))];
 
@@ -191,7 +180,7 @@ export default function NotesPage() {
                 fontFamily: "system-ui, -apple-system, sans-serif",
                 lineHeight: 1.5,
               }}>
-                Technical notes, tutorials, and insights on web development
+                Writing in progress. Notes on things I build and figure out.
               </p>
             </motion.div>
 
@@ -275,7 +264,29 @@ export default function NotesPage() {
               <NoteCard key={note.id} note={note} />
             ))}
 
-            {filtered.length === 0 && (
+            {filtered.length === 0 && NOTES.length === 0 && (
+              <div style={{
+                gridColumn: "1 / -1",
+                padding: "80px 0",
+                textAlign: "center",
+              }}>
+                <p style={{
+                  margin: "0 0 8px 0",
+                  fontSize: "11px",
+                  color: "var(--text-dim)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.12em",
+                  fontFamily: "system-ui, -apple-system, sans-serif",
+                }}>coming soon</p>
+                <p style={{
+                  margin: 0,
+                  fontSize: "14px",
+                  color: "var(--text-muted)",
+                  fontFamily: "system-ui, -apple-system, sans-serif",
+                }}>No notes yet — first one is on its way.</p>
+              </div>
+            )}
+            {filtered.length === 0 && NOTES.length > 0 && (
               <div style={{
                 gridColumn: "1 / -1",
                 padding: "80px 0",

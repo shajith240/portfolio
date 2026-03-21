@@ -199,7 +199,7 @@ export default function LeftSidebar() {
                     About me
                   </p>
                   <p style={{ fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.35, margin: 0, transition: "color 0.22s ease" }}>
-                    2nd year CSE student. Building web apps, CLI tools, and more.
+                    CS student at IIT(ISM) Dhanbad. I learn by building.
                   </p>
                 </>
               )}
