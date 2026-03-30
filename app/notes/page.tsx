@@ -117,12 +117,13 @@ function NoteCard({ note }: { note: typeof NOTES[0] }) {
 
 /* ── Page ──────────────────────────────────────────────────────────── */
 export default function NotesPage() {
-  const { isSidebarOpen, isNavOpen } = useLayout();
+  const { isSidebarOpen, isNavOpen, isMobileLayout, isTabletLayout } = useLayout();
   const [activeTag, setActiveTag] = useState("ALL");
   const [query, setQuery] = useState("");
 
-  const ml = isSidebarOpen ? 280 : 0;
-  const mr = isNavOpen ? 260 : 0;
+  const ml = !isMobileLayout && isSidebarOpen ? 280 : 0;
+  const mr = !isMobileLayout && isNavOpen ? 260 : 0;
+  const isPhone = isMobileLayout && !isTabletLayout;
 
   const filtered = NOTES.filter((n) => {
     const matchTag = activeTag === "ALL" || n.tag === activeTag;
@@ -145,16 +146,17 @@ export default function NotesPage() {
         <div style={{
           maxWidth: "1100px",
           margin: "0 auto",
-          padding: "120px 60px 120px 60px",
+          padding: `clamp(48px, 8vw, 120px) clamp(16px, 5vw, 60px)`,
         }}>
 
           {/* ── Header row ── */}
           <div style={{
             display: "flex",
-            alignItems: "flex-start",
+            flexDirection: isPhone ? "column" : "row",
+            alignItems: isPhone ? "flex-start" : "flex-start",
             justifyContent: "space-between",
             marginBottom: "40px",
-            gap: "40px",
+            gap: isPhone ? "16px" : "40px",
           }}>
             {/* Left — title + subtitle */}
             <motion.div
@@ -217,7 +219,7 @@ export default function NotesPage() {
                     fontSize: "13px",
                     color: "var(--text-muted)",
                     fontFamily: "system-ui, -apple-system, sans-serif",
-                    width: "140px",
+                    width: isPhone ? "100px" : "140px",
                     caretColor: "#FF4500",
                   }}
                 />
@@ -256,7 +258,7 @@ export default function NotesPage() {
             transition={{ duration: 0.45, ease: "easeOut", delay: 0.1 }}
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(2, 1fr)",
+              gridTemplateColumns: isPhone ? "1fr" : "repeat(2, 1fr)",
               gap: "32px 28px",
             }}
           >

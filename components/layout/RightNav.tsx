@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
-import { useState } from "react";
+import { motion, useAnimation } from "framer-motion";
+import { useState, useEffect } from "react";
 import { NAV_ITEMS } from "@/data/nav";
 import { useLayout } from "@/contexts/LayoutContext";
 import SplitText from "@/components/ui/SplitText";
@@ -48,7 +48,7 @@ function NavItem({
           style={{
             display: "flex",
             alignItems: "center",
-            fontSize: "72px",
+            fontSize: "clamp(36px, 9vw, 72px)",
             fontWeight: 700,
             lineHeight: 1.0,
             letterSpacing: "-0.03em",
@@ -82,12 +82,12 @@ function NavItem({
           </div>
           <span
             style={{
-              fontSize: "18px",
+              fontSize: "clamp(11px, 2.2vw, 18px)",
               fontWeight: 400,
               color: "#FF4500",
               position: "relative",
-              top: "-24px",
-              marginLeft: "12px",
+              top: "clamp(-14px, -3vw, -24px)",
+              marginLeft: "clamp(6px, 1.5vw, 12px)",
               letterSpacing: "0",
               fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
             }}
@@ -104,12 +104,23 @@ let _navAnimated = false;
 
 export default function RightNav() {
   const pathname = usePathname();
-  const { isNavOpen } = useLayout();
+  const { isNavOpen, isMobileLayout } = useLayout();
   const [playEntrance] = useState(() => {
     const play = !_navAnimated;
     _navAnimated = true;
     return play;
   });
+  const controls = useAnimation();
+
+  useEffect(() => {
+    if (playEntrance) {
+      controls.set("hidden");
+      controls.start("show");
+    } else {
+      controls.set("show");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <motion.nav
@@ -125,16 +136,17 @@ export default function RightNav() {
       }
       style={{
         position: "fixed",
-        right: "20px",
-        top: "20px",
+        right: isMobileLayout ? "0px" : "20px",
+        top: isMobileLayout ? "0px" : "20px",
         zIndex: 40,
-        width: "480px",
-        height: "calc(100vh - 40px)",
+        width: isMobileLayout ? "min(360px, 100vw)" : "480px",
+        height: isMobileLayout ? "100dvh" : "calc(100dvh - 40px)",
         backgroundColor: "var(--nav-bg)",
-        borderRadius: "24px",
+        borderRadius: isMobileLayout ? "20px 0 0 20px" : "24px",
         border: "1px solid var(--nav-border)",
         display: "flex",
         alignItems: "center",
+        willChange: "transform",
         transition: "background-color 0.22s ease, border-color 0.22s ease",
       }}
     >
@@ -143,14 +155,14 @@ export default function RightNav() {
           listStyle: "none",
           margin: 0,
           padding: 0,
-          paddingLeft: "48px",
+          paddingLeft: "clamp(20px, 6vw, 48px)",
           display: "flex",
           flexDirection: "column",
           gap: "4px",
         }}
         variants={container}
-        initial={playEntrance ? "hidden" : "show"}
-        animate="show"
+        initial={false}
+        animate={controls}
       >
         {NAV_ITEMS.map((navItem) => {
           const isActive = pathname === navItem.href;

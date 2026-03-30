@@ -63,12 +63,17 @@ function AppIcon({
   file,
   dimmed,
   index,
+  isPhone,
 }: {
   name: string
   file: string
   dimmed: boolean
   index: number
+  isPhone: boolean
 }) {
+  const iconSize = isPhone ? 60 : 80
+  const wrapSize = isPhone ? 72 : 96
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.65 }}
@@ -84,7 +89,7 @@ function AppIcon({
         flexDirection: 'column',
         alignItems: 'center',
         gap: 7,
-        width: 96,
+        width: wrapSize,
       }}
     >
       <motion.div
@@ -114,9 +119,9 @@ function AppIcon({
           alt={name}
           draggable={false}
           style={{
-            borderRadius: 18,
-            width: 80,
-            height: 80,
+            borderRadius: isPhone ? 14 : 18,
+            width: iconSize,
+            height: iconSize,
             display: 'block',
             objectFit: 'cover',
           }}
@@ -145,13 +150,14 @@ function AppIcon({
 /* ── Page ────────────────────────────────────────────────── */
 
 export default function SkillsPage() {
-  const { isSidebarOpen, isNavOpen } = useLayout()
+  const { isSidebarOpen, isNavOpen, isMobileLayout, isTabletLayout } = useLayout()
   const [search, setSearch] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const ml = isSidebarOpen ? 280 : 0
-  const mr = isNavOpen ? 260 : 0
+  const ml = !isMobileLayout && isSidebarOpen ? 280 : 0
+  const mr = !isMobileLayout && isNavOpen ? 260 : 0
   const q = search.toLowerCase().trim()
+  const isPhone = isMobileLayout && !isTabletLayout
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -248,7 +254,7 @@ export default function SkillsPage() {
             style={{
               maxWidth: 860,
               margin: '0 auto',
-              padding: '0 48px 80px',
+              padding: `0 clamp(16px, 4vw, 48px) 80px`,
             }}
           >
             {/* Search bar — glass style matching macOS App Library */}
@@ -258,7 +264,7 @@ export default function SkillsPage() {
               transition={{ duration: 0.35, ease: 'easeOut' }}
               style={{ display: 'flex', justifyContent: 'center', marginTop: 32, marginBottom: 48 }}
             >
-              <div style={{ position: 'relative', width: 280 }}>
+              <div style={{ position: 'relative', width: 'min(280px, calc(100vw - 64px))' }}>
                 <svg
                   width={14} height={14} viewBox="0 0 14 14" fill="none"
                   style={{
@@ -332,6 +338,7 @@ export default function SkillsPage() {
                         file={icon.file}
                         dimmed={!!q && !matches}
                         index={idx}
+                        isPhone={isPhone}
                       />
                     )
                   })}

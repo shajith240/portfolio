@@ -30,13 +30,13 @@ const DRAG_THRESHOLD = 80;
 const TOTAL_DOTS = 8;
 
 export default function Home() {
-  const { isNavOpen, isSidebarOpen } = useLayout();
+  const { isNavOpen, isSidebarOpen, isMobileLayout } = useLayout();
   const [cards, setCards] = useState(INITIAL_CARDS);
   const [direction, setDirection] = useState(0);
   const [dotIndex, setDotIndex] = useState(0);
 
-  const ml = isSidebarOpen ? 280 : 0;
-  const mr = isNavOpen ? 260 : 0;
+  const ml = !isMobileLayout && isSidebarOpen ? 280 : 0;
+  const mr = !isMobileLayout && isNavOpen ? 260 : 0;
 
   const moveToEnd = useCallback(() => {
     setDirection(-1);
@@ -154,7 +154,7 @@ export default function Home() {
         <div
           style={{
             width: "min(1050px, calc(100% - 60px))",
-            height: "calc(100vh - 260px)",
+            height: "clamp(320px, calc(100dvh - 200px), calc(100dvh - 200px))",
             position: "relative",
           }}
         >

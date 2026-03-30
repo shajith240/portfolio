@@ -78,9 +78,10 @@ const item = {
 }
 
 export default function UsesPage() {
-  const { isSidebarOpen, isNavOpen } = useLayout()
-  const ml = isSidebarOpen ? 280 : 0
-  const mr = isNavOpen ? 260 : 0
+  const { isSidebarOpen, isNavOpen, isMobileLayout, isTabletLayout } = useLayout()
+  const ml = !isMobileLayout && isSidebarOpen ? 280 : 0
+  const mr = !isMobileLayout && isNavOpen ? 260 : 0
+  const isPhone = isMobileLayout && !isTabletLayout
 
   return (
     <>
@@ -99,7 +100,7 @@ export default function UsesPage() {
           style={{
             maxWidth: '760px',
             margin: '0 auto',
-            padding: '100px 60px 120px',
+            padding: `clamp(48px, 8vw, 100px) clamp(16px, 5vw, 60px) clamp(60px, 10vw, 120px)`,
           }}
         >
           {/* Header */}
@@ -157,8 +158,9 @@ export default function UsesPage() {
                       key={tool.name}
                       style={{
                         display: 'flex',
-                        alignItems: 'baseline',
-                        gap: '20px',
+                        flexDirection: isPhone ? 'column' : 'row',
+                        alignItems: isPhone ? 'flex-start' : 'baseline',
+                        gap: isPhone ? '4px' : '20px',
                         padding: '14px 0',
                         borderBottom: '1px solid var(--border)',
                       }}
@@ -169,7 +171,7 @@ export default function UsesPage() {
                         fontWeight: 600,
                         color: 'var(--text-primary)',
                         fontFamily: 'system-ui, -apple-system, sans-serif',
-                        minWidth: '160px',
+                        minWidth: isPhone ? 'unset' : '160px',
                         flexShrink: 0,
                         transition: 'color 0.22s ease',
                       }}>

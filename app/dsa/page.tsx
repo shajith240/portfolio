@@ -164,7 +164,7 @@ function ErrorCard({ platform, href }: { platform: string; href: string }) {
       <div
         style={{
           ...CARD,
-          padding: '52px 40px',
+          padding: 'clamp(28px, 5vw, 52px) clamp(16px, 4vw, 40px)',
           textAlign: 'center',
           display: 'flex',
           flexDirection: 'column',
@@ -403,17 +403,19 @@ function LeetCodeTab({
         <div
           style={{
             ...CARD_ELEVATED,
-            padding: '36px 40px',
+            padding: 'clamp(20px, 4vw, 36px) clamp(16px, 4vw, 40px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
           }}
         >
           {/* LEFT — billboard number */}
           <div>
             <div
               style={{
-                fontSize: 72,
+                fontSize: 'clamp(48px, 12vw, 72px)',
                 fontWeight: 700,
                 letterSpacing: '-0.04em',
                 color: 'var(--text-primary)',
@@ -516,10 +518,12 @@ function LeetCodeTab({
         <div
           style={{
             ...CARD,
-            padding: '40px 40px',
+            padding: 'clamp(20px, 4vw, 40px)',
             display: 'flex',
             justifyContent: 'space-evenly',
             alignItems: 'flex-start',
+            flexWrap: 'wrap',
+            gap: 24,
           }}
         >
           <Ring
@@ -555,7 +559,7 @@ function LeetCodeTab({
           <div
             style={{
               ...CARD,
-              padding: '28px 40px',
+              padding: 'clamp(16px, 3vw, 28px) clamp(16px, 4vw, 40px)',
               display: 'flex',
               alignItems: 'center',
               gap: 0,
@@ -564,7 +568,7 @@ function LeetCodeTab({
             <div style={{ flex: 1 }}>
               <div
                 style={{
-                  fontSize: 36,
+                  fontSize: 'clamp(24px, 6vw, 36px)',
                   fontWeight: 700,
                   color: 'var(--text-primary)',
                   letterSpacing: '-0.02em',
@@ -599,7 +603,7 @@ function LeetCodeTab({
             <div style={{ flex: 1 }}>
               <div
                 style={{
-                  fontSize: 36,
+                  fontSize: 'clamp(24px, 6vw, 36px)',
                   fontWeight: 700,
                   color: 'var(--text-secondary)',
                   letterSpacing: '-0.02em',
@@ -666,7 +670,7 @@ function CodeforcesTab({
           style={{
             ...CARD_ELEVATED,
             borderColor: `${color}22`,
-            padding: '36px 40px',
+            padding: 'clamp(20px, 4vw, 36px) clamp(16px, 4vw, 40px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -676,7 +680,7 @@ function CodeforcesTab({
           <div>
             <div
               style={{
-                fontSize: 72,
+                fontSize: 'clamp(48px, 12vw, 72px)',
                 fontWeight: 700,
                 color,
                 letterSpacing: '-0.04em',
@@ -738,7 +742,7 @@ function CodeforcesTab({
         <div
           style={{
             ...CARD,
-            padding: '28px 40px',
+            padding: 'clamp(16px, 3vw, 28px) clamp(16px, 4vw, 40px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -747,7 +751,7 @@ function CodeforcesTab({
           <div>
             <div
               style={{
-                fontSize: 48,
+                fontSize: 'clamp(32px, 8vw, 48px)',
                 fontWeight: 700,
                 color: 'var(--text-primary)',
                 letterSpacing: '-0.02em',
@@ -840,7 +844,7 @@ function CodeChefTab({
           style={{
             ...CARD_ELEVATED,
             borderColor: `${starColor}22`,
-            padding: '36px 40px',
+            padding: 'clamp(20px, 4vw, 36px) clamp(16px, 4vw, 40px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -850,7 +854,7 @@ function CodeChefTab({
           <div>
             <div
               style={{
-                fontSize: 36,
+                fontSize: 'clamp(24px, 6vw, 36px)',
                 letterSpacing: 4,
                 lineHeight: 1,
                 marginBottom: 16,
@@ -871,7 +875,7 @@ function CodeChefTab({
             </div>
             <div
               style={{
-                fontSize: 48,
+                fontSize: 'clamp(32px, 8vw, 48px)',
                 fontWeight: 700,
                 color: 'var(--text-primary)',
                 letterSpacing: '-0.02em',
@@ -961,7 +965,7 @@ const TABS: { id: Tab; label: string; dot: string }[] = [
 /* ─── Page ───────────────────────────────────────────────────── */
 
 export default function DsaPage() {
-  const { isSidebarOpen, isNavOpen } = useLayout()
+  const { isSidebarOpen, isNavOpen, isMobileLayout } = useLayout()
 
   const [activeTab, setActiveTab] = useState<Tab>('leetcode')
   const [leetcode, setLeetcode] = useState<LCData | null>(null)
@@ -969,8 +973,8 @@ export default function DsaPage() {
   const [codechef, setCodechef] = useState<CCData | null>(null)
   const [loading, setLoading] = useState({ lc: true, cc: true, cf: true })
 
-  const ml = isSidebarOpen ? 280 : 0
-  const mr = isNavOpen ? 260 : 0
+  const ml = !isMobileLayout && isSidebarOpen ? 280 : 0
+  const mr = !isMobileLayout && isNavOpen ? 260 : 0
 
   useEffect(() => {
     fetch('/api/leetcode')
@@ -1019,7 +1023,7 @@ export default function DsaPage() {
           style={{
             maxWidth: 720,
             margin: '0 auto',
-            padding: '48px 40px 100px',
+            padding: `clamp(32px, 6vw, 48px) clamp(16px, 5vw, 40px) 100px`,
           }}
         >
           {/* ── Hero identity block ─────────────────────────── */}

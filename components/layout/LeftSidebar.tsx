@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, useAnimation } from "framer-motion";
 import { usePathname } from "next/navigation";
 import InfoCard from "@/components/cards/InfoCard";
 import { useLayout } from "@/contexts/LayoutContext";
@@ -74,7 +74,7 @@ const LinkedinIcon = ({ color }: { color: string }) => (
 let _sidebarAnimated = false;
 
 export default function LeftSidebar() {
-  const { isSidebarOpen, toggleSidebar, isSoundEnabled } = useLayout();
+  const { isSidebarOpen, toggleSidebar, isSoundEnabled, isMobileLayout } = useLayout();
   const playClick = useClickSound(isSoundEnabled);
   const pathname = usePathname();
   const isHome = pathname === "/";
@@ -83,6 +83,20 @@ export default function LeftSidebar() {
     _sidebarAnimated = true;
     return play;
   });
+  const controls = useAnimation();
+
+  // Defer entrance animation to after hydration to avoid SSR/client mismatch.
+  // SSR renders the `animate` target values; we snap to `hidden` then animate
+  // to `show` on the client so React never sees a difference during hydration.
+  useEffect(() => {
+    if (playEntrance) {
+      controls.set("hidden");
+      controls.start("show");
+    } else {
+      controls.set("show");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
@@ -91,8 +105,8 @@ export default function LeftSidebar() {
         onClick={() => { playClick(); toggleSidebar(); }}
         style={{
           position: "fixed",
-          left: "32px",
-          top: "32px",
+          left: isMobileLayout ? "16px" : "32px",
+          top: isMobileLayout ? "16px" : "32px",
           width: "32px",
           height: "32px",
           backgroundColor: "var(--sidebar-toggle-bg)",
@@ -137,14 +151,14 @@ export default function LeftSidebar() {
         }
         style={{
           position: "fixed",
-          left: "20px",
-          top: "20px",
+          left: isMobileLayout ? "0px" : "20px",
+          top: isMobileLayout ? "0px" : "20px",
           zIndex: 40,
-          width: "360px",
-          height: "calc(100vh - 40px)",
+          width: isMobileLayout ? "min(320px, calc(100vw - 16px))" : "360px",
+          height: isMobileLayout ? "100dvh" : "calc(100dvh - 40px)",
           background: "var(--sidebar-bg)",
           border: "1px solid var(--sidebar-border)",
-          borderRadius: "24px",
+          borderRadius: isMobileLayout ? "0 20px 20px 0" : "24px",
           padding: "20px",
           overflow: "hidden",
           display: "flex",
@@ -152,14 +166,15 @@ export default function LeftSidebar() {
           boxShadow: "var(--sidebar-shadow)",
           backdropFilter: "blur(32px) saturate(180%)",
           WebkitBackdropFilter: "blur(32px) saturate(180%)",
+          willChange: "transform",
           transition: "background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease",
         }}
       >
         <motion.div
           variants={container}
-          initial={playEntrance ? "hidden" : "show"}
-          animate="show"
-          style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "44px", flex: 1 }}
+          initial={false}
+          animate={controls}
+          style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "44px", flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
         >
           {/* Hero text */}
           <motion.div variants={cardVariant} style={{ marginBottom: "8px", padding: "0 4px" }}>
@@ -184,8 +199,8 @@ export default function LeftSidebar() {
                       src="/photos/my_photo.jpeg"
                       alt="Shajith"
                       style={{
-                        width: "250px",
-                        height: "250px",
+                        width: "min(250px, 100%)",
+                        height: "clamp(140px, 28dvh, 250px)",
                         objectFit: "cover",
                         objectPosition: "center 10%",
                         borderRadius: "10px",

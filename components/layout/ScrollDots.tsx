@@ -11,8 +11,12 @@ interface ScrollDotsProps {
 }
 
 export default function ScrollDots({ count, activeIndex, onDotClick }: ScrollDotsProps) {
-  const { isSidebarOpen } = useLayout();
-  const leftPos = isSidebarOpen ? 388 : 8;
+  const { isSidebarOpen, isMobileLayout, isTabletLayout } = useLayout();
+  const isPhone = isMobileLayout && !isTabletLayout;
+  const leftPos = !isMobileLayout && isSidebarOpen ? 388 : 8;
+
+  // Hide on phones (< 640px) — not enough horizontal space
+  if (isPhone) return null;
 
   return (
     <motion.div

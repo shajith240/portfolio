@@ -66,7 +66,7 @@ function TechChip({ label }: { label: string }) {
    No card-level scale on hover — image zoom carries the interaction
    ───────────────────────────────────────────────────────────────── */
 
-function FeaturedCard({ project }: { project: Project }) {
+function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boolean }) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -76,12 +76,12 @@ function FeaturedCard({ project }: { project: Project }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
         background: 'var(--bg-card)',
         border: '1px solid var(--border)',
         borderRadius: '10px',
         overflow: 'hidden',
-        minHeight: '380px',
+        minHeight: 'clamp(280px, 40vw, 380px)',
         boxShadow: 'var(--shadow-card)',
         transition: 'background 0.22s ease, border-color 0.22s ease',
       }}
@@ -89,11 +89,12 @@ function FeaturedCard({ project }: { project: Project }) {
       {/* Left — content */}
       <div
         style={{
-          padding: '36px',
+          padding: isMobile ? '24px' : '36px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          borderRight: '1px solid var(--border)',
+          borderRight: isMobile ? 'none' : '1px solid var(--border)',
+          borderBottom: isMobile ? '1px solid var(--border)' : 'none',
           transition: 'border-color 0.22s ease',
         }}
       >
@@ -238,7 +239,7 @@ function FeaturedCard({ project }: { project: Project }) {
           overflow: 'hidden',
           background: 'var(--bg-void)',
           position: 'relative',
-          minHeight: '380px',
+          minHeight: isMobile ? '200px' : 'clamp(280px, 40vw, 380px)',
         }}
       >
         <img
@@ -488,9 +489,10 @@ function GridCard({ project }: { project: Project }) {
    ───────────────────────────────────────────────────────────────── */
 
 export default function ProjectsPage() {
-  const { isSidebarOpen, isNavOpen } = useLayout()
-  const ml = isSidebarOpen ? 280 : 0
-  const mr = isNavOpen ? 260 : 0
+  const { isSidebarOpen, isNavOpen, isMobileLayout, isTabletLayout } = useLayout()
+  const ml = !isMobileLayout && isSidebarOpen ? 280 : 0
+  const mr = !isMobileLayout && isNavOpen ? 260 : 0
+  const isPhone = isMobileLayout && !isTabletLayout
 
   const featured = PROJECTS.find(p => p.type === 'featured')
   const grid = PROJECTS.filter(p => p.type !== 'featured')
@@ -511,11 +513,11 @@ export default function ProjectsPage() {
       >
         <motion.div
           animate={{
-            paddingLeft: `${ml + 48}px`,
-            paddingRight: `${mr + 48}px`,
+            paddingLeft: `${ml + (isMobileLayout ? 16 : 48)}px`,
+            paddingRight: `${mr + (isMobileLayout ? 16 : 48)}px`,
           }}
           transition={{ type: 'spring', stiffness: 520, damping: 44, mass: 0.85 }}
-          style={{ padding: '80px 48px 120px' }}
+          style={{ padding: isMobileLayout ? '80px 16px 120px' : '80px 48px 120px' }}
         >
 
           {/* ── Header ──────────────────────────────────────────── */}
@@ -620,15 +622,19 @@ export default function ProjectsPage() {
             animate="show"
             style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
           >
-            {/* Featured — full width, editorial split */}
-            {featured && <FeaturedCard project={featured} />}
+            {/* Featured — full width, editorial split (stacks on mobile) */}
+            {featured && <FeaturedCard project={featured} isMobile={isPhone} />}
 
-            {/* Grid — 3 columns */}
+            {/* Grid — 3 cols desktop / 2 cols tablet / 1 col phone */}
             {grid.length > 0 && (
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gridTemplateColumns: isPhone
+                    ? '1fr'
+                    : isTabletLayout
+                    ? 'repeat(2, 1fr)'
+                    : 'repeat(3, 1fr)',
                   gap: '16px',
                 }}
               >

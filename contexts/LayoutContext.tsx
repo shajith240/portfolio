@@ -8,6 +8,8 @@ interface LayoutContextValue {
   isSidebarOpen: boolean;
   isSearchOpen: boolean;
   isSoundEnabled: boolean;
+  isMobileLayout: boolean;
+  isTabletLayout: boolean;
   toggleNav: () => void;
   toggleSidebar: () => void;
   openSearch: () => void;
@@ -21,6 +23,8 @@ const LayoutContext = createContext<LayoutContextValue>({
   isSidebarOpen: false,
   isSearchOpen: false,
   isSoundEnabled: true,
+  isMobileLayout: false,
+  isTabletLayout: false,
   toggleNav: () => {},
   toggleSidebar: () => {},
   openSearch: () => {},
@@ -42,6 +46,21 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  // SSR-safe: default false (desktop) → updates after mount
+  const [isMobileLayout, setIsMobileLayout] = useState(false);
+  // isTabletLayout: 640px–1023px (iPad-size range)
+  const [isTabletLayout, setIsTabletLayout] = useState(false);
+
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth;
+      setIsMobileLayout(w < 1024);
+      setIsTabletLayout(w >= 640 && w < 1024);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   /*
     Route change handler — close both panels on any sub-page.
@@ -56,8 +75,14 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     }
   }, [isHome]);
 
-  const toggleNav = useCallback(() => setIsNavOpen((v) => !v), []);
-  const toggleSidebar = useCallback(() => setIsSidebarOpen((v) => !v), []);
+  const toggleNav = useCallback(() => {
+    setIsNavOpen((v) => !v);
+    if (isMobileLayout) setIsSidebarOpen(false);
+  }, [isMobileLayout]);
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen((v) => !v);
+    if (isMobileLayout) setIsNavOpen(false);
+  }, [isMobileLayout]);
   const openSearch = useCallback(() => setIsSearchOpen(true), []);
   const closeSearch = useCallback(() => setIsSearchOpen(false), []);
   const toggleSound = useCallback(() => setIsSoundEnabled((v) => !v), []);
@@ -65,7 +90,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
 
   return (
     <LayoutContext.Provider value={{
-      isNavOpen, isSidebarOpen, isSearchOpen, isSoundEnabled,
+      isNavOpen, isSidebarOpen, isSearchOpen, isSoundEnabled, isMobileLayout, isTabletLayout,
       toggleNav, toggleSidebar, openSearch, closeSearch, toggleSound, closeSidebars,
     }}>
       {children}
