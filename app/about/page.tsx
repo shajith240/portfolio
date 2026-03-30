@@ -5,10 +5,10 @@ import BottomToolbar from "@/components/ui/BottomToolbar";
 import { useLayout } from "@/contexts/LayoutContext";
 
 export default function AboutPage() {
-  const { isNavOpen, isSidebarOpen } = useLayout();
+  const { isNavOpen, isSidebarOpen, isMobileLayout } = useLayout();
 
-  const ml = isSidebarOpen ? 280 : 0;
-  const mr = isNavOpen ? 260 : 0;
+  const ml = !isMobileLayout && isSidebarOpen ? 280 : 0;
+  const mr = !isMobileLayout && isNavOpen ? 260 : 0;
 
   return (
     <>
@@ -22,11 +22,15 @@ export default function AboutPage() {
           position: "fixed",
           top: 0,
           bottom: 0,
-          overflow: "hidden",
+          overflowY: "auto",
+          overflowX: "hidden",
+          scrollbarWidth: "none",
           background: "transparent",
           display: "flex",
-          alignItems: "center",
+          alignItems: "flex-start",
           justifyContent: "center",
+          paddingTop: "clamp(48px, 10dvh, 120px)",
+          paddingBottom: "80px",
         }}
       >
         <motion.div
@@ -34,7 +38,7 @@ export default function AboutPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
           style={{
-            width: "380px",
+            width: "min(380px, calc(100vw - 32px))",
           }}
         >
           {/* Profile row */}

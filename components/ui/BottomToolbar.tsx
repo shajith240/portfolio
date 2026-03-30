@@ -63,7 +63,7 @@ const SearchIcon = () => (
 /* ── Component ───────────────────────────────────────────────────── */
 
 export default function BottomToolbar() {
-  const { isNavOpen, isSidebarOpen, isSearchOpen: _, openSearch, isSoundEnabled, toggleSound } = useLayout();
+  const { isNavOpen, isSidebarOpen, isSearchOpen: _, openSearch, isSoundEnabled, toggleSound, isMobileLayout, isTabletLayout } = useLayout();
   const { isDarkTheme, toggleTheme } = useTheme();
   const playClick = useClickSound(isSoundEnabled);
   const [soundHovered, setSoundHovered] = useState(false);
@@ -71,11 +71,12 @@ export default function BottomToolbar() {
 
   /*
     Position the toolbar using the physical panel edges, not the canvas offsets.
-    This ensures the buttons always sit just outside the sidebar/nav panels,
-    never on top of them.
+    On desktop (≥ 1024px): sidebar 360px at left:20 → right edge 380; nav 480px at right:20 → from-right 500.
+    On tablet (640–1023px): panels are full-height overlays — toolbar stays at 16px edges.
+    On phone (< 640px): same as tablet — panels overlay, toolbar stays at 16px.
   */
-  const leftPos  = isSidebarOpen ? SIDEBAR_RIGHT_EDGE + GAP : 32;
-  const rightPos = isNavOpen     ? NAV_FROM_RIGHT     + GAP : 32;
+  const leftPos  = !isMobileLayout && isSidebarOpen ? SIDEBAR_RIGHT_EDGE + GAP : 16;
+  const rightPos = !isMobileLayout && isNavOpen     ? NAV_FROM_RIGHT     + GAP : 16;
 
   return (
     <motion.div

@@ -37,6 +37,30 @@
   --nav-w:       260px;
   --radius-card: 10px;
 
+  /* ── Fluid spacing scale ───────────────────────────── */
+  --space-xs: clamp(4px, 1vw, 8px);
+  --space-sm: clamp(8px, 2vw, 16px);
+  --space-md: clamp(16px, 3vw, 24px);
+  --space-lg: clamp(24px, 5vw, 48px);
+  --space-xl: clamp(48px, 8vw, 100px);
+
+  /* ── Fluid type scale ──────────────────────────────── */
+  --text-xs:   clamp(10px, 1.5vw, 12px);
+  --text-sm:   clamp(12px, 1.8vw, 14px);
+  --text-base: clamp(13px, 2vw, 15px);
+  --text-lg:   clamp(16px, 2.5vw, 20px);
+  --text-xl:   clamp(20px, 4vw, 36px);
+  --text-2xl:  clamp(28px, 6vw, 48px);
+  --text-hero: clamp(36px, 10vw, 72px);
+
+  /* ── Responsive panel widths ────────────────────────── */
+  --sidebar-w-mobile:  min(300px, calc(100vw - 16px));
+  --sidebar-w-tablet:  320px;
+  --sidebar-w-desktop: 360px;
+  --nav-w-mobile:      min(340px, 100vw);
+  --nav-w-tablet:      360px;
+  --nav-w-desktop:     480px;
+
   /* ── Shadows (none in dark — flat aesthetic) ───────── */
   --shadow-card:     none;
   --shadow-elevated: none;
