@@ -68,12 +68,13 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   */
   useEffect(() => {
     if (isHome) {
-      setIsSidebarOpen(true);
+      // Only auto-open sidebar on desktop/tablet — phones have no sidebar
+      setIsSidebarOpen(!isMobileLayout || isTabletLayout);
     } else {
       setIsNavOpen(false);
       setIsSidebarOpen(false);
     }
-  }, [isHome]);
+  }, [isHome, isMobileLayout, isTabletLayout]);
 
   const toggleNav = useCallback(() => {
     setIsNavOpen((v) => !v);

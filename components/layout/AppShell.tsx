@@ -8,17 +8,24 @@ import LeftSidebar from "@/components/layout/LeftSidebar";
 import MenuButton from "@/components/ui/MenuButton";
 import CommandPalette from "@/components/ui/CommandPalette";
 import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
+import MobileTabBar from "@/components/ui/MobileTabBar";
 
 function Shell({ children }: { children: ReactNode }) {
-  const { isMobileLayout, isNavOpen, isSidebarOpen, closeSidebars } = useLayout();
-  const showBackdrop = isMobileLayout && (isNavOpen || isSidebarOpen);
+  const { isMobileLayout, isTabletLayout, isNavOpen, isSidebarOpen, closeSidebars } = useLayout();
+  const isPhone = isMobileLayout && !isTabletLayout;
+
+  // Phone: completely different shell — bottom tab bar, no sidebars, no MenuButton
+  // Tablet: sidebars as overlays with backdrop
+  // Desktop: full panel layout
+  // Backdrop only for tablet (overlay sidebars) — never on phones (no sidebars exist)
+  const showBackdrop = !isPhone && isMobileLayout && (isNavOpen || isSidebarOpen);
 
   return (
     <div
       className="h-screen overflow-hidden"
       style={{ color: "var(--text-primary)", background: "var(--bg-page)" }}
     >
-      {/* Mobile backdrop — closes panels when tapped */}
+      {/* Backdrop — closes panels when tapped (tablet + phone when sidebars forced open) */}
       {showBackdrop && (
         <div
           onClick={closeSidebars}
@@ -30,12 +37,25 @@ function Shell({ children }: { children: ReactNode }) {
           }}
         />
       )}
-      <PageBreadcrumb />
-      <LeftSidebar />
-      {children}
-      <RightNav />
-      <MenuButton />
-      <CommandPalette />
+
+      {/* Phone layout: no sidebars, no MenuButton — tab bar handles navigation */}
+      {isPhone ? (
+        <>
+          <PageBreadcrumb />
+          {children}
+          <MobileTabBar />
+          <CommandPalette />
+        </>
+      ) : (
+        <>
+          <PageBreadcrumb />
+          <LeftSidebar />
+          {children}
+          <RightNav />
+          <MenuButton />
+          <CommandPalette />
+        </>
+      )}
     </div>
   );
 }

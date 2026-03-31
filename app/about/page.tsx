@@ -5,7 +5,8 @@ import BottomToolbar from "@/components/ui/BottomToolbar";
 import { useLayout } from "@/contexts/LayoutContext";
 
 export default function AboutPage() {
-  const { isNavOpen, isSidebarOpen, isMobileLayout } = useLayout();
+  const { isNavOpen, isSidebarOpen, isMobileLayout, isTabletLayout } = useLayout();
+  const isPhone = isMobileLayout && !isTabletLayout;
 
   const ml = !isMobileLayout && isSidebarOpen ? 280 : 0;
   const mr = !isMobileLayout && isNavOpen ? 260 : 0;
@@ -21,7 +22,7 @@ export default function AboutPage() {
         style={{
           position: "fixed",
           top: 0,
-          bottom: 0,
+          bottom: isPhone ? 72 : 0,
           overflowY: "auto",
           overflowX: "hidden",
           scrollbarWidth: "none",
@@ -29,8 +30,8 @@ export default function AboutPage() {
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "center",
-          paddingTop: "clamp(48px, 10dvh, 120px)",
-          paddingBottom: "80px",
+          paddingTop: isPhone ? "24px" : "clamp(48px, 10dvh, 120px)",
+          paddingBottom: isPhone ? "24px" : "80px",
         }}
       >
         <motion.div
@@ -67,7 +68,7 @@ export default function AboutPage() {
               <p
                 style={{
                   margin: 0,
-                  fontSize: "15px",
+                  fontSize: isPhone ? "17px" : "15px",
                   fontWeight: 700,
                   color: "var(--text-primary)",
                   lineHeight: 1.2,
@@ -78,7 +79,7 @@ export default function AboutPage() {
               <p
                 style={{
                   margin: "2px 0 0 0",
-                  fontSize: "12px",
+                  fontSize: isPhone ? "14px" : "12px",
                   color: "#FF4500",
                   lineHeight: 1.2,
                 }}
@@ -92,7 +93,7 @@ export default function AboutPage() {
           <p
             style={{
               margin: "0 0 16px 0",
-              fontSize: "14px",
+              fontSize: isPhone ? "16px" : "14px",
               lineHeight: "1.65",
               color: "var(--text-secondary)",
             }}
@@ -106,7 +107,7 @@ export default function AboutPage() {
           <p
             style={{
               margin: "0 0 16px 0",
-              fontSize: "14px",
+              fontSize: isPhone ? "16px" : "14px",
               lineHeight: "1.65",
               color: "var(--text-secondary)",
             }}
@@ -118,7 +119,7 @@ export default function AboutPage() {
           <p
             style={{
               margin: "0 0 8px 0",
-              fontSize: "14px",
+              fontSize: isPhone ? "16px" : "14px",
               lineHeight: "1.65",
               color: "var(--text-secondary)",
             }}
@@ -129,7 +130,7 @@ export default function AboutPage() {
           <div
             style={{
               margin: "0 0 16px 0",
-              fontSize: "14px",
+              fontSize: isPhone ? "16px" : "14px",
               lineHeight: "1.8",
               color: "var(--text-secondary)",
             }}
@@ -143,7 +144,7 @@ export default function AboutPage() {
           <p
             style={{
               margin: "0 0 32px 0",
-              fontSize: "14px",
+              fontSize: isPhone ? "16px" : "14px",
               lineHeight: "1.65",
               color: "var(--text-secondary)",
             }}

@@ -88,7 +88,10 @@ export default function UsesPage() {
       <BottomToolbar />
       <div style={{
         position: 'fixed',
-        inset: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: isPhone ? 72 : 0,
         background: 'var(--bg-page)',
         overflowY: 'auto',
         scrollbarWidth: 'none',
@@ -123,7 +126,7 @@ export default function UsesPage() {
             </h1>
             <p style={{
               margin: 0,
-              fontSize: '14px',
+              fontSize: isPhone ? '16px' : '14px',
               color: 'var(--text-dim)',
               fontFamily: 'system-ui, -apple-system, sans-serif',
               lineHeight: 1.5,
@@ -167,7 +170,7 @@ export default function UsesPage() {
                     >
                       <p style={{
                         margin: 0,
-                        fontSize: '14px',
+                        fontSize: isPhone ? '16px' : '14px',
                         fontWeight: 600,
                         color: 'var(--text-primary)',
                         fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -179,7 +182,7 @@ export default function UsesPage() {
                       </p>
                       <p style={{
                         margin: 0,
-                        fontSize: '13px',
+                        fontSize: isPhone ? '15px' : '13px',
                         color: 'var(--text-muted)',
                         fontFamily: 'system-ui, -apple-system, sans-serif',
                         lineHeight: 1.5,

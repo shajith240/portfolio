@@ -235,7 +235,7 @@ export default function SkillsPage() {
         style={{
           position: 'fixed',
           top: 0,
-          bottom: 0,
+          bottom: isPhone ? 72 : 0,
           zIndex: 2,
           overflow: 'hidden',
         }}
@@ -264,16 +264,22 @@ export default function SkillsPage() {
               transition={{ duration: 0.35, ease: 'easeOut' }}
               style={{ display: 'flex', justifyContent: 'center', marginTop: 32, marginBottom: 48 }}
             >
-              <div style={{ position: 'relative', width: 'min(280px, calc(100vw - 64px))' }}>
+              <div style={{ position: 'relative', width: 'min(280px, calc(100vw - 64px))', isolation: 'isolate' }}>
                 <svg
-                  width={14} height={14} viewBox="0 0 14 14" fill="none"
+                  width={14} height={14} viewBox="0 0 14 14"
+                  fill="none"
+                  stroke="var(--search-glass-icon)"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                   style={{
                     position: 'absolute', left: 12, top: '50%',
                     transform: 'translateY(-50%)', pointerEvents: 'none',
+                    zIndex: 1,
                   }}
                 >
-                  <circle cx="6" cy="6" r="4.5" style={{ stroke: 'var(--search-glass-icon)' }} strokeWidth="1.4" />
-                  <line x1="9.5" y1="9.5" x2="13" y2="13" style={{ stroke: 'var(--search-glass-icon)' }} strokeWidth="1.4" strokeLinecap="round" />
+                  <circle cx="6" cy="6" r="4.5" />
+                  <line x1="9.5" y1="9.5" x2="13" y2="13" />
                 </svg>
                 <input
                   ref={searchRef}

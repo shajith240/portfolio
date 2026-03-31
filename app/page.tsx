@@ -26,17 +26,121 @@ const INITIAL_CARDS: CardData[] = PROJECTS.map((p) => ({
   image: p.image || undefined,
 }));
 
-const DRAG_THRESHOLD = 80;
 const TOTAL_DOTS = 8;
 
+/* ── Mobile profile header (shown only on phones) ─────────────────── */
+
+function MobileProfileHeader() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 300, damping: 28, mass: 0.8 }}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10,
+        padding: "14px 20px 12px",
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        background: "var(--canvas-bg)",
+        borderBottom: "1px solid var(--border)",
+        transition: "background 0.22s ease, border-color 0.22s ease",
+      }}
+    >
+      <img
+        src="/photos/my_photo.jpeg"
+        alt="Shajith"
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 12,
+          objectFit: "cover",
+          objectPosition: "center 10%",
+          filter: "grayscale(100%)",
+          flexShrink: 0,
+        }}
+      />
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <p style={{
+          margin: 0,
+          fontSize: 16,
+          fontWeight: 700,
+          color: "var(--text-primary)",
+          lineHeight: 1.2,
+          letterSpacing: "-0.01em",
+          transition: "color 0.22s ease",
+        }}>
+          Shajith Bathina
+        </p>
+        <p style={{
+          margin: "3px 0 0",
+          fontSize: 13,
+          fontWeight: 400,
+          color: "var(--text-muted)",
+          lineHeight: 1.2,
+          transition: "color 0.22s ease",
+        }}>
+          I build things people want to use.
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ── Horizontal dot indicator for mobile ──────────────────────────── */
+
+function MobileDots({ count, activeIndex, onDotClick }: { count: number; activeIndex: number; onDotClick: (i: number) => void }) {
+  return (
+    <div style={{
+      display: "flex",
+      gap: 7,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: "10px 0",
+    }}>
+      {Array.from({ length: count }).map((_, i) => {
+        const isActive = i === activeIndex;
+        return (
+          <motion.button
+            key={i}
+            onClick={() => onDotClick(i)}
+            animate={{
+              width: isActive ? 22 : 7,
+              backgroundColor: isActive ? "#FF4500" : "var(--dot-inactive)",
+            }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            whileTap={{ scale: 0.85 }}
+            style={{
+              height: 7,
+              borderRadius: 4,
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Home() {
-  const { isNavOpen, isSidebarOpen, isMobileLayout } = useLayout();
+  const { isNavOpen, isSidebarOpen, isMobileLayout, isTabletLayout } = useLayout();
   const [cards, setCards] = useState(INITIAL_CARDS);
   const [direction, setDirection] = useState(0);
   const [dotIndex, setDotIndex] = useState(0);
 
+  const isPhone = isMobileLayout && !isTabletLayout;
   const ml = !isMobileLayout && isSidebarOpen ? 280 : 0;
   const mr = !isMobileLayout && isNavOpen ? 260 : 0;
+
+  // Touch-optimized: lower threshold + velocity detection on phones
+  const DRAG_THRESHOLD = isPhone ? 50 : 80;
 
   const moveToEnd = useCallback(() => {
     setDirection(-1);
@@ -57,10 +161,12 @@ export default function Home() {
   }, []);
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
-    rawDragY.set(0); // spring overshoots back to 0 → jiggle
-    if (info.offset.y < -DRAG_THRESHOLD) {
+    rawDragY.set(0);
+    // Velocity-based detection: flick gesture triggers card change even if offset is small
+    const velocityThreshold = 300;
+    if (info.offset.y < -DRAG_THRESHOLD || info.velocity.y < -velocityThreshold) {
       moveToEnd();
-    } else if (info.offset.y > DRAG_THRESHOLD) {
+    } else if (info.offset.y > DRAG_THRESHOLD || info.velocity.y > velocityThreshold) {
       moveToFront();
     }
   };
@@ -93,10 +199,8 @@ export default function Home() {
     [dotIndex]
   );
 
-  // Rubber band motion values — rawDragY tracks drag offset, springDragY lags behind it
-  // Low damping means it overshoots on release → jiggle
   const rawDragY = useMotionValue(0);
-  const springDragY = useSpring(rawDragY, { stiffness: 380, damping: 26, mass: 0.9 });
+  const springDragY = useSpring(rawDragY, { stiffness: 380, damping: isPhone ? 22 : 26, mass: 0.9 });
   const rubberScaleX = useTransform(springDragY, [-320, -60, 0, 60, 320], [1.04, 1.015, 1, 1.015, 1.04]);
   const rubberScaleY = useTransform(springDragY, [-320, -60, 0, 60, 320], [0.94, 0.985, 1, 0.985, 0.94]);
 
@@ -128,9 +232,13 @@ export default function Home() {
 
   return (
     <>
-      <DragPill ml={ml} mr={mr} onNext={moveToEnd} onPrev={moveToFront} />
+      {/* Phone: inline profile header at top */}
+      {isPhone && <MobileProfileHeader />}
+
+      {/* DragPill + ScrollDots + BottomToolbar: hidden on phone (tab bar handles it) */}
+      {!isPhone && <DragPill ml={ml} mr={mr} onNext={moveToEnd} onPrev={moveToFront} />}
       <ScrollDots count={TOTAL_DOTS} activeIndex={dotIndex} onDotClick={handleDotClick} ml={ml} />
-      <BottomToolbar />
+      {!isPhone && <BottomToolbar />}
 
       {/* Canvas */}
       <motion.div
@@ -138,23 +246,24 @@ export default function Home() {
         transition={{ type: "spring", stiffness: 520, damping: 44, mass: 0.85 }}
         style={{
           position: "fixed",
-          top: 0,
-          bottom: 0,
+          top: isPhone ? 76 : 0,
+          bottom: isPhone ? 72 : 0,
           overflow: "hidden",
           background: "var(--canvas-bg)",
-        transition: "background 0.22s ease",
+          transition: "background 0.22s ease",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          paddingTop: "20px",
-          paddingBottom: "80px",
+          paddingTop: isPhone ? 0 : 20,
+          paddingBottom: isPhone ? 0 : 80,
         }}
       >
         {/* Card stack container */}
         <div
           style={{
-            width: "min(1050px, calc(100% - 60px))",
-            height: "clamp(320px, calc(100dvh - 200px), calc(100dvh - 200px))",
+            width: isPhone ? "calc(100% - 40px)" : "min(1050px, calc(100% - 60px))",
+            height: isPhone ? "calc(100% - 110px)" : "clamp(320px, calc(100dvh - 200px), calc(100dvh - 200px))",
             position: "relative",
           }}
         >
@@ -167,7 +276,7 @@ export default function Home() {
                 style={{
                   position: "absolute",
                   inset: 0,
-                  borderRadius: "20px",
+                  borderRadius: isPhone ? 20 : 20,
                   overflow: "hidden",
                   backgroundColor: "var(--stack-card-bg)",
                   transform: `scale(${1 - offset * 0.03}) translateY(${offset * 12}px)`,
@@ -194,8 +303,8 @@ export default function Home() {
               }}
               drag="y"
               dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.05}
-              dragTransition={{ bounceStiffness: 1100, bounceDamping: 24 }}
+              dragElastic={isPhone ? 0.15 : 0.05}
+              dragTransition={{ bounceStiffness: isPhone ? 800 : 1100, bounceDamping: 24 }}
               onDrag={handleDrag}
               onDragEnd={handleDragEnd}
               style={{
@@ -203,6 +312,7 @@ export default function Home() {
                 inset: 0,
                 cursor: "grab",
                 zIndex: 10,
+                touchAction: "none",
                 scaleX: rubberScaleX,
                 scaleY: rubberScaleY,
               }}
@@ -223,19 +333,49 @@ export default function Home() {
           <div
             style={{
               position: "absolute",
-              bottom: "-56px",
+              bottom: isPhone ? -52 : -56,
               width: "100%",
               textAlign: "center",
             }}
           >
-            <p style={{ fontSize: "16px", color: "var(--card-label-primary)", fontWeight: 500, margin: 0, transition: "color 0.22s ease" }}>
-              {frontCard.title}
-            </p>
-            <p style={{ fontSize: "13px", color: "var(--card-label-sub)", margin: "4px 0 0 0", transition: "color 0.22s ease" }}>
-              {frontCard.sub}
-            </p>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={frontCard.id}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15 }}
+              >
+                <p style={{
+                  fontSize: isPhone ? 16 : 16,
+                  color: "var(--card-label-primary)",
+                  fontWeight: 600,
+                  margin: 0,
+                  letterSpacing: "-0.01em",
+                  transition: "color 0.22s ease",
+                }}>
+                  {frontCard.title}
+                </p>
+                <p style={{
+                  fontSize: isPhone ? 13 : 13,
+                  color: "var(--card-label-sub)",
+                  fontWeight: 400,
+                  margin: "3px 0 0 0",
+                  transition: "color 0.22s ease",
+                }}>
+                  {frontCard.sub}
+                </p>
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
+
+        {/* Mobile horizontal dots */}
+        {isPhone && (
+          <div style={{ marginTop: 60 }}>
+            <MobileDots count={TOTAL_DOTS} activeIndex={dotIndex} onDotClick={handleDotClick} />
+          </div>
+        )}
       </motion.div>
     </>
   );
