@@ -164,9 +164,10 @@ export default function LeftSidebar() {
           display: "flex",
           flexDirection: "column",
           boxShadow: "var(--sidebar-shadow)",
-          backdropFilter: "blur(32px) saturate(180%)",
-          WebkitBackdropFilter: "blur(32px) saturate(180%)",
+          backdropFilter: "blur(20px) saturate(150%)",
+          WebkitBackdropFilter: "blur(20px) saturate(150%)",
           willChange: "transform",
+          contain: "layout style paint",
           transition: "background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease",
         }}
       >
@@ -198,6 +199,7 @@ export default function LeftSidebar() {
                     <img
                       src="/photos/my_photo.jpeg"
                       alt="Shajith"
+                      decoding="async"
                       style={{
                         width: "min(250px, 100%)",
                         height: "clamp(140px, 28dvh, 250px)",

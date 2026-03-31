@@ -218,8 +218,8 @@ export default function SkillsPage() {
           inset: 0,
           zIndex: 1,
           background: 'var(--frost-overlay-bg)',
-          backdropFilter: 'blur(60px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(60px) saturate(180%)',
+          backdropFilter: 'blur(20px) saturate(150%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(150%)',
           transition: 'background 0.22s ease',
         }}
       />
