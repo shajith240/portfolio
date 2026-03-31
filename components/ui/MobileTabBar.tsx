@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
-import { useLayout } from "@/contexts/LayoutContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useHaptic } from "@/lib/useHaptic";
 import { NAV_ITEMS } from "@/data/nav";
@@ -70,7 +69,6 @@ const SPRINGS = {
 
 function NavOverlay({ onClose }: { onClose: () => void }) {
   const pathname = usePathname();
-  const { isSoundEnabled, toggleSound } = useLayout();
   const { isDarkTheme, toggleTheme } = useTheme();
   const haptic = useHaptic();
 
@@ -232,7 +230,7 @@ function NavOverlay({ onClose }: { onClose: () => void }) {
             gap: 8,
           }}
         >
-          {/* Theme toggle — segmented control style */}
+          {/* Theme toggle — full-width segmented control (sound is haptic-only on mobile, no toggle needed) */}
           <div style={{
             flex: 1,
             display: "flex",
@@ -248,24 +246,24 @@ function NavOverlay({ onClose }: { onClose: () => void }) {
               onClick={() => { haptic("light"); if (isDarkTheme) toggleTheme(); }}
               style={{
                 flex: 1,
-                height: 36,
+                height: 40,
                 borderRadius: 10,
                 border: "none",
                 background: !isDarkTheme
                   ? (isDarkTheme ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.9)")
                   : "transparent",
                 color: !isDarkTheme ? "var(--text-primary)" : "var(--text-dim)",
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: 500,
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 5,
+                gap: 6,
                 transition: "background 0.15s ease, color 0.15s ease",
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="5" />
                 <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
                 <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
@@ -279,67 +277,29 @@ function NavOverlay({ onClose }: { onClose: () => void }) {
               onClick={() => { haptic("light"); if (!isDarkTheme) toggleTheme(); }}
               style={{
                 flex: 1,
-                height: 36,
+                height: 40,
                 borderRadius: 10,
                 border: "none",
                 background: isDarkTheme
                   ? (isDarkTheme ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)")
                   : "transparent",
                 color: isDarkTheme ? "var(--text-primary)" : "var(--text-dim)",
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: 500,
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 5,
+                gap: 6,
                 transition: "background 0.15s ease, color 0.15s ease",
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
               </svg>
               Dark
             </motion.button>
           </div>
-
-          {/* Sound toggle — compact pill */}
-          <motion.button
-            whileTap={{ scale: 0.92 }}
-            onClick={() => { haptic("medium"); toggleSound(); }}
-            style={{
-              height: 42,
-              width: 42,
-              borderRadius: 12,
-              border: "none",
-              background: isDarkTheme
-                ? "rgba(255, 255, 255, 0.06)"
-                : "rgba(0, 0, 0, 0.04)",
-              color: isSoundEnabled ? "#FF4500" : "var(--text-dim)",
-              fontSize: 13,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              transition: "background 0.22s ease, color 0.15s ease",
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="11,5 6,9 2,9 2,15 6,15 11,19" />
-              {isSoundEnabled ? (
-                <>
-                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-                </>
-              ) : (
-                <>
-                  <line x1="23" y1="9" x2="17" y2="15" />
-                  <line x1="17" y1="9" x2="23" y2="15" />
-                </>
-              )}
-            </svg>
-          </motion.button>
         </div>
       </motion.div>
     </>
