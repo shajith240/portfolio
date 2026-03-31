@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useClickSound } from "@/lib/useClickSound";
+import { useHaptic } from "@/lib/useHaptic";
 import { NAV_ITEMS } from "@/data/nav";
 
 /* ── Tab icons (22px, Apple SF-style) ─────────────────────────────── */
@@ -72,7 +72,7 @@ function NavOverlay({ onClose }: { onClose: () => void }) {
   const pathname = usePathname();
   const { isSoundEnabled, toggleSound } = useLayout();
   const { isDarkTheme, toggleTheme } = useTheme();
-  const playClick = useClickSound(isSoundEnabled);
+  const haptic = useHaptic();
 
   return (
     <>
@@ -82,7 +82,7 @@ function NavOverlay({ onClose }: { onClose: () => void }) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        onClick={() => { playClick(); onClose(); }}
+        onClick={() => { haptic("light"); onClose(); }}
         style={{
           position: "fixed",
           inset: 0,
@@ -168,7 +168,7 @@ function NavOverlay({ onClose }: { onClose: () => void }) {
               >
                 <Link
                   href={item.href}
-                  onClick={() => { playClick(); onClose(); }}
+                  onClick={() => { haptic("light"); onClose(); }}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -245,7 +245,7 @@ function NavOverlay({ onClose }: { onClose: () => void }) {
           }}>
             <motion.button
               whileTap={{ scale: 0.95 }}
-              onClick={() => { playClick(); if (isDarkTheme) toggleTheme(); }}
+              onClick={() => { haptic("light"); if (isDarkTheme) toggleTheme(); }}
               style={{
                 flex: 1,
                 height: 36,
@@ -276,7 +276,7 @@ function NavOverlay({ onClose }: { onClose: () => void }) {
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.95 }}
-              onClick={() => { playClick(); if (!isDarkTheme) toggleTheme(); }}
+              onClick={() => { haptic("light"); if (!isDarkTheme) toggleTheme(); }}
               style={{
                 flex: 1,
                 height: 36,
@@ -306,7 +306,7 @@ function NavOverlay({ onClose }: { onClose: () => void }) {
           {/* Sound toggle — compact pill */}
           <motion.button
             whileTap={{ scale: 0.92 }}
-            onClick={() => { playClick(); toggleSound(); }}
+            onClick={() => { haptic("medium"); toggleSound(); }}
             style={{
               height: 42,
               width: 42,
@@ -351,9 +351,8 @@ function NavOverlay({ onClose }: { onClose: () => void }) {
 export default function MobileTabBar() {
   const pathname = usePathname();
   const [overlayOpen, setOverlayOpen] = useState(false);
-  const { isSoundEnabled } = useLayout();
   const { isDarkTheme } = useTheme();
-  const playClick = useClickSound(isSoundEnabled);
+  const haptic = useHaptic();
 
   const morePages = ["/dsa", "/notes", "/uses"];
   const isMoreActive = morePages.includes(pathname) || overlayOpen;
@@ -406,7 +405,7 @@ export default function MobileTabBar() {
               const isMoreTab = tab.id === "more";
 
               const handleClick = () => {
-                playClick();
+                haptic(isMoreTab ? "medium" : "light");
                 if (isMoreTab) setOverlayOpen(true);
               };
 
@@ -504,7 +503,7 @@ export default function MobileTabBar() {
                 <Link
                   key={tab.id}
                   href={tab.href!}
-                  onClick={() => playClick()}
+                  onClick={() => haptic("light")}
                   style={{
                     textDecoration: "none",
                     WebkitTapHighlightColor: "transparent",
