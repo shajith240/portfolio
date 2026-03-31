@@ -965,7 +965,8 @@ const TABS: { id: Tab; label: string; dot: string }[] = [
 /* ─── Page ───────────────────────────────────────────────────── */
 
 export default function DsaPage() {
-  const { isSidebarOpen, isNavOpen, isMobileLayout } = useLayout()
+  const { isSidebarOpen, isNavOpen, isMobileLayout, isTabletLayout } = useLayout()
+  const isPhone = isMobileLayout && !isTabletLayout
 
   const [activeTab, setActiveTab] = useState<Tab>('leetcode')
   const [leetcode, setLeetcode] = useState<LCData | null>(null)
@@ -1012,7 +1013,7 @@ export default function DsaPage() {
         style={{
           position: 'absolute',
           top: 0,
-          bottom: 0,
+          bottom: isPhone ? 72 : 0,
           overflowY: 'auto',
           overflowX: 'hidden',
           scrollbarWidth: 'none',

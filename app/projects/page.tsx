@@ -163,11 +163,11 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
           <p
             style={{
               margin: 0,
-              fontSize: '13px',
+              fontSize: isMobile ? '15px' : '13px',
               color: 'var(--text-muted)',
               lineHeight: 1.7,
               fontFamily: 'system-ui, -apple-system, sans-serif',
-              maxWidth: '300px',
+              maxWidth: isMobile ? 'none' : '300px',
               transition: 'color 0.22s ease',
             }}
           >
@@ -504,7 +504,10 @@ export default function ProjectsPage() {
       <div
         style={{
           position: 'fixed',
-          inset: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: isPhone ? 72 : 0,
           overflowY: 'auto',
           scrollbarWidth: 'none',
           background: 'var(--bg-page)',

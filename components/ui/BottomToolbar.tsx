@@ -75,8 +75,12 @@ export default function BottomToolbar() {
     On tablet (640–1023px): panels are full-height overlays — toolbar stays at 16px edges.
     On phone (< 640px): same as tablet — panels overlay, toolbar stays at 16px.
   */
+  const isPhone = isMobileLayout && !isTabletLayout;
   const leftPos  = !isMobileLayout && isSidebarOpen ? SIDEBAR_RIGHT_EDGE + GAP : 16;
   const rightPos = !isMobileLayout && isNavOpen     ? NAV_FROM_RIGHT     + GAP : 16;
+
+  // Phone uses MobileTabBar — hide the desktop toolbar entirely
+  if (isPhone) return null;
 
   return (
     <motion.div

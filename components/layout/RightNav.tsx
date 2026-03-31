@@ -146,6 +146,7 @@ export default function RightNav() {
         border: "1px solid var(--nav-border)",
         display: "flex",
         alignItems: "center",
+        overflowY: "auto",
         willChange: "transform",
         transition: "background-color 0.22s ease, border-color 0.22s ease",
       }}
