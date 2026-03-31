@@ -283,7 +283,7 @@ export default function SkillsPage() {
                 </svg>
                 <input
                   ref={searchRef}
-                  autoFocus
+                  autoFocus={!isPhone}
                   type="text"
                   placeholder="Search"
                   value={search}
