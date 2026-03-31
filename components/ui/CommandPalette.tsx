@@ -452,10 +452,12 @@ export default function CommandPalette() {
               borderRadius: "14px",
               overflow: "hidden",
               background: "var(--palette-bg)",
-              backdropFilter: "blur(52px) saturate(180%)",
-              WebkitBackdropFilter: "blur(52px) saturate(180%)",
+              backdropFilter: "blur(20px) saturate(150%)",
+              WebkitBackdropFilter: "blur(20px) saturate(150%)",
               border: "1px solid var(--palette-border)",
               boxShadow: "var(--shadow-modal)",
+              willChange: "transform, opacity",
+              contain: "layout style paint",
               transition: "background 0.22s ease, border-color 0.22s ease",
             }}
           >

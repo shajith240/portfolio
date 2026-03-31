@@ -35,13 +35,12 @@ function NavItem({
   isActive: boolean;
   isNavOpen: boolean;
 }) {
-  const [hovered, setHovered] = useState(false);
-
   return (
     <motion.li variants={itemVariant}>
-      <div
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+      <motion.div
+        whileHover="hovered"
+        initial="idle"
+        animate="idle"
       >
         <Link
           href={navItem.href}
@@ -59,7 +58,10 @@ function NavItem({
         >
           <div key={String(isNavOpen)}>
             <motion.span
-              animate={{ color: isActive ? "#FF4500" : hovered ? "#FF4500" : "var(--text-primary)" }}
+              variants={{
+                idle: { color: isActive ? "#FF4500" : "var(--text-primary)" },
+                hovered: { color: "#FF4500" },
+              }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               style={{ display: "block" }}
             >
@@ -95,7 +97,7 @@ function NavItem({
             {navItem.num}
           </span>
         </Link>
-      </div>
+      </motion.div>
     </motion.li>
   );
 }
@@ -148,6 +150,7 @@ export default function RightNav() {
         alignItems: "center",
         overflowY: "auto",
         willChange: "transform",
+        contain: "layout style paint",
         transition: "background-color 0.22s ease, border-color 0.22s ease",
       }}
     >

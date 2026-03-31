@@ -28,7 +28,7 @@ export default function AboutPage() {
           scrollbarWidth: "none",
           background: "transparent",
           display: "flex",
-          alignItems: "flex-start",
+          alignItems: "center",
           justifyContent: "center",
           paddingTop: isPhone ? "24px" : "clamp(48px, 10dvh, 120px)",
           paddingBottom: isPhone ? "24px" : "80px",
@@ -39,7 +39,8 @@ export default function AboutPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
           style={{
-            width: "min(380px, calc(100vw - 32px))",
+            width: isPhone ? "min(380px, calc(100vw - 32px))" : "min(520px, calc(100vw - 64px))",
+            textAlign: "center",
           }}
         >
           {/* Profile row */}
@@ -48,15 +49,15 @@ export default function AboutPage() {
               display: "flex",
               alignItems: "center",
               gap: "12px",
-              marginBottom: "24px",
+              marginBottom: "28px",
             }}
           >
             <img
               src="/photos/my_photo.jpeg"
               alt="Shajith Bathina"
               style={{
-                width: "40px",
-                height: "40px",
+                width: "48px",
+                height: "48px",
                 borderRadius: "50%",
                 filter: "grayscale(100%)",
                 flexShrink: 0,
@@ -68,7 +69,7 @@ export default function AboutPage() {
               <p
                 style={{
                   margin: 0,
-                  fontSize: isPhone ? "17px" : "15px",
+                  fontSize: isPhone ? "17px" : "16px",
                   fontWeight: 700,
                   color: "var(--text-primary)",
                   lineHeight: 1.2,
@@ -78,8 +79,8 @@ export default function AboutPage() {
               </p>
               <p
                 style={{
-                  margin: "2px 0 0 0",
-                  fontSize: isPhone ? "14px" : "12px",
+                  margin: "4px 0 0 0",
+                  fontSize: isPhone ? "14px" : "13px",
                   color: "#FF4500",
                   lineHeight: 1.2,
                 }}
@@ -93,9 +94,10 @@ export default function AboutPage() {
           <p
             style={{
               margin: "0 0 16px 0",
-              fontSize: isPhone ? "16px" : "14px",
-              lineHeight: "1.65",
+              fontSize: isPhone ? "16px" : "15px",
+              lineHeight: "1.7",
               color: "var(--text-secondary)",
+              textAlign: "left",
             }}
           >
             I&apos;m a second-year Computer Science student at{" "}
@@ -107,9 +109,10 @@ export default function AboutPage() {
           <p
             style={{
               margin: "0 0 16px 0",
-              fontSize: isPhone ? "16px" : "14px",
-              lineHeight: "1.65",
+              fontSize: isPhone ? "16px" : "15px",
+              lineHeight: "1.7",
               color: "var(--text-secondary)",
+              textAlign: "left",
             }}
           >
             I work across TypeScript, Python, and Java. My projects range from AI voice agents
@@ -119,9 +122,10 @@ export default function AboutPage() {
           <p
             style={{
               margin: "0 0 8px 0",
-              fontSize: isPhone ? "16px" : "14px",
-              lineHeight: "1.65",
+              fontSize: isPhone ? "16px" : "15px",
+              lineHeight: "1.7",
               color: "var(--text-secondary)",
+              textAlign: "left",
             }}
           >
             Some things I&apos;ve built:
@@ -130,9 +134,10 @@ export default function AboutPage() {
           <div
             style={{
               margin: "0 0 16px 0",
-              fontSize: isPhone ? "16px" : "14px",
+              fontSize: isPhone ? "16px" : "15px",
               lineHeight: "1.8",
               color: "var(--text-secondary)",
+              textAlign: "left",
             }}
           >
             <p style={{ margin: 0 }}>• SHARPFLOW — TypeScript agency & landing page</p>
@@ -144,9 +149,10 @@ export default function AboutPage() {
           <p
             style={{
               margin: "0 0 32px 0",
-              fontSize: isPhone ? "16px" : "14px",
-              lineHeight: "1.65",
+              fontSize: isPhone ? "16px" : "15px",
+              lineHeight: "1.7",
               color: "var(--text-secondary)",
+              textAlign: "left",
             }}
           >
             Always open to collaborate on something interesting or just talk tech.
@@ -157,6 +163,7 @@ export default function AboutPage() {
             style={{
               display: "flex",
               alignItems: "center",
+              justifyContent: "center",
               gap: "10px",
               fontSize: "12px",
               fontWeight: 600,

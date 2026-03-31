@@ -28,6 +28,21 @@ body {
   transition: background 0.22s ease, color 0.22s ease;
 }
 
+/* Performance: skip rendering off-screen sections */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
+}
+
+/* Performance: reduced motion — disable all transitions/animations */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Hide scrollbar on main canvas */
 .scrollbar-none::-webkit-scrollbar {
   display: none;

@@ -1,8 +1,9 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { LayoutProvider, useLayout } from "@/contexts/LayoutContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { usePerformance } from "@/lib/usePerformance";
 import RightNav from "@/components/layout/RightNav";
 import LeftSidebar from "@/components/layout/LeftSidebar";
 import MenuButton from "@/components/ui/MenuButton";
@@ -12,6 +13,14 @@ import MobileTabBar from "@/components/ui/MobileTabBar";
 
 function Shell({ children }: { children: ReactNode }) {
   const { isMobileLayout, isTabletLayout, isNavOpen, isSidebarOpen, closeSidebars } = useLayout();
+  const { tier } = usePerformance();
+
+  // Set performance tier class on <html> for CSS-level optimizations
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.remove("perf-full", "perf-reduced", "perf-minimal");
+    html.classList.add(`perf-${tier}`);
+  }, [tier]);
   const isPhone = isMobileLayout && !isTabletLayout;
 
   // Phone: completely different shell — bottom tab bar, no sidebars, no MenuButton

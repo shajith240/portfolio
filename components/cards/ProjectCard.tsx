@@ -18,6 +18,8 @@ export default function ProjectCard({
       <img
         src={image}
         alt="Project"
+        loading="lazy"
+        decoding="async"
         draggable={false}
         style={{
           width: "100%",

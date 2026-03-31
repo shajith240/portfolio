@@ -55,6 +55,8 @@ export default function MusicCard({
         <img
           src={image}
           alt={title}
+          loading="lazy"
+          decoding="async"
           draggable={false}
           style={{
             width: "100%",

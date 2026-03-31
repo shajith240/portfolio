@@ -245,6 +245,8 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
         <img
           src={project.image || 'https://placehold.co/800x600/141414/222222'}
           alt={project.title}
+          loading="lazy"
+          decoding="async"
           style={{
             width: '100%',
             height: '100%',
@@ -313,6 +315,8 @@ function GridCard({ project }: { project: Project }) {
         <img
           src={project.image || 'https://placehold.co/800x500/141414/222222'}
           alt={project.title}
+          loading="lazy"
+          decoding="async"
           style={{
             width: '100%',
             height: '100%',

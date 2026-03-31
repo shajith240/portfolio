@@ -32,8 +32,8 @@
 /* ── GLASS CARD — ELEVATED (hero/featured cards) ── */
 .glass-card-elevated {
   background: var(--glass-elevated-bg);
-  backdrop-filter: blur(32px) saturate(180%);
-  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
   border-radius: 20px;
   border: 1px solid var(--glass-elevated-border);
   box-shadow: var(--glass-elevated-shadow);
@@ -106,6 +106,33 @@
 
 .glass-tab-inactive:hover {
   color: var(--glass-tab-text-hover);
+}
+
+/* ── PERFORMANCE: disable expensive blur on low-end / reduced-motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .glass-card,
+  .glass-card-elevated,
+  .glass-card-accent,
+  .glass-tabs {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+html.perf-reduced .glass-card,
+html.perf-reduced .glass-card-elevated,
+html.perf-reduced .glass-card-accent,
+html.perf-reduced .glass-tabs {
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+html.perf-minimal .glass-card,
+html.perf-minimal .glass-card-elevated,
+html.perf-minimal .glass-card-accent,
+html.perf-minimal .glass-tabs {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 /* ── TYPOGRAPHY ON GLASS ── */
