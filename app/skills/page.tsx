@@ -150,7 +150,7 @@ function AppIcon({
 /* ── Page ────────────────────────────────────────────────── */
 
 export default function SkillsPage() {
-  const { isSidebarOpen, isNavOpen, isMobileLayout, isTabletLayout } = useLayout()
+  const { isSidebarOpen, isNavOpen, isMobileLayout, isTabletLayout, isSearchOpen } = useLayout()
   const [search, setSearch] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -162,6 +162,8 @@ export default function SkillsPage() {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { setSearch(''); return }
+      // Don't steal focus when command palette is open
+      if (isSearchOpen) return
       if (
         e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey &&
         document.activeElement !== searchRef.current
@@ -171,7 +173,7 @@ export default function SkillsPage() {
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [])
+  }, [isSearchOpen])
 
   let iconIndex = 0
 

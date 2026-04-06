@@ -366,6 +366,10 @@ export default function CommandPalette() {
 
   useEffect(() => {
     if (isSearchOpen) {
+      // Blur any focused input (e.g. skills search bar) so keystrokes go to the palette
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
       setQuery("");
       setCursor(0);
       setTimeout(() => inputRef.current?.focus(), 60);

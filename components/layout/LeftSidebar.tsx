@@ -206,7 +206,6 @@ export default function LeftSidebar() {
                         objectFit: "cover",
                         objectPosition: "center 10%",
                         borderRadius: "10px",
-                        filter: "grayscale(100%)",
                         display: "block",
                         flexShrink: 0,
                       }}
