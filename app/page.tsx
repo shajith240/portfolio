@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, type PanInfo } from "framer-motion";
 import MusicCard from "@/components/cards/MusicCard";
 import ProjectCard from "@/components/cards/ProjectCard";
@@ -129,11 +129,77 @@ function MobileDots({ count, activeIndex, onDotClick }: { count: number; activeI
   );
 }
 
+/* ── Swipe hint — teaches drag gesture, auto-dismisses ───────────── */
+
+function SwipeHint({ onDismiss }: { onDismiss: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onDismiss, 3200);
+    return () => clearTimeout(timer);
+  }, [onDismiss]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 20,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        pointerEvents: "none",
+        gap: 6,
+      }}
+    >
+      {/* Up chevron */}
+      <motion.div
+        animate={{ y: [0, -6, 0] }}
+        transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="18,15 12,9 6,15" />
+        </svg>
+      </motion.div>
+
+      {/* Label */}
+      <motion.span
+        animate={{ opacity: [0.4, 0.7, 0.4] }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        style={{
+          fontSize: 12,
+          fontWeight: 500,
+          color: "rgba(255,255,255,0.45)",
+          letterSpacing: "0.04em",
+          userSelect: "none",
+        }}
+      >
+        Swipe to browse
+      </motion.span>
+
+      {/* Down chevron */}
+      <motion.div
+        animate={{ y: [0, 6, 0] }}
+        transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="6,9 12,15 18,9" />
+        </svg>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function Home() {
   const { isNavOpen, isSidebarOpen, isMobileLayout, isTabletLayout } = useLayout();
   const [cards, setCards] = useState(INITIAL_CARDS);
   const [direction, setDirection] = useState(0);
   const [dotIndex, setDotIndex] = useState(0);
+  const [showSwipeHint, setShowSwipeHint] = useState(true);
+  const dismissHint = useCallback(() => setShowSwipeHint(false), []);
 
   const isPhone = isMobileLayout && !isTabletLayout;
   const ml = !isMobileLayout && isSidebarOpen ? 280 : 0;
@@ -206,6 +272,7 @@ export default function Home() {
 
   const handleDrag = (_: unknown, info: PanInfo) => {
     rawDragY.set(info.offset.y);
+    if (showSwipeHint) setShowSwipeHint(false);
   };
 
   const frontCard = cards[0];
@@ -327,6 +394,11 @@ export default function Home() {
                 <ProjectCard image={frontCard.image} />
               )}
             </motion.div>
+          </AnimatePresence>
+
+          {/* Swipe hint — phones only, renders above card, auto-dismisses */}
+          <AnimatePresence>
+            {isPhone && showSwipeHint && <SwipeHint onDismiss={dismissHint} />}
           </AnimatePresence>
 
           {/* Card label below */}
