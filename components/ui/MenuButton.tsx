@@ -1,14 +1,12 @@
 "use client";
 
 import { useLayout } from "@/contexts/LayoutContext";
-import { useClickSound } from "@/lib/useClickSound";
 
 export default function MenuButton() {
-  const { isNavOpen, toggleNav, isSoundEnabled } = useLayout();
-  const playClick = useClickSound(isSoundEnabled);
+  const { isNavOpen, toggleNav } = useLayout();
   return (
     <button
-      onClick={() => { playClick(); toggleNav(); }}
+      onClick={toggleNav}
       style={{
         position: "fixed",
         top: "32px",
