@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import InfoCard from "@/components/cards/InfoCard";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useClickSound } from "@/lib/useClickSound";
+import { useShellMetrics } from "@/lib/useShellMetrics";
 
 const container = {
   hidden: {},
@@ -28,10 +29,10 @@ const cardVariant = {
   Dark: gunmetal pill with inset metallic rim.
   Light: warm off-white pill with subtle top-light shadow.
 */
-const IconWrapper = ({ children }: { children: React.ReactNode }) => (
+const IconWrapper = ({ children, compact = false }: { children: React.ReactNode; compact?: boolean }) => (
   <div style={{
-    minWidth: "38px",
-    height: "38px",
+    minWidth: compact ? "30px" : "38px",
+    height: compact ? "30px" : "38px",
     background: "linear-gradient(145deg, var(--icon-bg-start) 0%, var(--icon-bg-end) 100%)",
     border: "0.5px solid var(--icon-border)",
     borderRadius: "11px",
@@ -70,11 +71,54 @@ const LinkedinIcon = ({ color }: { color: string }) => (
   </svg>
 );
 
+function CompactSocialRow({
+  href,
+  title,
+  description,
+  children,
+}: {
+  href: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        padding: "5px 0",
+        textDecoration: "none",
+        color: "inherit",
+      }}
+    >
+      <IconWrapper compact>{children}</IconWrapper>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <p style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)", margin: "0 0 1px 0", transition: "color 0.22s ease" }}>
+          {title}
+        </p>
+        <p style={{ fontSize: "11px", color: "var(--text-muted)", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", transition: "color 0.22s ease" }}>
+          {description}
+        </p>
+      </div>
+      <span style={{ fontSize: "10px", color: "var(--text-ghost)", flexShrink: 0 }}>
+        Visit →
+      </span>
+    </a>
+  );
+}
+
 // Module-level flag: entrance stagger only plays on the very first mount
 let _sidebarAnimated = false;
 
 export default function LeftSidebar() {
   const { isSidebarOpen, toggleSidebar, isSoundEnabled, isMobileLayout } = useLayout();
+  const metrics = useShellMetrics();
+  const compactSocialCards = metrics.viewportHeight < 820;
   const playClick = useClickSound(isSoundEnabled);
   const pathname = usePathname();
   const isHome = pathname === "/";
@@ -139,9 +183,9 @@ export default function LeftSidebar() {
       </motion.button>}
 
       <motion.aside
-        initial={{ x: -400, scale: 0.97 }}
+        initial={{ x: metrics.sidebarHiddenX, scale: 0.97 }}
         animate={{
-          x: isSidebarOpen ? 0 : -400,
+          x: isSidebarOpen ? 0 : metrics.sidebarHiddenX,
           scale: isSidebarOpen ? 1 : 0.97,
         }}
         transition={
@@ -151,15 +195,15 @@ export default function LeftSidebar() {
         }
         style={{
           position: "fixed",
-          left: isMobileLayout ? "0px" : "20px",
-          top: isMobileLayout ? "0px" : "20px",
+          left: isMobileLayout ? "0px" : `${metrics.inset}px`,
+          top: isMobileLayout ? "0px" : `${metrics.inset}px`,
           zIndex: 40,
-          width: isMobileLayout ? "min(320px, calc(100vw - 16px))" : "360px",
-          height: isMobileLayout ? "100dvh" : "calc(100dvh - 40px)",
+          width: isMobileLayout ? "min(320px, calc(100vw - 16px))" : `${metrics.sidebarWidth}px`,
+          height: isMobileLayout ? "100dvh" : `calc(100dvh - ${metrics.inset * 2}px)`,
           background: "var(--sidebar-bg)",
           border: "1px solid var(--sidebar-border)",
           borderRadius: isMobileLayout ? "0 20px 20px 0" : "24px",
-          padding: "20px",
+          padding: isMobileLayout ? "18px" : "clamp(14px, 2dvh, 20px)",
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
@@ -175,21 +219,8 @@ export default function LeftSidebar() {
           variants={container}
           initial={false}
           animate={controls}
-          style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "44px", flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+          style={{ display: "flex", flexDirection: "column", gap: compactSocialCards ? "8px" : "10px", marginTop: compactSocialCards ? "42px" : "44px", marginLeft: "-8px", marginRight: "-8px", padding: "8px 8px 34px", flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
         >
-          {/* Hero text */}
-          <motion.div variants={cardVariant} style={{ marginBottom: "8px", padding: "0 4px" }}>
-            <p style={{ fontSize: "16px", fontWeight: 700, color: "var(--text-primary)", margin: 0, lineHeight: 1.3, transition: "color 0.22s ease" }}>
-              Hey, I&apos;m Shajith.
-            </p>
-            <p style={{ fontSize: "15px", fontWeight: 400, color: "var(--text-secondary)", margin: 0, lineHeight: 1.3, transition: "color 0.22s ease" }}>
-              I build things people
-            </p>
-            <p style={{ fontSize: "15px", fontWeight: 400, color: "var(--text-secondary)", margin: 0, lineHeight: 1.3, transition: "color 0.22s ease" }}>
-              want to use.
-            </p>
-          </motion.div>
-
           {/* Card 1 — Profile */}
           <motion.div variants={cardVariant}>
             <InfoCard label="SHAJITH" cta="Read more →" href="/about">
@@ -202,7 +233,7 @@ export default function LeftSidebar() {
                       decoding="async"
                       style={{
                         width: "min(250px, 100%)",
-                        height: "clamp(140px, 28dvh, 250px)",
+                        height: isMobileLayout ? "220px" : "250px",
                         objectFit: "cover",
                         objectPosition: "center 10%",
                         borderRadius: "10px",
@@ -223,42 +254,59 @@ export default function LeftSidebar() {
           </motion.div>
 
           {/* Social cards */}
-          <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "flex-start", gap: "10px" }}>
+          <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "flex-start", gap: compactSocialCards ? "8px" : "10px" }}>
 
           {/* Card 2 — GitHub */}
           <motion.div variants={cardVariant}>
-            <InfoCard label="GITHUB" cta="Visit →" href="https://github.com/shajith240">
+            {compactSocialCards && (
+              <InfoCard label="PLATFORMS" compact>
+                {(hovered) => (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <CompactSocialRow href="https://github.com/shajith240" title="@shajith240" description="Open source tools & experiments">
+                      <GithubIcon color={hovered ? "#FF4500" : "var(--icon-stroke)"} />
+                    </CompactSocialRow>
+                    <CompactSocialRow href="https://leetcode.com/shajith240" title="shajith240" description="Solving DSA problems daily">
+                      <LeetcodeIcon color={hovered ? "#FF4500" : "var(--icon-stroke)"} />
+                    </CompactSocialRow>
+                    <CompactSocialRow href="https://linkedin.com/in/shajith240" title="shajith240" description="Connect & work experience">
+                      <LinkedinIcon color={hovered ? "#FF4500" : "var(--icon-stroke)"} />
+                    </CompactSocialRow>
+                  </div>
+                )}
+              </InfoCard>
+            )}
+            {!compactSocialCards && <InfoCard label="GITHUB" cta="Visit →" href="https://github.com/shajith240">
               {(hovered) => (
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 0" }}>
-                  <IconWrapper>
+                <div style={{ display: "flex", alignItems: "center", gap: compactSocialCards ? "10px" : "12px", padding: compactSocialCards ? "2px 0 4px" : "10px 0" }}>
+                  <IconWrapper compact={compactSocialCards}>
                     <GithubIcon color={hovered ? "#FF4500" : "var(--icon-stroke)"} />
                   </IconWrapper>
                   <div>
-                    <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 2px 0", transition: "color 0.22s ease" }}>
+                    <p style={{ fontSize: compactSocialCards ? "12px" : "13px", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 2px 0", transition: "color 0.22s ease" }}>
                       @shajith240
                     </p>
-                    <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0, transition: "color 0.22s ease" }}>
+                    <p style={{ fontSize: compactSocialCards ? "11px" : "12px", color: "var(--text-muted)", margin: 0, transition: "color 0.22s ease" }}>
                       Open source tools &amp; experiments
                     </p>
                   </div>
                 </div>
               )}
-            </InfoCard>
+            </InfoCard>}
           </motion.div>
 
           {/* Card 3 — LeetCode */}
-          <motion.div variants={cardVariant}>
-            <InfoCard label="LEETCODE" cta="Visit →" href="https://leetcode.com/shajith240">
+          <motion.div variants={cardVariant} style={{ display: compactSocialCards ? "none" : undefined }}>
+            <InfoCard label="LEETCODE" cta="Visit →" href="https://leetcode.com/shajith240" compact={compactSocialCards}>
               {(hovered) => (
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 0" }}>
-                  <IconWrapper>
+                <div style={{ display: "flex", alignItems: "center", gap: compactSocialCards ? "10px" : "12px", padding: compactSocialCards ? "2px 0 4px" : "10px 0" }}>
+                  <IconWrapper compact={compactSocialCards}>
                     <LeetcodeIcon color={hovered ? "#FF4500" : "var(--icon-stroke)"} />
                   </IconWrapper>
                   <div>
-                    <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 2px 0", transition: "color 0.22s ease" }}>
+                    <p style={{ fontSize: compactSocialCards ? "12px" : "13px", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 2px 0", transition: "color 0.22s ease" }}>
                       shajith240
                     </p>
-                    <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0, transition: "color 0.22s ease" }}>
+                    <p style={{ fontSize: compactSocialCards ? "11px" : "12px", color: "var(--text-muted)", margin: 0, transition: "color 0.22s ease" }}>
                       Solving DSA problems daily
                     </p>
                   </div>
@@ -268,18 +316,18 @@ export default function LeftSidebar() {
           </motion.div>
 
           {/* Card 4 — LinkedIn */}
-          <motion.div variants={cardVariant}>
-            <InfoCard label="LINKEDIN" cta="Visit →" href="https://linkedin.com/in/shajith240">
+          <motion.div variants={cardVariant} style={{ display: compactSocialCards ? "none" : undefined }}>
+            <InfoCard label="LINKEDIN" cta="Visit →" href="https://linkedin.com/in/shajith240" compact={compactSocialCards}>
               {(hovered) => (
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 0" }}>
-                  <IconWrapper>
+                <div style={{ display: "flex", alignItems: "center", gap: compactSocialCards ? "10px" : "12px", padding: compactSocialCards ? "2px 0 4px" : "10px 0" }}>
+                  <IconWrapper compact={compactSocialCards}>
                     <LinkedinIcon color={hovered ? "#FF4500" : "var(--icon-stroke)"} />
                   </IconWrapper>
                   <div>
-                    <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 2px 0", transition: "color 0.22s ease" }}>
+                    <p style={{ fontSize: compactSocialCards ? "12px" : "13px", fontWeight: 600, color: "var(--text-primary)", margin: "0 0 2px 0", transition: "color 0.22s ease" }}>
                       shajith240
                     </p>
-                    <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: 0, transition: "color 0.22s ease" }}>
+                    <p style={{ fontSize: compactSocialCards ? "11px" : "12px", color: "var(--text-muted)", margin: 0, transition: "color 0.22s ease" }}>
                       Connect &amp; work experience
                     </p>
                   </div>

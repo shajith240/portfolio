@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { NAV_ITEMS } from "@/data/nav";
 import { useLayout } from "@/contexts/LayoutContext";
 import SplitText from "@/components/ui/SplitText";
+import { useShellMetrics } from "@/lib/useShellMetrics";
 
 const container = {
   hidden: {},
@@ -30,10 +31,18 @@ function NavItem({
   navItem,
   isActive,
   isNavOpen,
+  navFont,
+  indexFont,
+  indexTop,
+  indexMargin,
 }: {
   navItem: NavItemDef;
   isActive: boolean;
   isNavOpen: boolean;
+  navFont: number;
+  indexFont: number;
+  indexTop: number;
+  indexMargin: number;
 }) {
   return (
     <motion.li variants={itemVariant}>
@@ -47,7 +56,7 @@ function NavItem({
           style={{
             display: "flex",
             alignItems: "center",
-            fontSize: "clamp(36px, 9vw, 72px)",
+            fontSize: `${navFont}px`,
             fontWeight: 700,
             lineHeight: 1.0,
             letterSpacing: "-0.03em",
@@ -84,12 +93,12 @@ function NavItem({
           </div>
           <span
             style={{
-              fontSize: "clamp(11px, 2.2vw, 18px)",
+              fontSize: `${indexFont}px`,
               fontWeight: 400,
               color: "#FF4500",
               position: "relative",
-              top: "clamp(-14px, -3vw, -24px)",
-              marginLeft: "clamp(6px, 1.5vw, 12px)",
+              top: `${indexTop}px`,
+              marginLeft: `${indexMargin}px`,
               letterSpacing: "0",
               fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
             }}
@@ -107,6 +116,12 @@ let _navAnimated = false;
 export default function RightNav() {
   const pathname = usePathname();
   const { isNavOpen, isMobileLayout } = useLayout();
+  const metrics = useShellMetrics();
+  const navFont = Math.round(Math.min(72, Math.max(50, metrics.navWidth * 0.15)));
+  const indexFont = Math.round(Math.min(18, Math.max(12, navFont * 0.24)));
+  const indexTop = Math.round(navFont * -0.31);
+  const indexMargin = Math.round(Math.min(12, Math.max(6, navFont * 0.14)));
+  const navPadding = Math.round(Math.min(48, Math.max(24, metrics.navWidth * 0.1)));
   const [playEntrance] = useState(() => {
     const play = !_navAnimated;
     _navAnimated = true;
@@ -126,9 +141,9 @@ export default function RightNav() {
 
   return (
     <motion.nav
-      initial={{ x: 520, scale: 0.97 }}
+      initial={{ x: metrics.navHiddenX, scale: 0.97 }}
       animate={{
-        x: isNavOpen ? 0 : 520,
+        x: isNavOpen ? 0 : metrics.navHiddenX,
         scale: isNavOpen ? 1 : 0.97,
       }}
       transition={
@@ -138,11 +153,11 @@ export default function RightNav() {
       }
       style={{
         position: "fixed",
-        right: isMobileLayout ? "0px" : "20px",
-        top: isMobileLayout ? "0px" : "20px",
+        right: isMobileLayout ? "0px" : `${metrics.inset}px`,
+        top: isMobileLayout ? "0px" : `${metrics.inset}px`,
         zIndex: 40,
-        width: isMobileLayout ? "min(360px, 100vw)" : "480px",
-        height: isMobileLayout ? "100dvh" : "calc(100dvh - 40px)",
+        width: isMobileLayout ? "min(360px, 100vw)" : `${metrics.navWidth}px`,
+        height: isMobileLayout ? "100dvh" : `calc(100dvh - ${metrics.inset * 2}px)`,
         backgroundColor: "var(--nav-bg)",
         borderRadius: isMobileLayout ? "20px 0 0 20px" : "24px",
         border: "1px solid var(--nav-border)",
@@ -159,7 +174,7 @@ export default function RightNav() {
           listStyle: "none",
           margin: 0,
           padding: 0,
-          paddingLeft: "clamp(20px, 6vw, 48px)",
+          paddingLeft: `${navPadding}px`,
           display: "flex",
           flexDirection: "column",
           gap: "4px",
@@ -176,6 +191,10 @@ export default function RightNav() {
               navItem={navItem}
               isActive={isActive}
               isNavOpen={isNavOpen}
+              navFont={navFont}
+              indexFont={indexFont}
+              indexTop={indexTop}
+              indexMargin={indexMargin}
             />
           );
         })}

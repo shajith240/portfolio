@@ -3,13 +3,15 @@
 import { motion } from "framer-motion";
 import BottomToolbar from "@/components/ui/BottomToolbar";
 import { useLayout } from "@/contexts/LayoutContext";
+import { useShellMetrics } from "@/lib/useShellMetrics";
 
 export default function AboutPage() {
-  const { isNavOpen, isSidebarOpen, isMobileLayout, isTabletLayout } = useLayout();
+  const { isMobileLayout, isTabletLayout } = useLayout();
+  const metrics = useShellMetrics();
   const isPhone = isMobileLayout && !isTabletLayout;
 
-  const ml = !isMobileLayout && isSidebarOpen ? 280 : 0;
-  const mr = !isMobileLayout && isNavOpen ? 260 : 0;
+  const ml = metrics.contentLeft;
+  const mr = metrics.contentRight;
 
   return (
     <>

@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
+import { useShellMetrics } from "@/lib/useShellMetrics";
 
 interface ScrollDotsProps {
   count: number;
@@ -11,9 +12,10 @@ interface ScrollDotsProps {
 }
 
 export default function ScrollDots({ count, activeIndex, onDotClick }: ScrollDotsProps) {
-  const { isSidebarOpen, isMobileLayout, isTabletLayout } = useLayout();
+  const { isMobileLayout, isTabletLayout } = useLayout();
+  const metrics = useShellMetrics();
   const isPhone = isMobileLayout && !isTabletLayout;
-  const leftPos = !isMobileLayout && isSidebarOpen ? 388 : 8;
+  const leftPos = metrics.dotsLeft;
 
   // Hide on phones (< 640px) — not enough horizontal space
   if (isPhone) return null;

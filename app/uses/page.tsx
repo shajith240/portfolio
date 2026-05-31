@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { useLayout } from '@/contexts/LayoutContext'
+import { useShellMetrics } from '@/lib/useShellMetrics'
 import BottomToolbar from '@/components/ui/BottomToolbar'
 
 const USES = [
@@ -78,9 +79,10 @@ const item = {
 }
 
 export default function UsesPage() {
-  const { isSidebarOpen, isNavOpen, isMobileLayout, isTabletLayout } = useLayout()
-  const ml = !isMobileLayout && isSidebarOpen ? 280 : 0
-  const mr = !isMobileLayout && isNavOpen ? 260 : 0
+  const { isMobileLayout, isTabletLayout } = useLayout()
+  const metrics = useShellMetrics()
+  const ml = metrics.contentLeft
+  const mr = metrics.contentRight
   const isPhone = isMobileLayout && !isTabletLayout
 
   return (

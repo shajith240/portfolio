@@ -5,15 +5,13 @@ import { motion } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useClickSound } from "@/lib/useClickSound";
+import { useShellMetrics } from "@/lib/useShellMetrics";
 
 /*
   Physical layout constants — must match LeftSidebar and RightNav exactly.
   LeftSidebar: left: 20px, width: 360px  → right edge at 380px
   RightNav:    right: 20px, width: 480px → from-right edge at 500px
 */
-const SIDEBAR_RIGHT_EDGE = 20 + 360; // 380
-const NAV_FROM_RIGHT     = 20 + 480; // 500
-const GAP = 16;
 
 /* ── Icons ───────────────────────────────────────────────────────── */
 
@@ -63,8 +61,9 @@ const SearchIcon = () => (
 /* ── Component ───────────────────────────────────────────────────── */
 
 export default function BottomToolbar() {
-  const { isNavOpen, isSidebarOpen, isSearchOpen: _, openSearch, isSoundEnabled, toggleSound, isMobileLayout, isTabletLayout } = useLayout();
+  const { openSearch, isSoundEnabled, toggleSound, isMobileLayout, isTabletLayout } = useLayout();
   const { isDarkTheme, toggleTheme } = useTheme();
+  const metrics = useShellMetrics();
   const playClick = useClickSound(isSoundEnabled);
   const [soundHovered, setSoundHovered] = useState(false);
   const [searchHovered, setSearchHovered] = useState(false);
@@ -76,8 +75,8 @@ export default function BottomToolbar() {
     On phone (< 640px): same as tablet — panels overlay, toolbar stays at 16px.
   */
   const isPhone = isMobileLayout && !isTabletLayout;
-  const leftPos  = !isMobileLayout && isSidebarOpen ? SIDEBAR_RIGHT_EDGE + GAP : 16;
-  const rightPos = !isMobileLayout && isNavOpen     ? NAV_FROM_RIGHT     + GAP : 16;
+  const leftPos = metrics.toolbarLeft;
+  const rightPos = metrics.toolbarRight;
 
   // Phone uses MobileTabBar — hide the desktop toolbar entirely
   if (isPhone) return null;
