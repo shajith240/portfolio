@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, type PanInfo } from "framer-motion";
+import { animate, motion, AnimatePresence, useMotionValue, type PanInfo } from "framer-motion";
 import MusicCard from "@/components/cards/MusicCard";
 import ProjectCard from "@/components/cards/ProjectCard";
 import DragPill from "@/components/ui/DragPill";
@@ -27,7 +27,13 @@ const INITIAL_CARDS: CardData[] = PROJECTS.map((p) => ({
   image: p.image || undefined,
 }));
 
-const TOTAL_DOTS = 8;
+const TOTAL_DOTS = INITIAL_CARDS.length;
+const STACK_DRAG_THRESHOLD = 30;
+
+function getAlternatingRotation(position: number, degrees = 2) {
+  if (position === 0) return 0;
+  return position < 0 ? -degrees : degrees;
+}
 
 /* ── Mobile profile header (shown only on phones) ─────────────────── */
 
@@ -198,29 +204,30 @@ export default function Home() {
   const { isMobileLayout, isTabletLayout } = useLayout();
   const metrics = useShellMetrics();
   const [cards, setCards] = useState(INITIAL_CARDS);
-  const [direction, setDirection] = useState(0);
   const [dotIndex, setDotIndex] = useState(0);
   const [showSwipeHint, setShowSwipeHint] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
   const dismissHint = useCallback(() => setShowSwipeHint(false), []);
 
   const isPhone = isMobileLayout && !isTabletLayout;
   const ml = metrics.contentLeft;
-  const mr = metrics.contentRight;
+  const mr = isPhone ? metrics.contentRight : metrics.inset;
   const desktopCardGutter = Math.min(60, Math.max(32, metrics.viewportWidth * 0.032));
   const desktopAvailableWidth = Math.max(260, metrics.viewportWidth - ml - mr - desktopCardGutter);
-  const desktopMaxHeight = Math.max(
-    360,
-    metrics.viewportHeight - Math.min(240, Math.max(190, metrics.viewportHeight * 0.24))
-  );
   const desktopCardWidth = Math.floor(
-    Math.max(260, Math.min(desktopAvailableWidth, 1120, desktopMaxHeight * (4 / 3)))
+    Math.max(260, Math.min(desktopAvailableWidth, 1200))
   );
-
-  // Touch-optimized: lower threshold + velocity detection on phones
-  const DRAG_THRESHOLD = isPhone ? 50 : 80;
+  const desktopCardHeight = Math.floor(
+    Math.max(320, Math.min(metrics.viewportHeight * 0.65, desktopCardWidth * 0.68, metrics.viewportHeight - 220))
+  );
+  const cardWidth = isPhone ? "calc(100% - 40px)" : `${desktopCardWidth}px`;
+  const cardHeight = isPhone ? "min(calc(100% - 110px), 70vh)" : `${desktopCardHeight}px`;
+  const stackTravel = isPhone ? 72 : 75;
+  const labelTop = isPhone
+    ? "calc(50% + 35vh + 16px)"
+    : `calc(50% + ${desktopCardHeight / 2}px + 20px)`;
 
   const moveToEnd = useCallback(() => {
-    setDirection(-1);
     setCards((prev) => {
       const [first, ...rest] = prev;
       return [...rest, first];
@@ -229,7 +236,6 @@ export default function Home() {
   }, []);
 
   const moveToFront = useCallback(() => {
-    setDirection(1);
     setCards((prev) => {
       const last = prev[prev.length - 1];
       return [last, ...prev.slice(0, -1)];
@@ -238,14 +244,20 @@ export default function Home() {
   }, []);
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
-    rawDragY.set(0);
-    // Velocity-based detection: flick gesture triggers card change even if offset is small
-    const velocityThreshold = 300;
-    if (info.offset.y < -DRAG_THRESHOLD || info.velocity.y < -velocityThreshold) {
-      moveToEnd();
-    } else if (info.offset.y > DRAG_THRESHOLD || info.velocity.y > velocityThreshold) {
-      moveToFront();
+    setIsDragging(false);
+    if (Math.abs(info.offset.y) > STACK_DRAG_THRESHOLD) {
+      if (info.offset.y < 0) {
+        moveToEnd();
+      } else {
+        moveToFront();
+      }
     }
+    animate(rawDragY, 0, {
+      type: "spring",
+      stiffness: 300,
+      damping: 30,
+      velocity: info.velocity.y,
+    });
   };
 
   const handleDotClick = useCallback(
@@ -253,7 +265,6 @@ export default function Home() {
       const diff = index - dotIndex;
       if (diff === 0) return;
       if (diff > 0) {
-        setDirection(-1);
         setCards((prev) => {
           const rotated = [...prev];
           for (let i = 0; i < diff; i++) {
@@ -262,7 +273,6 @@ export default function Home() {
           return rotated;
         });
       } else {
-        setDirection(1);
         setCards((prev) => {
           const rotated = [...prev];
           for (let i = 0; i < Math.abs(diff); i++) {
@@ -277,36 +287,17 @@ export default function Home() {
   );
 
   const rawDragY = useMotionValue(0);
-  const springDragY = useSpring(rawDragY, { stiffness: 380, damping: isPhone ? 22 : 26, mass: 0.9 });
-  const rubberScaleX = useTransform(springDragY, [-320, -60, 0, 60, 320], [1.04, 1.015, 1, 1.015, 1.04]);
-  const rubberScaleY = useTransform(springDragY, [-320, -60, 0, 60, 320], [0.94, 0.985, 1, 0.985, 0.94]);
 
-  const handleDrag = (_: unknown, info: PanInfo) => {
-    rawDragY.set(info.offset.y);
+  const handleDrag = () => {
     if (showSwipeHint) setShowSwipeHint(false);
   };
 
   const frontCard = cards[0];
-
-  const cardVariants = {
-    enter: (dir: number) => ({
-      scale: 0.94,
-      y: dir === 0 ? 0 : dir < 0 ? 36 : -36,
-      opacity: 0,
-    }),
-    center: {
-      scale: 1,
-      y: 0,
-      opacity: 1,
-      zIndex: 10,
-    },
-    exit: (dir: number) => ({
-      scale: 0.94,
-      y: dir < 0 ? "-65%" : "65%",
-      opacity: 0,
-      zIndex: 0,
-    }),
-  };
+  const visibleCards = [
+    { ...cards[cards.length - 1], stackPosition: -1, stackKey: "prev" },
+    { ...cards[0], stackPosition: 0, stackKey: "current" },
+    { ...cards[1 % cards.length], stackPosition: 1, stackKey: "next" },
+  ];
 
   return (
     <>
@@ -340,119 +331,124 @@ export default function Home() {
         {/* Card stack container */}
         <div
           style={{
-            width: isPhone ? "calc(100% - 40px)" : `${desktopCardWidth}px`,
-            height: isPhone ? "calc(100% - 110px)" : "auto",
-            aspectRatio: isPhone ? undefined : "4 / 3",
+            width: "100%",
+            height: "100%",
             position: "relative",
           }}
         >
-          {/* Cards behind (invisible until transition) */}
-          {cards.slice(1, 3).map((card, i) => {
-            const offset = i + 1;
-            return (
-              <div
-                key={card.id}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  borderRadius: isPhone ? 20 : 20,
-                  overflow: "hidden",
-                  backgroundColor: "var(--stack-card-bg)",
-                  transform: `scale(${1 - offset * 0.03}) translateY(${offset * 12}px)`,
-                  zIndex: 10 - offset,
-                  opacity: 0,
-                }}
-              />
-            );
-          })}
+          <motion.div
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragDirectionLock
+            dragElastic={0.3}
+            dragMomentum={false}
+            dragTransition={{ bounceStiffness: 300, bounceDamping: 30 }}
+            onDrag={handleDrag}
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={handleDragEnd}
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 10,
+              cursor: isDragging ? "grabbing" : "grab",
+              touchAction: "none",
+              userSelect: "none",
+              y: rawDragY,
+            }}
+          >
+            {visibleCards.map((card) => {
+              const isActive = card.stackPosition === 0;
+              return (
+                <motion.div
+                  key={`${card.id}-${card.stackKey}`}
+                  initial={isActive ? { opacity: 1, y: 20, scale: 1, filter: "blur(4px)", rotate: 0 } : false}
+                  animate={{
+                    y: `${card.stackPosition * stackTravel}vh`,
+                    scale: isActive ? 1 : 0.85,
+                    opacity: isActive ? 1 : 0.3,
+                    filter: isActive ? "blur(0px)" : "blur(4px)",
+                    rotate: getAlternatingRotation(card.stackPosition, 2),
+                  }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0 }}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: isActive ? 10 : 1,
+                    pointerEvents: isActive ? "auto" : "none",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: cardWidth,
+                      height: cardHeight,
+                      pointerEvents: "none",
+                    }}
+                  >
+                    {card.type === "music" ? (
+                      <MusicCard
+                        image={card.image}
+                        title={card.title}
+                        artist={card.sub}
+                        progress={35}
+                      />
+                    ) : (
+                      <ProjectCard image={card.image} />
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
 
-          {/* Active card with drag */}
-          <AnimatePresence mode="popLayout" custom={direction}>
-            <motion.div
-              key={frontCard.id}
-              custom={direction}
-              variants={cardVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{
-                scale:  { type: "spring", stiffness: 480, damping: 30, mass: 0.7 },
-                y:      { type: "spring", stiffness: 520, damping: 32 },
-                opacity:{ duration: 0.14 },
-              }}
-              drag="y"
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={isPhone ? 0.15 : 0.05}
-              dragTransition={{ bounceStiffness: isPhone ? 800 : 1100, bounceDamping: 24 }}
-              onDrag={handleDrag}
-              onDragEnd={handleDragEnd}
+            {/* Card label below */}
+            <div
               style={{
                 position: "absolute",
-                inset: 0,
-                cursor: "grab",
-                zIndex: 10,
-                touchAction: "none",
-                scaleX: rubberScaleX,
-                scaleY: rubberScaleY,
+                top: labelTop,
+                width: "100%",
+                textAlign: "center",
+                pointerEvents: "none",
               }}
             >
-              {frontCard.type === "music" ? (
-                <MusicCard
-                  image={frontCard.image}
-                  title={frontCard.title}
-                  artist={frontCard.sub}
-                  progress={35}
-                />
-              ) : (
-                <ProjectCard image={frontCard.image} />
-              )}
-            </motion.div>
-          </AnimatePresence>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={frontCard.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.05 }}
+                >
+                  <p style={{
+                    fontSize: isPhone ? 16 : 16,
+                    color: "var(--card-label-primary)",
+                    fontWeight: 600,
+                    margin: 0,
+                    letterSpacing: "-0.01em",
+                    transition: "color 0.22s ease",
+                  }}>
+                    {frontCard.title}
+                  </p>
+                  <p style={{
+                    fontSize: isPhone ? 13 : 13,
+                    color: "var(--card-label-sub)",
+                    fontWeight: 400,
+                    margin: "3px 0 0 0",
+                    transition: "color 0.22s ease",
+                  }}>
+                    {frontCard.sub}
+                  </p>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </motion.div>
 
           {/* Swipe hint — phones only, renders above card, auto-dismisses */}
           <AnimatePresence>
             {isPhone && showSwipeHint && <SwipeHint onDismiss={dismissHint} />}
           </AnimatePresence>
 
-          {/* Card label below */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: isPhone ? -52 : -56,
-              width: "100%",
-              textAlign: "center",
-            }}
-          >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={frontCard.id}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.15 }}
-              >
-                <p style={{
-                  fontSize: isPhone ? 16 : 16,
-                  color: "var(--card-label-primary)",
-                  fontWeight: 600,
-                  margin: 0,
-                  letterSpacing: "-0.01em",
-                  transition: "color 0.22s ease",
-                }}>
-                  {frontCard.title}
-                </p>
-                <p style={{
-                  fontSize: isPhone ? 13 : 13,
-                  color: "var(--card-label-sub)",
-                  fontWeight: 400,
-                  margin: "3px 0 0 0",
-                  transition: "color 0.22s ease",
-                }}>
-                  {frontCard.sub}
-                </p>
-              </motion.div>
-            </AnimatePresence>
-          </div>
         </div>
 
         {/* Mobile horizontal dots */}

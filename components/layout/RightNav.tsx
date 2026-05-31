@@ -35,6 +35,7 @@ function NavItem({
   indexFont,
   indexTop,
   indexMargin,
+  forceDarkChrome,
 }: {
   navItem: NavItemDef;
   isActive: boolean;
@@ -43,6 +44,7 @@ function NavItem({
   indexFont: number;
   indexTop: number;
   indexMargin: number;
+  forceDarkChrome: boolean;
 }) {
   return (
     <motion.li variants={itemVariant}>
@@ -68,7 +70,7 @@ function NavItem({
           <div key={String(isNavOpen)}>
             <motion.span
               variants={{
-                idle: { color: isActive ? "#FF4500" : "var(--text-primary)" },
+                idle: { color: isActive ? "#FF4500" : forceDarkChrome ? "#FFFFFF" : "var(--text-primary)" },
                 hovered: { color: "#FF4500" },
               }}
               transition={{ duration: 0.2, ease: "easeOut" }}
@@ -117,6 +119,7 @@ export default function RightNav() {
   const pathname = usePathname();
   const { isNavOpen, isMobileLayout } = useLayout();
   const metrics = useShellMetrics();
+  const forceDarkChrome = pathname === "/dsa";
   const navFont = Math.round(Math.min(72, Math.max(50, metrics.navWidth * 0.15)));
   const indexFont = Math.round(Math.min(18, Math.max(12, navFont * 0.24)));
   const indexTop = Math.round(navFont * -0.31);
@@ -158,9 +161,9 @@ export default function RightNav() {
         zIndex: 40,
         width: isMobileLayout ? "min(360px, 100vw)" : `${metrics.navWidth}px`,
         height: isMobileLayout ? "100dvh" : `calc(100dvh - ${metrics.inset * 2}px)`,
-        backgroundColor: "var(--nav-bg)",
+        backgroundColor: forceDarkChrome ? "#1a1a1a" : "var(--nav-bg)",
         borderRadius: isMobileLayout ? "20px 0 0 20px" : "24px",
-        border: "1px solid var(--nav-border)",
+        border: `1px solid ${forceDarkChrome ? "#333333" : "var(--nav-border)"}`,
         display: "flex",
         alignItems: "center",
         overflowY: "auto",
@@ -195,6 +198,7 @@ export default function RightNav() {
               indexFont={indexFont}
               indexTop={indexTop}
               indexMargin={indexMargin}
+              forceDarkChrome={forceDarkChrome}
             />
           );
         })}
