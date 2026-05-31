@@ -206,6 +206,10 @@ function formatNumber(value: number | null | undefined) {
   return value.toLocaleString('en-US')
 }
 
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+
 function submissionCount(data: LCData, difficulty: string) {
   return data.totalSubmissions?.find((entry) => entry.difficulty === difficulty)?.count ?? 0
 }
@@ -638,7 +642,7 @@ function ContestCard({ data }: { data: LCData }) {
 
         <div style={{ borderLeft: '1px solid #4a4a4a', paddingLeft: 24, minWidth: 0, overflow: 'hidden' }}>
           <Metric label="Top" value={`${data.contestTopPercentage ?? 0}%`} large />
-          <TopPercentageChart value={data.contestTopPercentage ?? 0} rating={data.contestRating} />
+          <TopPercentageChart data={data} />
         </div>
       </div>
     </Block>
@@ -709,16 +713,6 @@ function ContestRatingChart({ data }: { data: LCData }) {
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
             />
-            <motion.circle
-              cx={point.x}
-              cy={point.y}
-              r={index === (hoveredIndex ?? points.length - 1) ? 1.2 : 0.86}
-              fill="#e8e8e8"
-              stroke="#2f2f2f"
-              strokeWidth="0.55"
-              style={{ pointerEvents: 'none' }}
-              transition={{ type: 'spring', stiffness: 420, damping: 24 }}
-            />
           </g>
         ))}
       </svg>
@@ -726,31 +720,51 @@ function ContestRatingChart({ data }: { data: LCData }) {
         style={{
           position: 'absolute',
           left: `${selected.x}%`,
-          top: `${selectedYPx - 22}px`,
+          top: `${selectedYPx - 27}px`,
           transform: 'translateX(-50%)',
-          background: '#3b3b3b',
-          border: '1px solid #666',
+          zIndex: 4,
+          background: '#333',
+          border: '1px solid #5f5f5f',
           borderRadius: 4,
-          padding: '4px 8px',
-          color: '#ededed',
+          minWidth: 38,
+          height: 21,
+          padding: '0 5px',
+          color: '#f0f0f0',
           fontSize: 11,
-          lineHeight: 1,
+          lineHeight: '21px',
+          textAlign: 'center',
           pointerEvents: 'none',
           whiteSpace: 'nowrap',
         }}
       >
         {formatNumber(Math.round(selected.entry.rating))}
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            left: '50%',
+            bottom: -4,
+            width: 7,
+            height: 7,
+            transform: 'translateX(-50%) rotate(45deg)',
+            background: '#333',
+            borderRight: '1px solid #5f5f5f',
+            borderBottom: '1px solid #5f5f5f',
+          }}
+        />
       </div>
       <div
         style={{
           position: 'absolute',
           left: `${selected.x}%`,
-          top: `${selectedYPx - 1}px`,
-          width: 1,
-          height: 10,
-          background: '#d8d8d8',
-          transform: 'translateX(-50%)',
-          opacity: 0.8,
+          top: selectedYPx,
+          width: 7,
+          height: 7,
+          borderRadius: '50%',
+          background: '#f2f2f2',
+          border: '1px solid #777',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 3,
           pointerEvents: 'none',
         }}
       />
@@ -761,40 +775,114 @@ function ContestRatingChart({ data }: { data: LCData }) {
   )
 }
 
-function TopPercentageChart({ value, rating }: { value: number; rating: number }) {
+interface ContestTopBar {
+  id: string
+  rating: number
+  topPercentage: number
+  users: number
+  height: number
+  active: boolean
+}
+
+function contestTopPercentage(data: LCData) {
+  if (Number.isFinite(data.contestTopPercentage)) {
+    return clampNumber(data.contestTopPercentage ?? 0, 0.1, 99.9)
+  }
+
+  if (data.contestRank && data.contestParticipants) {
+    return clampNumber((data.contestRank / data.contestParticipants) * 100, 0.1, 99.9)
+  }
+
+  return 50
+}
+
+function buildContestTopBars(data: LCData): ContestTopBar[] {
+  const barCount = 25
+  const top = contestTopPercentage(data)
+  const rating = Number.isFinite(data.contestRating) ? data.contestRating : 1500
+  const participants = Math.max(1, data.contestParticipants ?? 1)
+  const history = (data.contestParticipation ?? [])
+    .map((entry) => entry.rating)
+    .filter((entryRating) => Number.isFinite(entryRating))
+
+  const activePosition = clampNumber(0.38 + (50 - top) * 0.006 + (rating - 1500) * 0.0007, 0.26, 0.7)
+  const activeIndex = Math.round(activePosition * (barCount - 1))
+  const peakIndex = clampNumber(activeIndex - (1.4 + top / 36), 3, barCount - 5)
+  const percentileStep = clampNumber(1.7 + top / 36, 2.1, 4.3)
+  const ratingStep = clampNumber(28 + top * 0.42 + (data.contestAttend <= 1 ? 5 : 0), 30, 48)
+
+  const raw = Array.from({ length: barCount }, (_, index) => {
+    const ratingBucket = Math.round(rating + (index - activeIndex) * ratingStep)
+    const percentileBucket = clampNumber(top + (index - activeIndex) * percentileStep, 0.1, 99.9)
+    const distance = index - peakIndex
+    const sigma = distance < 0 ? 2.55 : 4.7
+    const populationSignal = Math.exp(-Math.pow(distance / sigma, 2) / 2)
+    const historySignal = history.length
+      ? history.reduce((sum, historyRating) => sum + Math.exp(-Math.pow((ratingBucket - historyRating) / 72, 2) / 2), 0) / history.length
+      : 0
+    const rankSignal = Math.exp(-Math.pow((index - activeIndex) / 3.2, 2) / 2)
+    const tailFloor = 0.045 + Math.max(0, index - activeIndex) * 0.002
+    const density = populationSignal * 0.76 + historySignal * 0.11 + rankSignal * 0.08 + tailFloor
+
+    return {
+      index,
+      rating: ratingBucket,
+      topPercentage: percentileBucket,
+      density,
+      active: index === activeIndex,
+    }
+  })
+
+  const maxDensity = Math.max(...raw.map((bar) => bar.density), 1)
+  const densityTotal = raw.reduce((sum, bar) => sum + bar.density, 0) || 1
+  const windowCoverage = clampNumber(0.18 + Math.min(data.contestAttend, 10) * 0.012, 0.18, 0.3)
+
+  return raw.map((bar) => ({
+    id: `${bar.index}-${bar.rating}`,
+    rating: bar.rating,
+    topPercentage: bar.active ? top : bar.topPercentage,
+    users: Math.max(1, Math.round((participants * windowCoverage * bar.density) / densityTotal)),
+    height: Math.max(5, 5 + Math.pow(bar.density / maxDensity, 1.08) * 39),
+    active: bar.active,
+  }))
+}
+
+function TopPercentageChart({ data }: { data: LCData }) {
   const [hovered, setHovered] = useState<number | null>(null)
-  const bars = [1, 1, 1, 1, 1.2, 2, 3.2, 5.5, 9, 15, 22, 18, 13, 9, 6.3, 5, 4.1, 3.5, 3, 2.6, 2.25, 2, 1.75, 1.55, 1.38, 1.22, 1.1, 1]
-  const ratingPosition = Number.isFinite(rating) ? (rating - 1100) / 1300 : Number.NaN
-  const topPosition = 0.22 + (Math.max(0, Math.min(100, value)) / 100) * 0.52
-  const activeIndex = Math.min(
-    bars.length - 1,
-    Math.max(0, Math.round((Number.isFinite(ratingPosition) ? ratingPosition : topPosition) * (bars.length - 1))),
-  )
-  const selected = hovered ?? activeIndex
+  const bars = useMemo(() => buildContestTopBars(data), [data])
+  const activeIndex = Math.max(0, bars.findIndex((bar) => bar.active))
+  const selected = bars[hovered ?? activeIndex] ?? bars[activeIndex]
   const barWidth = 7
-  const gap = 3
-  const chartHeight = 76
-  const baseline = 62
+  const gap = 2.5
+  const chartHeight = 60
+  const baseline = 56
   const chartWidth = bars.length * barWidth + (bars.length - 1) * gap
-  const max = Math.max(...bars)
-  const selectedXPercent = ((selected * (barWidth + gap) + barWidth / 2) / chartWidth) * 100
+  const selectedIndex = hovered ?? activeIndex
+  const selectedXPercent = ((selectedIndex * (barWidth + gap) + barWidth / 2) / chartWidth) * 100
 
   return (
-    <div style={{ position: 'relative', height: 78, marginTop: 8 }}>
-      <svg width="100%" height={chartHeight} viewBox={`0 0 ${chartWidth} 76`} preserveAspectRatio="xMidYMid meet" style={{ display: 'block', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', width: 'min(228px, 100%)', height: 62, margin: '44px auto 0' }}>
+      <svg
+        width="100%"
+        height={chartHeight}
+        viewBox={`0 0 ${chartWidth} 60`}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ display: 'block', overflow: 'hidden' }}
+        role="img"
+        aria-label={`Contest top ${contestTopPercentage(data).toFixed(2)} percent distribution`}
+      >
         {bars.map((bar, index) => {
-          const height = Math.max(6, (bar / max) * 54)
+          const height = bar.height
           const x = index * (barWidth + gap)
           const y = baseline - height
-          const isActive = index === activeIndex
           const isHovered = index === hovered
           return (
-            <g key={index}>
+            <g key={bar.id}>
               <rect
                 x={x - gap / 2}
-                y={8}
+                y={6}
                 width={barWidth + gap}
-                height={chartHeight - 8}
+                height={chartHeight - 6}
                 fill="transparent"
                 style={{ cursor: 'pointer' }}
                 onMouseEnter={() => setHovered(index)}
@@ -806,12 +894,14 @@ function TopPercentageChart({ value, rating }: { value: number; rating: number }
                 width={barWidth}
                 height={height}
                 rx={1.5}
-                fill={isActive ? LEETCODE_ORANGE : isHovered ? '#5f5f5f' : '#494949'}
-                initial={{ y: baseline, height: 0 }}
-                animate={{ y, height }}
+                fill={bar.active ? LEETCODE_ORANGE : isHovered ? '#656565' : '#494949'}
+                initial={{ opacity: 0, scaleY: 0 }}
+                animate={{ opacity: 1, scaleY: 1 }}
                 transition={{ duration: 0.38, ease: 'easeOut', delay: index * 0.012 }}
-                style={{ pointerEvents: 'none' }}
-              />
+                style={{ pointerEvents: 'none', transformBox: 'fill-box', transformOrigin: '50% 100%' }}
+              >
+                <title>{bar.active ? `Top ${bar.topPercentage.toFixed(2)}%` : `~Top ${bar.topPercentage.toFixed(1)}%`}</title>
+              </motion.rect>
             </g>
           )
         })}
@@ -833,7 +923,9 @@ function TopPercentageChart({ value, rating }: { value: number; rating: number }
             pointerEvents: 'none',
           }}
         >
-          {selected === activeIndex ? `Top ${value}%` : 'Rating distribution'}
+          {selected.active
+            ? `Top ${selected.topPercentage.toFixed(2)}%`
+            : `${formatNumber(selected.users)} users near ${formatNumber(selected.rating)}`}
         </div>
       )}
     </div>
@@ -872,9 +964,6 @@ function SolvedAndBadges({ data }: { data: LCData }) {
             height: '100%',
             position: 'relative',
             overflow: 'hidden',
-            display: 'grid',
-            gridTemplateColumns: '1fr 168px',
-            gap: 18,
           }}
         >
           <div>
@@ -908,7 +997,17 @@ function SolvedAndBadges({ data }: { data: LCData }) {
               <path d="m13 6 6 6-6 6" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </a>
-          <div style={{ display: 'grid', placeItems: 'center', alignSelf: 'stretch', justifySelf: 'stretch' }}>
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              display: 'grid',
+              placeItems: 'center',
+              pointerEvents: 'none',
+            }}
+          >
             {data.activeBadge?.icon && (
               <img
                 src={normalizeBadgeIcon(data.activeBadge.icon)}
@@ -955,16 +1054,35 @@ function ProblemWheel({ data }: { data: LCData }) {
   const solved = useCountUp(data.totalSolved, 120)
   const total = data.totalQuestions || data.totalEasy + data.totalMedium + data.totalHard
   const attempting = Math.max(0, submissionCount(data, 'All') - data.totalSolved)
-  const size = 154
+  const size = 170
   const center = size / 2
-  const radius = 63
+  const radius = 73
   const strokeWidth = 5
+  const easyTotal = Math.max(0, data.totalEasy)
+  const mediumTotal = Math.max(0, data.totalMedium)
+  const hardTotal = Math.max(0, data.totalHard)
+  const difficultyTotal = easyTotal + mediumTotal + hardTotal
+  const easyRatio = difficultyTotal > 0 ? easyTotal / difficultyTotal : 0.24
+  const mediumRatio = difficultyTotal > 0 ? mediumTotal / difficultyTotal : 0.52
+  const hardRatio = difficultyTotal > 0 ? hardTotal / difficultyTotal : 0.24
+  const topGapDegrees = 8
+  const bottomTextGapDegrees = 78
+  const drawableDegrees = 360 - bottomTextGapDegrees - topGapDegrees * 2
+  const mediumSpan = drawableDegrees * mediumRatio
+  const easySpan = drawableDegrees * easyRatio
+  const hardSpan = drawableDegrees * hardRatio
+  const mediumEnd = mediumSpan / 2
+  const mediumStart = 360 - mediumEnd
+  const hardStart = mediumEnd + topGapDegrees
+  const hardEnd = hardStart + hardSpan
+  const easyEnd = mediumStart - topGapDegrees
+  const easyStart = easyEnd - easySpan
   const segments = [
     {
       key: 'medium',
       label: 'Medium',
-      start: 294,
-      end: 78,
+      start: mediumStart,
+      end: mediumEnd,
       solved: data.mediumSolved,
       total: data.totalMedium,
       color: MEDIUM,
@@ -974,19 +1092,19 @@ function ProblemWheel({ data }: { data: LCData }) {
     {
       key: 'easy',
       label: 'Easy',
-      start: 204,
-      end: 270,
+      start: easyStart,
+      end: easyEnd,
       solved: data.easySolved,
       total: data.totalEasy,
       color: EASY,
       track: '#1b5d5b',
-      minVisibleDegrees: 6,
+      minVisibleDegrees: 5.25,
     },
     {
       key: 'hard',
       label: 'Hard',
-      start: 98,
-      end: 148,
+      start: hardStart,
+      end: hardEnd,
       solved: data.hardSolved,
       total: data.totalHard,
       color: HARD,
@@ -1031,7 +1149,58 @@ function ProblemWheel({ data }: { data: LCData }) {
           </g>
         ))}
       </svg>
-      <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: 54,
+          transform: 'translateX(-50%)',
+          color: '#fff',
+          fontSize: 32,
+          fontWeight: 500,
+          lineHeight: 1,
+          letterSpacing: 0,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {solved}<span style={{ color: '#f2f2f2', fontSize: 13, fontWeight: 600, marginLeft: 1, verticalAlign: 'baseline' }}>/{total}</span>
+      </div>
+      <div
+        className="problem-wheel-solved"
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: 90,
+          transform: 'translateX(-50%)',
+          color: '#f2f2f2',
+          fontSize: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 3,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+          <path d="M2.4 6.3 4.8 8.7 9.8 3.4" stroke="#2bd576" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span className="solved-label" style={{ fontSize: 13 }}>Solved</span>
+      </div>
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: 128,
+          transform: 'translateX(-50%)',
+          color: '#a7a7a7',
+          fontSize: 13,
+          lineHeight: 1,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {attempting} Attempting
+      </div>
+      <div className="problem-wheel-legacy-center" style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
         <div>
           <div style={{ color: '#fff', fontSize: 31, fontWeight: 500, lineHeight: 1, letterSpacing: 0 }}>
             {solved}<span style={{ color: '#f2f2f2', fontSize: 13, fontWeight: 600, marginLeft: 1 }}>/{total}</span>
@@ -1336,6 +1505,10 @@ export default function DsaPage() {
 
           .problem-wheel-solved > span:not(.solved-label) {
             display: none;
+          }
+
+          .problem-wheel-legacy-center {
+            display: none !important;
           }
         `}</style>
       </div>
