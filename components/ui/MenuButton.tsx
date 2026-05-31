@@ -1,9 +1,13 @@
 "use client";
 
 import { useLayout } from "@/contexts/LayoutContext";
+import { usePathname } from "next/navigation";
 
 export default function MenuButton() {
   const { isNavOpen, toggleNav } = useLayout();
+  const pathname = usePathname();
+  const forceDarkChrome = pathname === "/dsa";
+
   return (
     <button
       onClick={toggleNav}
@@ -17,9 +21,9 @@ export default function MenuButton() {
         gap: "8px",
         padding: "6px 14px",
         borderRadius: "99px",
-        border: "1px solid var(--menu-btn-border)",
+        border: `1px solid ${forceDarkChrome ? "#333333" : "var(--menu-btn-border)"}`,
         background: "transparent",
-        color: "var(--menu-btn-text)",
+        color: forceDarkChrome ? "#dddddd" : "var(--menu-btn-text)",
         fontSize: "14px",
         cursor: "pointer",
         transition: "color 0.22s ease, border-color 0.22s ease",

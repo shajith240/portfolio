@@ -22,8 +22,13 @@ export default function PageBreadcrumb() {
   const isPhone = isMobileLayout && !isTabletLayout;
   const isHome = pathname === "/";
   const label = LABELS[pathname] ?? "";
+  const forceDarkChrome = pathname === "/dsa";
 
   const fontSize = isPhone ? "14px" : "11px";
+  const linkColor = forceDarkChrome ? "rgba(255, 255, 255, 0.38)" : "var(--breadcrumb-link)";
+  const linkHoverColor = forceDarkChrome ? "rgba(255, 255, 255, 0.72)" : "var(--breadcrumb-link-hover)";
+  const separatorColor = forceDarkChrome ? "rgba(255, 255, 255, 0.16)" : "var(--breadcrumb-sep)";
+  const currentColor = forceDarkChrome ? "rgba(255, 255, 255, 0.55)" : "var(--breadcrumb-current)";
 
   // Phone: dock handles navigation — breadcrumb is redundant
   if (isPhone) return null;
@@ -62,7 +67,7 @@ export default function PageBreadcrumb() {
             style={{
               fontSize,
               fontWeight: 600,
-              color: linkHovered ? "var(--breadcrumb-link-hover)" : "var(--breadcrumb-link)",
+              color: linkHovered ? linkHoverColor : linkColor,
               textDecoration: "none",
               letterSpacing: "0.09em",
               textTransform: "uppercase",
@@ -72,11 +77,11 @@ export default function PageBreadcrumb() {
           >
             Back to Home
           </Link>
-          <span style={{ color: "var(--breadcrumb-sep)", fontSize, fontWeight: 400, transition: "color 0.22s ease" }}>/</span>
+          <span style={{ color: separatorColor, fontSize, fontWeight: 400, transition: "color 0.22s ease" }}>/</span>
           <span style={{
             fontSize,
             fontWeight: 600,
-            color: "var(--breadcrumb-current)",
+            color: currentColor,
             letterSpacing: "0.09em",
             textTransform: "uppercase",
             transition: "color 0.22s ease",

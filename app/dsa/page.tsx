@@ -453,9 +453,9 @@ function Icon({
   return <svg {...common}>{paths[kind]}</svg>
 }
 
-function Skeleton() {
+function Skeleton({ compact = false }: { compact?: boolean }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '230px 1fr', gap: 18 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '230px 1fr', gap: 18 }}>
       <div style={{ ...PANEL, height: 560, animation: 'pulse 1.5s ease-in-out infinite' }} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {[200, 150, 150, 360].map((height, index) => (
@@ -625,24 +625,50 @@ function RailSection({ title, children }: { title: string; children: React.React
   )
 }
 
-function ContestCard({ data }: { data: LCData }) {
+function ContestCard({ data, compact }: { data: LCData; compact: boolean }) {
   const rating = useCountUp(data.contestRating)
+  const metricGridStyle: CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: compact ? 'repeat(3, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))',
+    gap: compact ? 12 : 24,
+    marginBottom: compact ? 22 : 28,
+  }
 
   return (
     <Block delay={0}>
-      <div style={{ ...PANEL, padding: '24px 28px', display: 'grid', gridTemplateColumns: '1fr 260px', gap: 26, minHeight: 164 }}>
+      <div
+        style={{
+          ...PANEL,
+          padding: compact ? '20px 16px' : '24px 28px',
+          display: compact ? 'flex' : 'grid',
+          flexDirection: compact ? 'column' : undefined,
+          gridTemplateColumns: compact ? undefined : '1fr 260px',
+          gap: compact ? 18 : 26,
+          minHeight: compact ? 'auto' : 164,
+          overflow: 'hidden',
+        }}
+      >
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 24, marginBottom: 28 }}>
-            <Metric label="Contest Rating" value={formatNumber(rating)} large />
-            <Metric label="Global Ranking" value={`${formatNumber(data.contestRank)}/${formatNumber(data.contestParticipants)}`} />
-            <Metric label="Attended" value={String(data.contestAttend ?? 0)} />
+          <div style={metricGridStyle}>
+            <Metric label="Contest Rating" value={formatNumber(rating)} large compact={compact} />
+            <Metric label="Global Ranking" value={`${formatNumber(data.contestRank)}/${formatNumber(data.contestParticipants)}`} compact={compact} />
+            <Metric label="Attended" value={String(data.contestAttend ?? 0)} compact={compact} />
           </div>
           <ContestRatingChart data={data} />
         </div>
 
-        <div style={{ borderLeft: '1px solid #4a4a4a', paddingLeft: 24, minWidth: 0, overflow: 'hidden' }}>
-          <Metric label="Top" value={`${data.contestTopPercentage ?? 0}%`} large />
-          <TopPercentageChart data={data} />
+        <div
+          style={{
+            borderLeft: compact ? 'none' : '1px solid #4a4a4a',
+            borderTop: compact ? '1px solid #3a3a3a' : 'none',
+            paddingLeft: compact ? 0 : 24,
+            paddingTop: compact ? 18 : 0,
+            minWidth: 0,
+            overflow: 'hidden',
+          }}
+        >
+          <Metric label="Top" value={`${data.contestTopPercentage ?? 0}%`} large compact={compact} />
+          <TopPercentageChart data={data} compact={compact} />
         </div>
       </div>
     </Block>
@@ -847,21 +873,21 @@ function buildContestTopBars(data: LCData): ContestTopBar[] {
   }))
 }
 
-function TopPercentageChart({ data }: { data: LCData }) {
+function TopPercentageChart({ data, compact = false }: { data: LCData; compact?: boolean }) {
   const [hovered, setHovered] = useState<number | null>(null)
   const bars = useMemo(() => buildContestTopBars(data), [data])
   const activeIndex = Math.max(0, bars.findIndex((bar) => bar.active))
   const selected = bars[hovered ?? activeIndex] ?? bars[activeIndex]
   const barWidth = 7
   const gap = 2.5
-  const chartHeight = 60
-  const baseline = 56
+  const chartHeight = compact ? 54 : 60
+  const baseline = compact ? 50 : 56
   const chartWidth = bars.length * barWidth + (bars.length - 1) * gap
   const selectedIndex = hovered ?? activeIndex
   const selectedXPercent = ((selectedIndex * (barWidth + gap) + barWidth / 2) / chartWidth) * 100
 
   return (
-    <div style={{ position: 'relative', width: 'min(228px, 100%)', height: 62, margin: '44px auto 0' }}>
+    <div style={{ position: 'relative', width: 'min(228px, 100%)', height: compact ? 56 : 62, margin: compact ? '26px auto 0' : '44px auto 0' }}>
       <svg
         width="100%"
         height={chartHeight}
@@ -932,25 +958,59 @@ function TopPercentageChart({ data }: { data: LCData }) {
   )
 }
 
-function Metric({ label, value, large = false }: { label: string; value: string; large?: boolean }) {
+function Metric({
+  label,
+  value,
+  large = false,
+  compact = false,
+}: {
+  label: string
+  value: string
+  large?: boolean
+  compact?: boolean
+}) {
   return (
-    <div>
-      <div style={{ color: '#bdbdbd', fontSize: 11, marginBottom: 8 }}>{label}</div>
-      <div style={{ color: '#fff', fontSize: large ? 27 : 13, fontWeight: 400, lineHeight: 1 }}>{value}</div>
+    <div style={{ minWidth: 0 }}>
+      <div style={{ color: '#bdbdbd', fontSize: compact ? 10 : 11, marginBottom: compact ? 7 : 8 }}>{label}</div>
+      <div
+        style={{
+          color: '#fff',
+          fontSize: large ? (compact ? 25 : 27) : compact ? 12 : 13,
+          fontWeight: 400,
+          lineHeight: 1.1,
+          overflowWrap: 'anywhere',
+        }}
+      >
+        {value}
+      </div>
     </div>
   )
 }
 
-function SolvedAndBadges({ data }: { data: LCData }) {
+function SolvedAndBadges({ data, compact, tiny }: { data: LCData; compact: boolean; tiny: boolean }) {
+  const solvedCardPadding = compact ? (tiny ? 16 : 18) : 22
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'stretch' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr 1fr', gap: 14, alignItems: 'stretch' }}>
       <Block delay={0.05} style={{ height: '100%' }}>
-        <div style={{ ...PANEL, padding: 22, minHeight: 194, height: '100%', display: 'grid', gridTemplateColumns: '1fr 92px', gap: 16, alignItems: 'center' }}>
-          <ProblemWheel data={data} />
+        <div
+          style={{
+            ...PANEL,
+            padding: solvedCardPadding,
+            minHeight: compact ? (tiny ? 198 : 214) : 194,
+            height: '100%',
+            display: 'grid',
+            gridTemplateColumns: compact ? `minmax(0, 1fr) ${tiny ? 78 : 92}px` : '1fr 92px',
+            gap: compact ? (tiny ? 10 : 14) : 16,
+            alignItems: 'center',
+            overflow: 'hidden',
+          }}
+        >
+          <ProblemWheel data={data} compact={compact} tiny={tiny} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <DifficultyMini label="Easy" solved={data.easySolved} total={data.totalEasy} color={EASY} />
-            <DifficultyMini label="Med." solved={data.mediumSolved} total={data.totalMedium} color={MEDIUM} />
-            <DifficultyMini label="Hard" solved={data.hardSolved} total={data.totalHard} color={HARD} />
+            <DifficultyMini label="Easy" solved={data.easySolved} total={data.totalEasy} color={EASY} compact={compact} tiny={tiny} />
+            <DifficultyMini label="Med." solved={data.mediumSolved} total={data.totalMedium} color={MEDIUM} compact={compact} tiny={tiny} />
+            <DifficultyMini label="Hard" solved={data.hardSolved} total={data.totalHard} color={HARD} compact={compact} tiny={tiny} />
           </div>
         </div>
       </Block>
@@ -959,8 +1019,8 @@ function SolvedAndBadges({ data }: { data: LCData }) {
         <div
           style={{
             ...PANEL,
-            padding: 22,
-            minHeight: 194,
+            padding: compact ? 22 : 22,
+            minHeight: compact ? 202 : 194,
             height: '100%',
             position: 'relative',
             overflow: 'hidden',
@@ -1050,13 +1110,13 @@ function progressArcEnd(startAngle: number, endAngle: number, solved: number, to
   return startAngle + Math.min(span, Math.max(minVisibleDegrees, span * ratio))
 }
 
-function ProblemWheel({ data }: { data: LCData }) {
+function ProblemWheel({ data, compact, tiny }: { data: LCData; compact: boolean; tiny: boolean }) {
   const solved = useCountUp(data.totalSolved, 120)
   const total = data.totalQuestions || data.totalEasy + data.totalMedium + data.totalHard
   const attempting = Math.max(0, submissionCount(data, 'All') - data.totalSolved)
-  const size = 170
+  const size = tiny ? 152 : compact ? 166 : 170
   const center = size / 2
-  const radius = 73
+  const radius = tiny ? 65 : compact ? 71 : 73
   const strokeWidth = 5
   const easyTotal = Math.max(0, data.totalEasy)
   const mediumTotal = Math.max(0, data.totalMedium)
@@ -1153,24 +1213,24 @@ function ProblemWheel({ data }: { data: LCData }) {
         style={{
           position: 'absolute',
           left: '50%',
-          top: 54,
+          top: tiny ? 49 : compact ? 52 : 54,
           transform: 'translateX(-50%)',
           color: '#fff',
-          fontSize: 32,
+          fontSize: tiny ? 29 : compact ? 31 : 32,
           fontWeight: 500,
           lineHeight: 1,
           letterSpacing: 0,
           whiteSpace: 'nowrap',
         }}
       >
-        {solved}<span style={{ color: '#f2f2f2', fontSize: 13, fontWeight: 600, marginLeft: 1, verticalAlign: 'baseline' }}>/{total}</span>
+        {solved}<span style={{ color: '#f2f2f2', fontSize: tiny ? 12 : 13, fontWeight: 600, marginLeft: 1, verticalAlign: 'baseline' }}>/{total}</span>
       </div>
       <div
         className="problem-wheel-solved"
         style={{
           position: 'absolute',
           left: '50%',
-          top: 90,
+          top: tiny ? 83 : compact ? 88 : 90,
           transform: 'translateX(-50%)',
           color: '#f2f2f2',
           fontSize: 0,
@@ -1184,16 +1244,16 @@ function ProblemWheel({ data }: { data: LCData }) {
         <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true">
           <path d="M2.4 6.3 4.8 8.7 9.8 3.4" stroke="#2bd576" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <span className="solved-label" style={{ fontSize: 13 }}>Solved</span>
+        <span className="solved-label" style={{ fontSize: tiny ? 12 : 13 }}>Solved</span>
       </div>
       <div
         style={{
           position: 'absolute',
           left: '50%',
-          top: 128,
+          top: tiny ? 116 : compact ? 124 : 128,
           transform: 'translateX(-50%)',
           color: '#a7a7a7',
-          fontSize: 13,
+          fontSize: tiny ? 12 : 13,
           lineHeight: 1,
           whiteSpace: 'nowrap',
         }}
@@ -1219,16 +1279,30 @@ function ProblemWheel({ data }: { data: LCData }) {
   )
 }
 
-function DifficultyMini({ label, solved, total, color }: { label: string; solved: number; total: number; color: string }) {
+function DifficultyMini({
+  label,
+  solved,
+  total,
+  color,
+  compact,
+  tiny,
+}: {
+  label: string
+  solved: number
+  total: number
+  color: string
+  compact: boolean
+  tiny: boolean
+}) {
   return (
-    <div style={{ background: '#333', borderRadius: 5, padding: '8px 10px', textAlign: 'center' }}>
-      <div style={{ color, fontSize: 12, fontWeight: 700 }}>{label}</div>
-      <div style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{solved}/{total}</div>
+    <div style={{ background: '#333', borderRadius: 5, padding: compact ? (tiny ? '7px 5px' : '8px 8px') : '8px 10px', textAlign: 'center' }}>
+      <div style={{ color, fontSize: tiny ? 11 : 12, fontWeight: 700 }}>{label}</div>
+      <div style={{ color: '#fff', fontSize: tiny ? 11 : 12, fontWeight: 700 }}>{solved}/{total}</div>
     </div>
   )
 }
 
-function CalendarCard({ data }: { data: LCData }) {
+function CalendarCard({ data, compact }: { data: LCData; compact: boolean }) {
   const yearOptions = useMemo(() => availableCalendarYears(data.submissionCalendar), [data.submissionCalendar])
   const [filter, setFilter] = useState<CalendarFilter>('current')
   const heatmap = useMemo(() => buildCalendarMonths(data.submissionCalendar, filter), [data.submissionCalendar, filter])
@@ -1237,17 +1311,36 @@ function CalendarCard({ data }: { data: LCData }) {
 
   return (
     <Block delay={0.12}>
-      <div style={{ ...PANEL, padding: '16px 16px 18px', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <div style={{ color: '#fff', fontSize: 18 }}>
-            <strong>{stats.total}</strong> <span style={{ fontSize: 14 }}>{heatmap.title}</span>
+      <div style={{ ...PANEL, padding: compact ? '16px 14px 18px' : '16px 16px 18px', overflow: 'hidden' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: compact ? 'column' : 'row',
+            alignItems: compact ? 'stretch' : 'center',
+            gap: compact ? 12 : 12,
+            marginBottom: 16,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <div style={{ color: '#fff', fontSize: compact ? 17 : 18, minWidth: 0 }}>
+              <strong>{stats.total}</strong> <span style={{ fontSize: compact ? 13 : 14 }}>{heatmap.title}</span>
+            </div>
+            <span style={{ width: 14, height: 14, border: '1px solid #777', color: '#999', borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 10, flexShrink: 0 }}>i</span>
           </div>
-          <span style={{ width: 14, height: 14, border: '1px solid #777', color: '#999', borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 10 }}>i</span>
-          <div style={{ marginLeft: 'auto', color: '#cfcfcf', fontSize: 12 }}>
-            Total active days: <strong style={{ color: '#fff' }}>{stats.activeDays}</strong>
-            <span style={{ marginLeft: 18 }}>Max streak: <strong style={{ color: '#fff' }}>{stats.maxStreak}</strong></span>
-          </div>
-          <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ color: '#cfcfcf', fontSize: 12, display: 'flex', gap: compact ? 12 : 18, flexWrap: 'wrap' }}>
+              <span>Total active days: <strong style={{ color: '#fff' }}>{stats.activeDays}</strong></span>
+              <span>Max streak: <strong style={{ color: '#fff' }}>{stats.maxStreak}</strong></span>
+            </div>
+            <div style={{ position: 'relative', flexShrink: 0, marginLeft: compact ? 0 : 'auto' }}>
             <select
               value={filter}
               onChange={(event) => setFilter(event.target.value as CalendarFilter)}
@@ -1289,6 +1382,7 @@ function CalendarCard({ data }: { data: LCData }) {
             >
               <path d="m6 9 6 6 6-6" stroke="#bdbdbd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
+            </div>
           </div>
         </div>
         <div
@@ -1341,8 +1435,18 @@ function CalendarCard({ data }: { data: LCData }) {
   )
 }
 
-function LeetCodeProfile({ data, loading, compact }: { data: LCData | null; loading: boolean; compact: boolean }) {
-  if (loading) return <Skeleton />
+function LeetCodeProfile({
+  data,
+  loading,
+  compact,
+  tiny,
+}: {
+  data: LCData | null
+  loading: boolean
+  compact: boolean
+  tiny: boolean
+}) {
+  if (loading) return <Skeleton compact={compact} />
   if (!data || data.error) return <ErrorCard platform="LeetCode" />
 
   return (
@@ -1356,9 +1460,9 @@ function LeetCodeProfile({ data, loading, compact }: { data: LCData | null; load
     >
       <ProfileRail data={data} compact={compact} />
       <main style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
-        <ContestCard data={data} />
-        <SolvedAndBadges data={data} />
-        <CalendarCard data={data} />
+        <ContestCard data={data} compact={compact} />
+        <SolvedAndBadges data={data} compact={compact} tiny={tiny} />
+        <CalendarCard data={data} compact={compact} />
       </main>
     </div>
   )
@@ -1372,11 +1476,11 @@ function ErrorCard({ platform }: { platform: string }) {
   )
 }
 
-function CodeforcesTab({ data, loading }: { data: CFData | null; loading: boolean }) {
+function CodeforcesTab({ data, loading, compact }: { data: CFData | null; loading: boolean; compact: boolean }) {
   const ratingCount = useCountUp(data?.user?.rating ?? 0)
   const solvedCount = useCountUp(data?.problemsSolved ?? 0, 120)
 
-  if (loading) return <Skeleton />
+  if (loading) return <Skeleton compact={compact} />
   if (!data || data.error || !data.user) return <ErrorCard platform="Codeforces" />
 
   const { user, problemsSolved } = data
@@ -1385,9 +1489,20 @@ function CodeforcesTab({ data, loading }: { data: CFData | null; loading: boolea
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
       <Block delay={0}>
-        <div style={{ ...PANEL, borderColor: `${color}55`, padding: 36, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div
+          style={{
+            ...PANEL,
+            borderColor: `${color}55`,
+            padding: compact ? 24 : 36,
+            display: 'flex',
+            flexDirection: compact ? 'column' : 'row',
+            alignItems: compact ? 'flex-start' : 'center',
+            justifyContent: 'space-between',
+            gap: compact ? 20 : undefined,
+          }}
+        >
           <div>
-            <div style={{ fontSize: 72, fontWeight: 700, color, letterSpacing: '-0.04em', lineHeight: 1 }}>{ratingCount}</div>
+            <div style={{ fontSize: compact ? 56 : 72, fontWeight: 700, color, letterSpacing: '-0.04em', lineHeight: 1 }}>{ratingCount}</div>
             <div style={{ fontSize: 16, color, marginTop: 8, textTransform: 'capitalize' }}>{user.rank}</div>
             <div style={{ fontSize: 12, color: '#777', marginTop: 5 }}>Max: {user.maxRating} / {user.maxRank}</div>
           </div>
@@ -1397,12 +1512,22 @@ function CodeforcesTab({ data, loading }: { data: CFData | null; loading: boolea
         </div>
       </Block>
       <Block delay={0.08}>
-        <div style={{ ...PANEL, padding: 30, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            ...PANEL,
+            padding: compact ? 24 : 30,
+            display: 'flex',
+            flexDirection: compact ? 'column' : 'row',
+            justifyContent: 'space-between',
+            alignItems: compact ? 'flex-start' : 'center',
+            gap: compact ? 18 : undefined,
+          }}
+        >
           <div>
-            <div style={{ fontSize: 48, color: '#fff', fontWeight: 700 }}>{solvedCount}</div>
+            <div style={{ fontSize: compact ? 40 : 48, color: '#fff', fontWeight: 700 }}>{solvedCount}</div>
             <div style={{ color: '#999', fontSize: 13 }}>unique problems solved</div>
           </div>
-          <div style={{ textAlign: 'right' }}>
+          <div style={{ textAlign: compact ? 'left' : 'right' }}>
             <div style={{ fontSize: 32, color: '#fff' }}>{user.contribution >= 0 ? `+${user.contribution}` : user.contribution}</div>
             <div style={{ color: '#777', fontSize: 11, textTransform: 'uppercase' }}>Contribution</div>
           </div>
@@ -1416,6 +1541,7 @@ export default function DsaPage() {
   const { isMobileLayout, isTabletLayout } = useLayout()
   const metrics = useShellMetrics()
   const isPhone = isMobileLayout && !isTabletLayout
+  const isTinyPhone = isPhone && metrics.viewportWidth < 370
   const availableWidth = metrics.viewportWidth - metrics.contentLeft - metrics.contentRight
   const compactProfile = availableWidth < 980
 
@@ -1467,12 +1593,13 @@ export default function DsaPage() {
         >
           <div
             style={{
-              width: 'min(1160px, calc(100vw - 56px))',
+              width: isPhone ? '100%' : 'min(1160px, calc(100vw - 56px))',
               margin: '0 auto',
-              padding: `${isPhone ? 24 : 28}px ${isPhone ? 16 : 24}px 112px`,
+              boxSizing: 'border-box',
+              padding: `${isPhone ? 24 : 28}px ${isPhone ? 16 : 24}px ${isPhone ? 128 : 112}px`,
             }}
           >
-            <PlatformTabs activeTab={activeTab} onChange={setActiveTab} />
+            <PlatformTabs activeTab={activeTab} onChange={setActiveTab} compact={isPhone} />
 
             <AnimatePresence mode="wait">
               <motion.div
@@ -1483,10 +1610,15 @@ export default function DsaPage() {
                 transition={{ duration: 0.18, ease: 'easeOut' }}
               >
                 {activeTab === 'leetcode' && (
-                  <LeetCodeProfile data={leetcode} loading={loading.lc} compact={compactProfile || isPhone} />
+                  <LeetCodeProfile
+                    data={leetcode}
+                    loading={loading.lc}
+                    compact={compactProfile || isPhone}
+                    tiny={isTinyPhone}
+                  />
                 )}
                 {activeTab === 'codeforces' && (
-                  <CodeforcesTab data={codeforces} loading={loading.cf} />
+                  <CodeforcesTab data={codeforces} loading={loading.cf} compact={isPhone} />
                 )}
               </motion.div>
             </AnimatePresence>
@@ -1516,10 +1648,28 @@ export default function DsaPage() {
   )
 }
 
-function PlatformTabs({ activeTab, onChange }: { activeTab: Tab; onChange: (tab: Tab) => void }) {
+function PlatformTabs({
+  activeTab,
+  onChange,
+  compact,
+}: {
+  activeTab: Tab
+  onChange: (tab: Tab) => void
+  compact: boolean
+}) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
-      <div style={{ ...CARD, background: '#282828', borderRadius: 999, padding: 5, display: 'inline-flex', gap: 4 }}>
+    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: compact ? 18 : 20 }}>
+      <div
+        style={{
+          ...CARD,
+          background: '#282828',
+          borderRadius: 999,
+          padding: 5,
+          display: 'inline-flex',
+          gap: 4,
+          maxWidth: compact ? '100%' : undefined,
+        }}
+      >
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -1527,13 +1677,13 @@ function PlatformTabs({ activeTab, onChange }: { activeTab: Tab; onChange: (tab:
             style={{
               border: 0,
               borderRadius: 999,
-              padding: '8px 24px',
+              padding: compact ? '8px 16px' : '8px 24px',
               background: activeTab === tab.id ? '#333' : 'transparent',
               color: activeTab === tab.id ? '#fff' : '#9a9a9a',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              fontSize: 14,
+              fontSize: compact ? 13 : 14,
               fontWeight: 700,
               cursor: 'pointer',
             }}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { usePathname } from "next/navigation";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useClickSound } from "@/lib/useClickSound";
@@ -63,10 +64,21 @@ const SearchIcon = () => (
 export default function BottomToolbar() {
   const { openSearch, isSoundEnabled, toggleSound, isMobileLayout, isTabletLayout } = useLayout();
   const { isDarkTheme, toggleTheme } = useTheme();
+  const pathname = usePathname();
   const metrics = useShellMetrics();
   const playClick = useClickSound(isSoundEnabled);
   const [soundHovered, setSoundHovered] = useState(false);
   const [searchHovered, setSearchHovered] = useState(false);
+  const forceDarkChrome = pathname === "/dsa";
+  const toolbarButtonBg = forceDarkChrome ? "#1a1a1a" : "var(--toolbar-btn-bg)";
+  const toolbarButtonBorder = forceDarkChrome ? "#333333" : "var(--toolbar-btn-border)";
+  const toolbarSearchBg = forceDarkChrome ? "#242424" : "var(--toolbar-search-bg)";
+  const toolbarSearchBorder = forceDarkChrome ? "rgba(255, 255, 255, 0.12)" : "var(--toolbar-search-border)";
+  const toolbarPillActive = forceDarkChrome ? "#2c2c2c" : "var(--toolbar-pill-active)";
+  const toolbarIconActive = forceDarkChrome ? "rgba(255, 255, 255, 0.70)" : "var(--toolbar-icon-active)";
+  const toolbarIconInactive = forceDarkChrome ? "#555555" : "var(--toolbar-icon-inactive)";
+  const toolbarSearchText = forceDarkChrome ? "#888888" : "var(--toolbar-search-text)";
+  const toolbarSearchIcon = forceDarkChrome ? "#888888" : "var(--text-muted)";
 
   /*
     Position the toolbar using the physical panel edges, not the canvas offsets.
@@ -107,8 +119,8 @@ export default function BottomToolbar() {
             width: "32px",
             height: "32px",
             borderRadius: "50%",
-            backgroundColor: "var(--toolbar-btn-bg)",
-            border: "1px solid var(--toolbar-btn-border)",
+            backgroundColor: toolbarButtonBg,
+            border: `1px solid ${toolbarButtonBorder}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -117,8 +129,8 @@ export default function BottomToolbar() {
             color: soundHovered
               ? "#FF4500"
               : isSoundEnabled
-              ? "var(--toolbar-icon-active)"
-              : "var(--toolbar-icon-inactive)",
+              ? toolbarIconActive
+              : toolbarIconInactive,
             transition: "color 0.15s ease, background-color 0.22s ease, border-color 0.22s ease",
           }}
         >
@@ -128,8 +140,8 @@ export default function BottomToolbar() {
         {/* Theme toggle pill */}
         <div style={{
           display: "flex",
-          backgroundColor: "var(--toolbar-btn-bg)",
-          border: "1px solid var(--toolbar-btn-border)",
+          backgroundColor: toolbarButtonBg,
+          border: `1px solid ${toolbarButtonBorder}`,
           borderRadius: "999px",
           padding: "3px",
           gap: "2px",
@@ -143,14 +155,14 @@ export default function BottomToolbar() {
               width: "26px",
               height: "26px",
               borderRadius: "50%",
-              backgroundColor: !isDarkTheme ? "var(--toolbar-pill-active)" : "transparent",
+              backgroundColor: !isDarkTheme ? toolbarPillActive : "transparent",
               border: "none",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               padding: 0,
-              color: !isDarkTheme ? "var(--toolbar-icon-active)" : "var(--toolbar-icon-inactive)",
+              color: !isDarkTheme ? toolbarIconActive : toolbarIconInactive,
               transition: "background-color 0.15s ease, color 0.15s ease",
             }}
           >
@@ -165,14 +177,14 @@ export default function BottomToolbar() {
               width: "26px",
               height: "26px",
               borderRadius: "50%",
-              backgroundColor: isDarkTheme ? "var(--toolbar-pill-active)" : "transparent",
+              backgroundColor: isDarkTheme ? toolbarPillActive : "transparent",
               border: "none",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               padding: 0,
-              color: isDarkTheme ? "var(--toolbar-icon-active)" : "var(--toolbar-icon-inactive)",
+              color: isDarkTheme ? toolbarIconActive : toolbarIconInactive,
               transition: "background-color 0.15s ease, color 0.15s ease",
             }}
           >
@@ -187,22 +199,22 @@ export default function BottomToolbar() {
         onMouseEnter={() => setSearchHovered(true)}
         onMouseLeave={() => setSearchHovered(false)}
         style={{
-          backgroundColor: "var(--toolbar-search-bg)",
-          border: "1px solid var(--toolbar-search-border)",
+          backgroundColor: toolbarSearchBg,
+          border: `1px solid ${toolbarSearchBorder}`,
           borderRadius: "999px",
           padding: "8px 14px",
           display: "flex",
           alignItems: "center",
           gap: "8px",
           cursor: "pointer",
-          color: searchHovered ? "#FF4500" : "var(--text-muted)",
+          color: searchHovered ? "#FF4500" : toolbarSearchIcon,
           transition: "color 0.15s ease, background-color 0.22s ease, border-color 0.22s ease",
         }}
       >
         <SearchIcon />
         <span style={{
           fontSize: "12px",
-          color: "var(--toolbar-search-text)",
+          color: toolbarSearchText,
           fontFamily: "ui-monospace, 'SF Mono', monospace",
           letterSpacing: "0.04em",
           transition: "color 0.22s ease",
