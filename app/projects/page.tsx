@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useLayout } from '@/contexts/LayoutContext'
+import { useShellMetrics } from '@/lib/useShellMetrics'
 import BottomToolbar from '@/components/ui/BottomToolbar'
 import { PROJECTS, type Project } from '@/data/projects'
 
@@ -493,9 +494,10 @@ function GridCard({ project }: { project: Project }) {
    ───────────────────────────────────────────────────────────────── */
 
 export default function ProjectsPage() {
-  const { isSidebarOpen, isNavOpen, isMobileLayout, isTabletLayout } = useLayout()
-  const ml = !isMobileLayout && isSidebarOpen ? 280 : 0
-  const mr = !isMobileLayout && isNavOpen ? 260 : 0
+  const { isMobileLayout, isTabletLayout } = useLayout()
+  const metrics = useShellMetrics()
+  const ml = metrics.contentLeft
+  const mr = metrics.contentRight
   const isPhone = isMobileLayout && !isTabletLayout
 
   const featured = PROJECTS.find(p => p.type === 'featured')

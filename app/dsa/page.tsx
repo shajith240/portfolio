@@ -1,25 +1,80 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLayout } from '@/contexts/LayoutContext'
+import { useShellMetrics } from '@/lib/useShellMetrics'
 import BottomToolbar from '@/components/ui/BottomToolbar'
 
-/* ─── Types ─────────────────────────────────────────────────── */
+interface LeetCodeUser {
+  username: string
+  name: string
+  avatar: string | null
+  ranking: number | null
+  country: string | null
+  school: string | null
+  gitHub: string | null
+  linkedIN: string | null
+  reputation: number
+  contributionPoint: number
+}
+
+interface DifficultyCount {
+  difficulty: string
+  count: number
+  submissions: number
+}
+
+interface Badge {
+  id: string
+  displayName: string
+  icon: string
+  creationDate: string
+}
+
+interface SkillTag {
+  tagName: string
+  tagSlug: string
+  problemsSolved: number
+}
 
 interface LCData {
+  user: LeetCodeUser
   ranking: number | null
   totalSolved: number
+  totalQuestions: number
   easySolved: number
   mediumSolved: number
   hardSolved: number
   totalEasy: number
   totalMedium: number
   totalHard: number
+  totalSubmissions: DifficultyCount[]
+  acceptedSubmissions: DifficultyCount[]
+  submissionCalendar: Record<string, number>
   acceptanceRate: string
   contestRating: number
   contestRank: number | null
   contestTopPercentage: number | null
+  contestAttend: number
+  contestParticipants: number | null
+  contestParticipation: Array<{
+    rating: number
+    ranking: number
+    problemsSolved: number
+    totalProblems: number
+    contest: { title: string; startTime: number }
+  }>
+  badgesCount: number
+  badges: Badge[]
+  activeBadge: Badge | null
+  languageProblemCount: Array<{ languageName: string; problemsSolved: number }>
+  skills: {
+    fundamental: SkillTag[]
+    intermediate: SkillTag[]
+    advanced: SkillTag[]
+  }
   error?: boolean
 }
 
@@ -36,58 +91,65 @@ interface CFData {
   error?: boolean
 }
 
-interface CCData {
-  rating?: number
-  stars?: number
-  highestRating?: number
-  globalRank?: number
-  countryRank?: number
-  totalSolved?: number
-  error?: boolean
+type Tab = 'leetcode' | 'codeforces'
+type CalendarFilter = 'current' | `${number}`
+
+interface HeatmapDay {
+  date: string
+  count: number
+  level: number
 }
 
-type Tab = 'leetcode' | 'codeforces' | 'codechef'
+interface HeatmapMonth {
+  key: string
+  label: string
+  weeks: Array<Array<HeatmapDay | null>>
+}
 
-/* ─── CF rank colours ────────────────────────────────────────── */
+const CARD: CSSProperties = {
+  background: '#282828',
+  border: '1px solid #343434',
+  borderRadius: 6,
+}
+
+const PANEL: CSSProperties = {
+  ...CARD,
+  background: '#262626',
+}
+
+const LEETCODE_ORANGE = '#ffa116'
+const EASY = '#00b8a3'
+const MEDIUM = '#ffc01e'
+const HARD = '#ff375f'
+const HEATMAP_CELL = 10
+const HEATMAP_GAP = 2
+const HEATMAP_MONTH_GAP = 8
+const MONTH_LABEL = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  timeZone: 'UTC',
+})
+
+const TABS: { id: Tab; label: string; dot: string }[] = [
+  { id: 'leetcode', label: 'LeetCode', dot: LEETCODE_ORANGE },
+  { id: 'codeforces', label: 'Codeforces', dot: '#318CE7' },
+]
 
 const CF_RANK_COLORS: Record<string, string> = {
-  newbie:                  '#808080',
-  pupil:                   '#008000',
-  specialist:              '#03A89E',
-  expert:                  '#4A90E2',
-  'candidate master':      '#AA00AA',
-  master:                  '#FF8C00',
-  'international master':  '#FF8C00',
-  grandmaster:             '#FF0000',
+  newbie: '#808080',
+  pupil: '#008000',
+  specialist: '#03A89E',
+  expert: '#4A90E2',
+  'candidate master': '#AA00AA',
+  master: '#FF8C00',
+  'international master': '#FF8C00',
+  grandmaster: '#FF0000',
   'international grandmaster': '#FF0000',
   'legendary grandmaster': '#FF0000',
 }
+
 function cfColor(rank: string) {
   return CF_RANK_COLORS[rank?.toLowerCase()] ?? '#888888'
 }
-
-/* ─── CodeChef star colours ─────────────────────────────────── */
-
-const CC_STAR_COLORS: Record<number, string> = {
-  1: '#808080', 2: '#008000', 3: '#008000',
-  4: '#0000FF', 5: '#AA00AA', 6: '#FF8C00', 7: '#FF0000',
-}
-
-/* ─── Glass card style ───────────────────────────────────────── */
-
-const CARD: React.CSSProperties = {
-  background: 'var(--bg-card)',
-  border: '1px solid var(--border)',
-  borderRadius: 20,
-}
-
-const CARD_ELEVATED: React.CSSProperties = {
-  background: 'var(--bg-elevated)',
-  border: '1px solid var(--border)',
-  borderRadius: 20,
-}
-
-/* ─── Count-up hook ─────────────────────────────────────────── */
 
 function useCountUp(target: number, delayMs = 0) {
   const [count, setCount] = useState(0)
@@ -97,17 +159,18 @@ function useCountUp(target: number, delayMs = 0) {
     setCount(0)
     if (target === 0) return
     const timer = setTimeout(() => {
-      const dur = 900
+      const duration = 850
       let t0: number | null = null
       const tick = (ts: number) => {
         if (!t0) t0 = ts
-        const p = Math.min((ts - t0) / dur, 1)
-        const eased = 1 - Math.pow(1 - p, 3) // easeOutCubic
+        const progress = Math.min((ts - t0) / duration, 1)
+        const eased = 1 - Math.pow(1 - progress, 3)
         setCount(Math.round(target * eased))
-        if (p < 1) rafRef.current = requestAnimationFrame(tick)
+        if (progress < 1) rafRef.current = requestAnimationFrame(tick)
       }
       rafRef.current = requestAnimationFrame(tick)
     }, delayMs)
+
     return () => {
       clearTimeout(timer)
       cancelAnimationFrame(rafRef.current)
@@ -117,1053 +180,1196 @@ function useCountUp(target: number, delayMs = 0) {
   return count
 }
 
-/* ─── Block entrance wrapper ────────────────────────────────── */
-
 function Block({
   children,
   delay = 0,
+  style,
 }: {
   children: React.ReactNode
   delay?: number
+  style?: CSSProperties
 }) {
   return (
     <motion.div
-      initial={{ y: 16, opacity: 0 }}
+      initial={{ y: 14, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 30, delay }}
+      transition={{ duration: 0.28, ease: 'easeOut', delay }}
+      style={style}
     >
       {children}
     </motion.div>
   )
 }
 
-/* ─── Skeleton ───────────────────────────────────────────────── */
+function formatNumber(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) return '-'
+  return value.toLocaleString('en-US')
+}
+
+function submissionCount(data: LCData, difficulty: string) {
+  return data.totalSubmissions?.find((entry) => entry.difficulty === difficulty)?.count ?? 0
+}
+
+function dateKey(date: Date) {
+  return date.toISOString().slice(0, 10)
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date)
+  next.setUTCDate(next.getUTCDate() + days)
+  return next
+}
+
+function addMonths(date: Date, months: number) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1))
+}
+
+function startOfUtcMonth(date: Date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1))
+}
+
+function endOfUtcMonth(date: Date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0))
+}
+
+function maxDate(a: Date, b: Date) {
+  return a.getTime() > b.getTime() ? a : b
+}
+
+function minDate(a: Date, b: Date) {
+  return a.getTime() < b.getTime() ? a : b
+}
+
+function epochToDateKey(epochSeconds: string) {
+  return new Date(Number(epochSeconds) * 1000).toISOString().slice(0, 10)
+}
+
+function countMapFromCalendar(calendar: Record<string, number>) {
+  const byDate = new Map<string, number>()
+  for (const [epoch, count] of Object.entries(calendar)) {
+    byDate.set(epochToDateKey(epoch), count)
+  }
+  return byDate
+}
+
+function availableCalendarYears(calendar: Record<string, number>) {
+  const years = new Set<number>()
+  const currentYear = new Date().getUTCFullYear()
+  years.add(currentYear)
+
+  for (const epoch of Object.keys(calendar)) {
+    years.add(new Date(Number(epoch) * 1000).getUTCFullYear())
+  }
+
+  return Array.from(years).sort((a, b) => b - a)
+}
+
+function heatmapLevel(count: number) {
+  if (count <= 0) return 0
+  if (count < 2) return 1
+  if (count < 5) return 2
+  if (count < 9) return 3
+  return 4
+}
+
+function heatmapColor(level: number) {
+  return ['#3b3b3b', '#1d6426', '#229b31', '#39d14a', '#a7ff9a'][level] ?? '#3b3b3b'
+}
+
+function getCalendarWindow(filter: CalendarFilter) {
+  const today = new Date()
+  const current = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()))
+
+  if (filter === 'current') {
+    const start = addMonths(startOfUtcMonth(current), -11)
+    return {
+      start,
+      end: current,
+      months: Array.from({ length: 12 }, (_, index) => addMonths(start, index)),
+      title: 'submissions in the past one year',
+    }
+  }
+
+  const year = Number(filter)
+  const start = new Date(Date.UTC(year, 0, 1))
+  const end = new Date(Date.UTC(year, 11, 31))
+  return {
+    start,
+    end,
+    months: Array.from({ length: 12 }, (_, index) => new Date(Date.UTC(year, index, 1))),
+    title: `submissions in ${year}`,
+  }
+}
+
+function buildCalendarMonths(calendar: Record<string, number>, filter: CalendarFilter) {
+  const byDate = countMapFromCalendar(calendar)
+  const window = getCalendarWindow(filter)
+  const months: HeatmapMonth[] = window.months.map((monthStart) => {
+    const monthEnd = endOfUtcMonth(monthStart)
+    const visibleStart = maxDate(monthStart, window.start)
+    const visibleEnd = minDate(monthEnd, window.end)
+    const cells: Array<HeatmapDay | null> = []
+    const offset = monthStart.getUTCDay()
+
+    for (let i = 0; i < offset; i += 1) cells.push(null)
+
+    if (visibleEnd >= visibleStart) {
+      for (let day = visibleStart; day <= visibleEnd; day = addDays(day, 1)) {
+        const key = dateKey(day)
+        const count = byDate.get(key) ?? 0
+        cells.push({ date: key, count, level: heatmapLevel(count) })
+      }
+    }
+
+    const weekCount = Math.max(1, Math.ceil(cells.length / 7))
+    while (cells.length < weekCount * 7) cells.push(null)
+
+    const weeks = Array.from({ length: weekCount }, (_, weekIndex) =>
+      cells.slice(weekIndex * 7, weekIndex * 7 + 7),
+    )
+
+    return {
+      key: `${monthStart.getUTCFullYear()}-${monthStart.getUTCMonth()}`,
+      label: MONTH_LABEL.format(monthStart),
+      weeks,
+    }
+  })
+
+  return { ...window, months }
+}
+
+function calendarWidth(months: HeatmapMonth[]) {
+  const weekCount = months.reduce((sum, month) => sum + month.weeks.length, 0)
+  const weekGaps = months.reduce((sum, month) => sum + Math.max(0, month.weeks.length - 1), 0)
+  const monthGaps = Math.max(0, months.length - 1)
+  return weekCount * HEATMAP_CELL + weekGaps * HEATMAP_GAP + monthGaps * HEATMAP_MONTH_GAP
+}
+
+function selectedCalendarStats(calendar: Record<string, number>, filter: CalendarFilter) {
+  const byDate = countMapFromCalendar(calendar)
+  const { start, end } = getCalendarWindow(filter)
+  let total = 0
+  let activeDays = 0
+  let maxStreak = 0
+  let currentStreak = 0
+
+  for (let day = start; day <= end; day = addDays(day, 1)) {
+    const count = byDate.get(dateKey(day)) ?? 0
+    total += count
+    if (count > 0) {
+      activeDays += 1
+      currentStreak += 1
+      maxStreak = Math.max(maxStreak, currentStreak)
+    } else {
+      currentStreak = 0
+    }
+  }
+
+  return { total, activeDays, maxStreak }
+}
+
+function Icon({
+  kind,
+  color = '#b8b8b8',
+}: {
+  kind: 'pin' | 'school' | 'github' | 'linkedin' | 'eye' | 'solution' | 'chat' | 'star' | 'list'
+  color?: string
+}) {
+  const common = {
+    width: 14,
+    height: 14,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: color,
+    strokeWidth: 1.8,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  }
+
+  const paths = {
+    pin: (
+      <>
+        <path d="M12 21s7-5.2 7-11a7 7 0 0 0-14 0c0 5.8 7 11 7 11Z" />
+        <circle cx="12" cy="10" r="2.4" />
+      </>
+    ),
+    school: (
+      <>
+        <path d="m3 8 9-4 9 4-9 4-9-4Z" />
+        <path d="M6 10v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5" />
+      </>
+    ),
+    github: (
+      <>
+        <path d="M9 19c-4 1.2-4-2-6-2.4" />
+        <path d="M15 22v-3.5c0-1 .3-1.8.9-2.4 3-.3 6.1-1.4 6.1-6.6A5.1 5.1 0 0 0 20.6 6 4.8 4.8 0 0 0 20.5 2s-1.1-.4-3.8 1.5a13 13 0 0 0-6.8 0C7.2 1.6 6.1 2 6.1 2A4.8 4.8 0 0 0 6 6a5.1 5.1 0 0 0-1.4 3.5c0 5.2 3.1 6.3 6.1 6.6.6.5.9 1.4.9 2.4V22" />
+      </>
+    ),
+    linkedin: (
+      <>
+        <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6Z" />
+        <path d="M2 9h4v12H2z" />
+        <circle cx="4" cy="4" r="2" />
+      </>
+    ),
+    eye: (
+      <>
+        <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="3" />
+      </>
+    ),
+    solution: (
+      <>
+        <path d="M8 6h12" />
+        <path d="M8 12h12" />
+        <path d="M8 18h12" />
+        <path d="m3 6 .8.8L6 4.6" />
+        <path d="m3 12 .8.8L6 10.6" />
+        <path d="m3 18 .8.8L6 16.6" />
+      </>
+    ),
+    chat: (
+      <>
+        <path d="M21 12a8 8 0 0 1-8 8H7l-4 2 1.2-4A8 8 0 1 1 21 12Z" />
+      </>
+    ),
+    star: <path d="m12 2 3 6 6.5.9-4.7 4.6 1.1 6.5L12 17l-5.9 3 1.1-6.5L2.5 8.9 9 8l3-6Z" />,
+    list: (
+      <>
+        <path d="M8 6h13" />
+        <path d="M8 12h13" />
+        <path d="M8 18h13" />
+        <path d="M3 6h.01" />
+        <path d="M3 12h.01" />
+        <path d="M3 18h.01" />
+      </>
+    ),
+  }
+
+  return <svg {...common}>{paths[kind]}</svg>
+}
 
 function Skeleton() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {[140, 220, 100].map((h, i) => (
-        <div
-          key={i}
-          style={{
-            ...CARD,
-            height: h,
-            animation: 'pulse 1.5s ease-in-out infinite',
-          }}
-        />
-      ))}
+    <div style={{ display: 'grid', gridTemplateColumns: '230px 1fr', gap: 18 }}>
+      <div style={{ ...PANEL, height: 560, animation: 'pulse 1.5s ease-in-out infinite' }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {[200, 150, 150, 360].map((height, index) => (
+          <div
+            key={index}
+            style={{
+              ...PANEL,
+              height,
+              animation: 'pulse 1.5s ease-in-out infinite',
+            }}
+          />
+        ))}
+      </div>
     </div>
   )
 }
 
-/* ─── Error card ─────────────────────────────────────────────── */
+function ProfileRail({ data, compact }: { data: LCData; compact: boolean }) {
+  const user = data.user
+  const languages = data.languageProblemCount ?? []
+  const skillGroups = [
+    { label: 'Advanced', color: '#ff375f', items: data.skills?.advanced ?? [] },
+    { label: 'Intermediate', color: '#ffc01e', items: data.skills?.intermediate ?? [] },
+    { label: 'Fundamental', color: '#2bd576', items: data.skills?.fundamental ?? [] },
+  ]
 
-function ErrorCard({ platform, href }: { platform: string; href: string }) {
   return (
-    <Block delay={0}>
-      <div
-        style={{
-          ...CARD,
-          padding: 'clamp(28px, 5vw, 52px) clamp(16px, 4vw, 40px)',
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 16,
-          borderColor: 'rgba(255,69,0,0.25)',
-        }}
-      >
-        {/* Ghost stars for CodeChef visual echo */}
-        {platform === 'CodeChef' && (
-          <div
-            style={{
-              fontSize: 32,
-              letterSpacing: 6,
-              color: 'var(--border)',
-              marginBottom: 4,
-            }}
-          >
-            ★★★★★★★
+    <aside
+      style={{
+        ...(!compact ? { position: 'sticky', top: 28 } : {}),
+        alignSelf: 'start',
+        color: '#f5f5f5',
+      }}
+    >
+      <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 18 }}>
+        <img
+          src={user.avatar || '/photos/my_photo.jpeg'}
+          alt={user.username}
+          style={{ width: 80, height: 80, borderRadius: 6, objectFit: 'cover', display: 'block' }}
+        />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>{user.username}</span>
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: '#5ad66f',
+                display: 'inline-block',
+              }}
+            />
           </div>
-        )}
-        <svg width={20} height={20} viewBox="0 0 20 20" fill="none">
-          <circle cx="10" cy="10" r="8.5" stroke="#FF4500" strokeWidth="1.2" />
-          <path
-            d="M10 6v4.5M10 13.5v.5"
-            stroke="#FF4500"
-            strokeWidth="1.2"
-            strokeLinecap="round"
-          />
-        </svg>
-        <div>
-          <div
-            style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 6 }}
-          >
-            {platform} API unavailable
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-            The third-party data source is currently down.
+          <div style={{ fontSize: 12, color: '#c9c9c9', marginTop: 2 }}>{user.name}</div>
+          <div style={{ fontSize: 14, color: '#fff', marginTop: 14 }}>
+            Rank <strong>{formatNumber(user.ranking)}</strong>
           </div>
         </div>
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ fontSize: 12, color: '#FF4500', textDecoration: 'none' }}
-        >
-          View on {platform} →
-        </a>
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, color: '#fff', fontSize: 13, marginBottom: 12 }}>
+        <span>0 Following</span>
+        <span style={{ color: '#555' }}>|</span>
+        <span>1 Followers</span>
+      </div>
+
+      <a
+        href={`https://leetcode.com/u/${user.username}/`}
+        target="_blank"
+        rel="noreferrer"
+        style={{
+          height: 36,
+          borderRadius: 4,
+          background: '#17351f',
+          color: '#4ade80',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 13,
+          fontWeight: 700,
+          marginBottom: 18,
+          textDecoration: 'none',
+        }}
+      >
+        Visit Profile
+      </a>
+
+      <RailInfo icon="pin" text={user.country || 'India'} />
+      <RailInfo icon="school" text={user.school || 'Indian Institute of Technology Dhanbad'} />
+      <RailInfo icon="github" text="shajith240" />
+      <RailInfo icon="linkedin" text="shajith240" />
+
+      <RailDivider />
+      <RailSection title="Languages">
+        {languages.map((language) => (
+          <div key={language.languageName} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <span
+              style={{
+                background: '#303030',
+                borderRadius: 999,
+                color: '#d6d6d6',
+                fontSize: 11,
+                padding: '4px 9px',
+              }}
+            >
+              {language.languageName}
+            </span>
+            <span style={{ marginLeft: 'auto', fontSize: 11, color: '#fff', fontWeight: 700 }}>
+              {language.problemsSolved}
+            </span>
+            <span style={{ fontSize: 11, color: '#b0b0b0' }}>problems solved</span>
+          </div>
+        ))}
+      </RailSection>
+
+      <RailDivider />
+      <RailSection title="Skills">
+        {skillGroups.map((group) => (
+          <div key={group.label} style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+              <span style={{ width: 4, height: 4, borderRadius: '50%', background: group.color }} />
+              <span style={{ color: '#f0f0f0', fontSize: 11, fontWeight: 700 }}>{group.label}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {group.items.slice(0, compact ? 5 : 4).map((skill) => (
+                <span
+                  key={skill.tagSlug}
+                  style={{
+                    background: '#303030',
+                    border: '1px solid #3a3a3a',
+                    borderRadius: 999,
+                    color: '#d8d8d8',
+                    fontSize: 10,
+                    padding: '4px 7px',
+                  }}
+                >
+                  {skill.tagName} <span style={{ color: '#aaa' }}>x{skill.problemsSolved}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </RailSection>
+    </aside>
+  )
+}
+
+function RailInfo({ icon, text }: { icon: Parameters<typeof Icon>[0]['kind']; text: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#e0e0e0', fontSize: 13, marginBottom: 15 }}>
+      <Icon kind={icon} color="#9a9a9a" />
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{text}</span>
+    </div>
+  )
+}
+
+function RailDivider() {
+  return <div style={{ height: 1, background: '#333', margin: '16px 0' }} />
+}
+
+function RailSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <h3 style={{ margin: '0 0 14px', color: '#fff', fontSize: 15, fontWeight: 700 }}>{title}</h3>
+      {children}
+    </section>
+  )
+}
+
+function ContestCard({ data }: { data: LCData }) {
+  const rating = useCountUp(data.contestRating)
+
+  return (
+    <Block delay={0}>
+      <div style={{ ...PANEL, padding: '24px 28px', display: 'grid', gridTemplateColumns: '1fr 260px', gap: 26, minHeight: 164 }}>
+        <div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 24, marginBottom: 28 }}>
+            <Metric label="Contest Rating" value={formatNumber(rating)} large />
+            <Metric label="Global Ranking" value={`${formatNumber(data.contestRank)}/${formatNumber(data.contestParticipants)}`} />
+            <Metric label="Attended" value={String(data.contestAttend ?? 0)} />
+          </div>
+          <ContestRatingChart data={data} />
+        </div>
+
+        <div style={{ borderLeft: '1px solid #4a4a4a', paddingLeft: 24, minWidth: 0, overflow: 'hidden' }}>
+          <Metric label="Top" value={`${data.contestTopPercentage ?? 0}%`} large />
+          <TopPercentageChart value={data.contestTopPercentage ?? 0} rating={data.contestRating} />
+        </div>
       </div>
     </Block>
   )
 }
 
-/* ─── Profile link ───────────────────────────────────────────── */
+function contestDateLabel(seconds?: number) {
+  if (!seconds) return 'Contest'
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(seconds * 1000))
+}
 
-function ProfileLink({ href, label }: { href: string; label: string }) {
-  const [hov, setHov] = useState(false)
+function ContestRatingChart({ data }: { data: LCData }) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
+  const svgHeight = 58
+  const viewBoxHeight = 46
+  const history = [...(data.contestParticipation ?? [])]
+    .filter((entry) => Number.isFinite(entry.rating))
+    .sort((a, b) => a.contest.startTime - b.contest.startTime)
+  const fallback = {
+    rating: data.contestRating,
+    ranking: data.contestRank ?? 0,
+    problemsSolved: 0,
+    totalProblems: 0,
+    contest: { title: 'Contest rating', startTime: 0 },
+  }
+  const pointsSource = history.length ? history : [fallback]
+  const ratings = pointsSource.map((entry) => entry.rating)
+  const minRating = Math.min(...ratings, 1500)
+  const maxRating = Math.max(...ratings, 1700)
+  const span = Math.max(1, maxRating - minRating)
+  const points = pointsSource.map((entry, index) => {
+    const x = pointsSource.length === 1 ? 54 : 3 + (index / (pointsSource.length - 1)) * 94
+    const y = 34 - ((entry.rating - minRating) / span) * 22
+    return { entry, x, y }
+  })
+  const selected = points[hoveredIndex ?? points.length - 1]
+  const path =
+    points.length === 1
+      ? `M 0 ${selected.y} L 100 ${selected.y}`
+      : points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')
+  const selectedYPx = selected.y * (svgHeight / viewBoxHeight)
+
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        onMouseEnter={() => setHov(true)}
-        onMouseLeave={() => setHov(false)}
+    <div style={{ position: 'relative', height: 76, marginTop: 14 }}>
+      <svg width="100%" height={svgHeight} viewBox={`0 0 100 ${viewBoxHeight}`} preserveAspectRatio="none" style={{ display: 'block', overflow: 'visible' }}>
+        <motion.path
+          d={path}
+          fill="none"
+          stroke="#906404"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.55, ease: 'easeOut' }}
+        />
+        {points.map((point, index) => (
+          <g key={`${point.entry.contest.startTime}-${index}`}>
+            <circle
+              cx={point.x}
+              cy={point.y}
+              r={4.2}
+              fill="transparent"
+              style={{ cursor: 'pointer' }}
+              onMouseEnter={() => setHoveredIndex(index)}
+              onMouseLeave={() => setHoveredIndex(null)}
+            />
+            <motion.circle
+              cx={point.x}
+              cy={point.y}
+              r={index === (hoveredIndex ?? points.length - 1) ? 1.2 : 0.86}
+              fill="#e8e8e8"
+              stroke="#2f2f2f"
+              strokeWidth="0.55"
+              style={{ pointerEvents: 'none' }}
+              transition={{ type: 'spring', stiffness: 420, damping: 24 }}
+            />
+          </g>
+        ))}
+      </svg>
+      <div
         style={{
-          border: `1px solid ${hov ? 'var(--border-strong)' : 'var(--border)'}`,
-          borderRadius: 999,
-          padding: '6px 18px',
-          fontSize: 12,
-          color: hov ? 'var(--text-secondary)' : 'var(--text-dim)',
-          textDecoration: 'none',
-          transition: 'color 150ms ease, border-color 150ms ease',
-          display: 'inline-block',
-          background: 'transparent',
+          position: 'absolute',
+          left: `${selected.x}%`,
+          top: `${selectedYPx - 22}px`,
+          transform: 'translateX(-50%)',
+          background: '#3b3b3b',
+          border: '1px solid #666',
+          borderRadius: 4,
+          padding: '4px 8px',
+          color: '#ededed',
+          fontSize: 11,
+          lineHeight: 1,
+          pointerEvents: 'none',
+          whiteSpace: 'nowrap',
         }}
       >
-        {label} →
-      </a>
+        {formatNumber(Math.round(selected.entry.rating))}
+      </div>
+      <div
+        style={{
+          position: 'absolute',
+          left: `${selected.x}%`,
+          top: `${selectedYPx - 1}px`,
+          width: 1,
+          height: 10,
+          background: '#d8d8d8',
+          transform: 'translateX(-50%)',
+          opacity: 0.8,
+          pointerEvents: 'none',
+        }}
+      />
+      <div style={{ color: '#cfcfcf', fontSize: 12, textAlign: 'center', marginTop: 2 }}>
+        {contestDateLabel(selected.entry.contest.startTime)}
+      </div>
     </div>
   )
 }
 
-/* ─── Fitness ring (120px SVG) ───────────────────────────────── */
-
-function Ring({
-  pct,
-  color,
-  solved,
-  total,
-  label,
-  animDelay = 0,
-}: {
-  pct: number
-  color: string
-  solved: number
-  total: number
-  label: string
-  animDelay?: number
-}) {
-  const R = 52
-  const circ = 2 * Math.PI * R // 326.73
-  const targetOffset = circ - (Math.min(pct, 100) / 100) * circ
-  const centerCount = useCountUp(solved, animDelay * 1000 + 400)
+function TopPercentageChart({ value, rating }: { value: number; rating: number }) {
+  const [hovered, setHovered] = useState<number | null>(null)
+  const bars = [1, 1, 1, 1, 1.2, 2, 3.2, 5.5, 9, 15, 22, 18, 13, 9, 6.3, 5, 4.1, 3.5, 3, 2.6, 2.25, 2, 1.75, 1.55, 1.38, 1.22, 1.1, 1]
+  const ratingPosition = Number.isFinite(rating) ? (rating - 1100) / 1300 : Number.NaN
+  const topPosition = 0.22 + (Math.max(0, Math.min(100, value)) / 100) * 0.52
+  const activeIndex = Math.min(
+    bars.length - 1,
+    Math.max(0, Math.round((Number.isFinite(ratingPosition) ? ratingPosition : topPosition) * (bars.length - 1))),
+  )
+  const selected = hovered ?? activeIndex
+  const barWidth = 7
+  const gap = 3
+  const chartHeight = 76
+  const baseline = 62
+  const chartWidth = bars.length * barWidth + (bars.length - 1) * gap
+  const max = Math.max(...bars)
+  const selectedXPercent = ((selected * (barWidth + gap) + barWidth / 2) / chartWidth) * 100
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 16,
-      }}
-    >
-      <div style={{ position: 'relative', width: 120, height: 120 }}>
-        {/* SVG rotated so arc starts at 12 o'clock */}
-        <svg
-          width={120}
-          height={120}
-          style={{ transform: 'rotate(-90deg)', display: 'block' }}
-        >
-          {/* Track */}
-          <circle
-            cx={60}
-            cy={60}
-            r={R}
-            fill="none"
-            style={{ stroke: 'var(--border)' }}
-            strokeWidth={10}
-          />
-          {/* Progress arc */}
-          <motion.circle
-            cx={60}
-            cy={60}
-            r={R}
-            fill="none"
-            stroke={color}
-            strokeWidth={10}
-            strokeLinecap="round"
-            strokeDasharray={circ}
-            initial={{ strokeDashoffset: circ }}
-            animate={{ strokeDashoffset: targetOffset }}
-            transition={{
-              duration: 1.2,
-              ease: [0.34, 1.0, 0.64, 1],
-              delay: animDelay + 0.3,
-            }}
-          />
-        </svg>
-
-        {/* Center number */}
+    <div style={{ position: 'relative', height: 78, marginTop: 8 }}>
+      <svg width="100%" height={chartHeight} viewBox={`0 0 ${chartWidth} 76`} preserveAspectRatio="xMidYMid meet" style={{ display: 'block', overflow: 'hidden' }}>
+        {bars.map((bar, index) => {
+          const height = Math.max(6, (bar / max) * 54)
+          const x = index * (barWidth + gap)
+          const y = baseline - height
+          const isActive = index === activeIndex
+          const isHovered = index === hovered
+          return (
+            <g key={index}>
+              <rect
+                x={x - gap / 2}
+                y={8}
+                width={barWidth + gap}
+                height={chartHeight - 8}
+                fill="transparent"
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={() => setHovered(index)}
+                onMouseLeave={() => setHovered(null)}
+              />
+              <motion.rect
+                x={x}
+                y={y}
+                width={barWidth}
+                height={height}
+                rx={1.5}
+                fill={isActive ? LEETCODE_ORANGE : isHovered ? '#5f5f5f' : '#494949'}
+                initial={{ y: baseline, height: 0 }}
+                animate={{ y, height }}
+                transition={{ duration: 0.38, ease: 'easeOut', delay: index * 0.012 }}
+                style={{ pointerEvents: 'none' }}
+              />
+            </g>
+          )
+        })}
+      </svg>
+      {hovered != null && (
         <div
           style={{
             position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            left: `${selectedXPercent}%`,
+            top: 0,
+            transform: 'translate(-50%, 0)',
+            background: '#3b3b3b',
+            border: '1px solid #606060',
+            borderRadius: 4,
+            color: '#ededed',
+            fontSize: 11,
+            padding: '4px 7px',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
           }}
         >
-          <span
-            style={{
-              fontSize: 24,
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            {centerCount}
-          </span>
+          {selected === activeIndex ? `Top ${value}%` : 'Rating distribution'}
         </div>
-      </div>
-
-      {/* Below ring */}
-      <div style={{ textAlign: 'center', lineHeight: 1 }}>
-        <div
-          style={{
-            fontSize: 12,
-            color: 'var(--text-muted)',
-            fontWeight: 500,
-            marginBottom: 6,
-          }}
-        >
-          {solved} / {total}
-        </div>
-        <div
-          style={{
-            fontSize: 10,
-            color,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            fontWeight: 600,
-          }}
-        >
-          {label}
-        </div>
-      </div>
+      )}
     </div>
   )
 }
 
-/* ─── Thin divider ───────────────────────────────────────────── */
-
-const Divider = () => (
-  <div
-    style={{ height: 1, background: 'var(--border-subtle)', margin: '10px 0' }}
-  />
-)
-
-/* ─── LeetCode tab ───────────────────────────────────────────── */
-
-function LeetCodeTab({
-  data,
-  loading,
-}: {
-  data: LCData | null
-  loading: boolean
-}) {
-  // Hooks must be called before any conditional return
-  const heroCount = useCountUp(data?.totalSolved ?? 0)
-
-  if (loading) return <Skeleton />
-  if (!data || data.error) {
-    return <ErrorCard platform="LeetCode" href="https://leetcode.com/u/shajith240" />
-  }
-
-  const easyPct = (data.easySolved / data.totalEasy) * 100
-  const medPct = (data.mediumSolved / data.totalMedium) * 100
-  const hardPct = (data.hardSolved / data.totalHard) * 100
-
+function Metric({ label, value, large = false }: { label: string; value: string; large?: boolean }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div>
+      <div style={{ color: '#bdbdbd', fontSize: 11, marginBottom: 8 }}>{label}</div>
+      <div style={{ color: '#fff', fontSize: large ? 27 : 13, fontWeight: 400, lineHeight: 1 }}>{value}</div>
+    </div>
+  )
+}
 
-      {/* Block 1 — Hero solved card */}
-      <Block delay={0}>
+function SolvedAndBadges({ data }: { data: LCData }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'stretch' }}>
+      <Block delay={0.05} style={{ height: '100%' }}>
+        <div style={{ ...PANEL, padding: 22, minHeight: 194, height: '100%', display: 'grid', gridTemplateColumns: '1fr 92px', gap: 16, alignItems: 'center' }}>
+          <ProblemWheel data={data} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <DifficultyMini label="Easy" solved={data.easySolved} total={data.totalEasy} color={EASY} />
+            <DifficultyMini label="Med." solved={data.mediumSolved} total={data.totalMedium} color={MEDIUM} />
+            <DifficultyMini label="Hard" solved={data.hardSolved} total={data.totalHard} color={HARD} />
+          </div>
+        </div>
+      </Block>
+
+      <Block delay={0.08} style={{ height: '100%' }}>
         <div
           style={{
-            ...CARD_ELEVATED,
-            padding: 'clamp(20px, 4vw, 36px) clamp(16px, 4vw, 40px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 12,
+            ...PANEL,
+            padding: 22,
+            minHeight: 194,
+            height: '100%',
+            position: 'relative',
+            overflow: 'hidden',
+            display: 'grid',
+            gridTemplateColumns: '1fr 168px',
+            gap: 18,
           }}
         >
-          {/* LEFT — billboard number */}
           <div>
-            <div
-              style={{
-                fontSize: 'clamp(48px, 12vw, 72px)',
-                fontWeight: 700,
-                letterSpacing: '-0.04em',
-                color: 'var(--text-primary)',
-                lineHeight: 1,
-              }}
-            >
-              {heroCount}
-            </div>
-            <div
-              style={{
-                fontSize: 13,
-                color: 'var(--text-muted)',
-                marginTop: 8,
-              }}
-            >
-              problems solved
+            <div style={{ color: '#d2d2d2', fontSize: 12 }}>Badges</div>
+            <div style={{ color: '#fff', fontSize: 28, marginTop: 4 }}>{data.badgesCount}</div>
+            <div style={{ position: 'absolute', left: 22, bottom: 22 }}>
+              <div style={{ color: '#bdbdbd', fontSize: 11, marginBottom: 4 }}>Most Recent Badge</div>
+              <div style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>{data.activeBadge?.displayName ?? 'No badge yet'}</div>
             </div>
           </div>
-
-          {/* RIGHT — secondary inline stats */}
-          <div style={{ textAlign: 'right', minWidth: 120 }}>
-            <div
-              style={{
-                fontSize: 15,
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {data.ranking ? `#${data.ranking.toLocaleString()}` : '—'}
-            </div>
-            <div
-              style={{
-                fontSize: 10,
-                color: 'var(--text-dim)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginTop: 2,
-              }}
-            >
-              Global rank
-            </div>
-
-            <Divider />
-
-            <div
-              style={{
-                fontSize: 15,
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {data.acceptanceRate}%
-            </div>
-            <div
-              style={{
-                fontSize: 10,
-                color: 'var(--text-dim)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginTop: 2,
-              }}
-            >
-              Acceptance
-            </div>
-
-            {data.contestRating > 0 && (
-              <>
-                <Divider />
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 600,
-                    color: 'white',
-                    letterSpacing: '-0.01em',
-                  }}
-                >
-                  {data.contestRating}
-                </div>
-                <div
-                  style={{
-                    fontSize: 10,
-                    color: '#555555',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    marginTop: 2,
-                  }}
-                >
-                  Contest rating
-                </div>
-              </>
+          <a
+            href={`https://leetcode.com/u/${data.user.username}/`}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open LeetCode profile"
+            style={{
+              position: 'absolute',
+              right: 20,
+              top: 20,
+              width: 34,
+              height: 34,
+              borderRadius: 8,
+              display: 'grid',
+              placeItems: 'center',
+              color: '#b8b8b8',
+              textDecoration: 'none',
+            }}
+          >
+            <svg width="25" height="25" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 12h13" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+              <path d="m13 6 6 6-6 6" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </a>
+          <div style={{ display: 'grid', placeItems: 'center', alignSelf: 'stretch', justifySelf: 'stretch' }}>
+            {data.activeBadge?.icon && (
+              <img
+                src={normalizeBadgeIcon(data.activeBadge.icon)}
+                alt={data.activeBadge.displayName}
+                style={{ width: 86, height: 86, objectFit: 'contain' }}
+              />
             )}
           </div>
         </div>
       </Block>
-
-      {/* Block 2 — Difficulty rings (the emotional centrepiece) */}
-      <Block delay={0.08}>
-        <div
-          style={{
-            ...CARD,
-            padding: 'clamp(20px, 4vw, 40px)',
-            display: 'flex',
-            justifyContent: 'space-evenly',
-            alignItems: 'flex-start',
-            flexWrap: 'wrap',
-            gap: 24,
-          }}
-        >
-          <Ring
-            pct={easyPct}
-            color="#30D158"
-            solved={data.easySolved}
-            total={data.totalEasy}
-            label="Easy"
-            animDelay={0}
-          />
-          <Ring
-            pct={medPct}
-            color="#FF9F0A"
-            solved={data.mediumSolved}
-            total={data.totalMedium}
-            label="Medium"
-            animDelay={0.15}
-          />
-          <Ring
-            pct={hardPct}
-            color="#FF453A"
-            solved={data.hardSolved}
-            total={data.totalHard}
-            label="Hard"
-            animDelay={0.30}
-          />
-        </div>
-      </Block>
-
-      {/* Block 3 — Contest (only if data exists) */}
-      {data.contestRating > 0 && data.contestRank != null && (
-        <Block delay={0.16}>
-          <div
-            style={{
-              ...CARD,
-              padding: 'clamp(16px, 3vw, 28px) clamp(16px, 4vw, 40px)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0,
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <div
-                style={{
-                  fontSize: 'clamp(24px, 6vw, 36px)',
-                  fontWeight: 700,
-                  color: 'var(--text-primary)',
-                  letterSpacing: '-0.02em',
-                  lineHeight: 1,
-                }}
-              >
-                {data.contestRating}
-              </div>
-              <div
-                style={{
-                  fontSize: 10,
-                  color: 'var(--text-dim)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  marginTop: 6,
-                }}
-              >
-                Contest rating
-              </div>
-            </div>
-
-            <div
-              style={{
-                width: 1,
-                height: 40,
-                background: 'var(--border)',
-                marginRight: 40,
-                flexShrink: 0,
-              }}
-            />
-
-            <div style={{ flex: 1 }}>
-              <div
-                style={{
-                  fontSize: 'clamp(24px, 6vw, 36px)',
-                  fontWeight: 700,
-                  color: 'var(--text-secondary)',
-                  letterSpacing: '-0.02em',
-                  lineHeight: 1,
-                }}
-              >
-                #{data.contestRank.toLocaleString()}
-              </div>
-              <div
-                style={{
-                  fontSize: 10,
-                  color: 'var(--text-dim)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  marginTop: 6,
-                }}
-              >
-                Global rank
-              </div>
-            </div>
-          </div>
-        </Block>
-      )}
-
-      <ProfileLink href="https://leetcode.com/u/shajith240" label="View full profile" />
     </div>
   )
 }
 
-/* ─── Codeforces tab ─────────────────────────────────────────── */
+function normalizeBadgeIcon(icon: string) {
+  if (icon.startsWith('http')) return icon
+  return `https://assets.leetcode.com${icon}`
+}
 
-function CodeforcesTab({
-  data,
-  loading,
-}: {
-  data: CFData | null
-  loading: boolean
-}) {
-  // Hooks before conditional returns
+function polarPoint(cx: number, cy: number, radius: number, angle: number) {
+  const radians = ((angle - 90) * Math.PI) / 180
+  return {
+    x: cx + radius * Math.cos(radians),
+    y: cy + radius * Math.sin(radians),
+  }
+}
+
+function arcPath(cx: number, cy: number, radius: number, startAngle: number, endAngle: number) {
+  const delta = ((endAngle - startAngle) % 360 + 360) % 360
+  const start = polarPoint(cx, cy, radius, startAngle)
+  const end = polarPoint(cx, cy, radius, endAngle)
+  const largeArc = delta > 180 ? 1 : 0
+  return `M ${start.x.toFixed(3)} ${start.y.toFixed(3)} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x.toFixed(3)} ${end.y.toFixed(3)}`
+}
+
+function progressArcEnd(startAngle: number, endAngle: number, solved: number, total: number, minVisibleDegrees: number) {
+  const span = ((endAngle - startAngle) % 360 + 360) % 360
+  const ratio = total > 0 ? Math.max(0, Math.min(1, solved / total)) : 0
+  if (ratio === 0) return startAngle
+  return startAngle + Math.min(span, Math.max(minVisibleDegrees, span * ratio))
+}
+
+function ProblemWheel({ data }: { data: LCData }) {
+  const solved = useCountUp(data.totalSolved, 120)
+  const total = data.totalQuestions || data.totalEasy + data.totalMedium + data.totalHard
+  const attempting = Math.max(0, submissionCount(data, 'All') - data.totalSolved)
+  const size = 154
+  const center = size / 2
+  const radius = 63
+  const strokeWidth = 5
+  const segments = [
+    {
+      key: 'medium',
+      label: 'Medium',
+      start: 294,
+      end: 78,
+      solved: data.mediumSolved,
+      total: data.totalMedium,
+      color: MEDIUM,
+      track: '#5b4712',
+      minVisibleDegrees: 7,
+    },
+    {
+      key: 'easy',
+      label: 'Easy',
+      start: 204,
+      end: 270,
+      solved: data.easySolved,
+      total: data.totalEasy,
+      color: EASY,
+      track: '#1b5d5b',
+      minVisibleDegrees: 6,
+    },
+    {
+      key: 'hard',
+      label: 'Hard',
+      start: 98,
+      end: 148,
+      solved: data.hardSolved,
+      total: data.totalHard,
+      color: HARD,
+      track: '#5a252c',
+      minVisibleDegrees: 3,
+    },
+  ]
+
+  return (
+    <div style={{ position: 'relative', width: size, height: size, margin: '0 auto' }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block' }} aria-hidden="true">
+        {segments.map((segment, index) => (
+          <g key={`${segment.key}-track`}>
+            <motion.path
+              d={arcPath(center, center, radius, segment.start, segment.end)}
+              fill="none"
+              stroke={segment.track}
+              strokeWidth={strokeWidth}
+              strokeLinecap="round"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.78 }}
+              transition={{ duration: 0.25, ease: 'easeOut', delay: 0.08 + index * 0.05 }}
+            />
+            <motion.path
+              d={arcPath(
+                center,
+                center,
+                radius,
+                segment.start,
+                progressArcEnd(segment.start, segment.end, segment.solved, segment.total, segment.minVisibleDegrees),
+              )}
+              fill="none"
+              stroke={segment.color}
+              strokeWidth={strokeWidth}
+              strokeLinecap="round"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 0.56, ease: 'easeOut', delay: 0.18 + index * 0.08 }}
+            >
+              <title>{`${segment.label}: ${segment.solved}/${segment.total}`}</title>
+            </motion.path>
+          </g>
+        ))}
+      </svg>
+      <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
+        <div>
+          <div style={{ color: '#fff', fontSize: 31, fontWeight: 500, lineHeight: 1, letterSpacing: 0 }}>
+            {solved}<span style={{ color: '#f2f2f2', fontSize: 13, fontWeight: 600, marginLeft: 1 }}>/{total}</span>
+          </div>
+          <div className="problem-wheel-solved" style={{ color: '#f2f2f2', fontSize: 0, marginTop: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M2.4 6.3 4.8 8.7 9.8 3.4" stroke="#2bd576" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="solved-label" style={{ fontSize: 13 }}>Solved</span>
+            <span style={{ color: '#5ad66f', marginRight: 4 }}>✓</span>Solved
+          </div>
+          <div style={{ color: '#a7a7a7', fontSize: 13, marginTop: 18 }}>{attempting} Attempting</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DifficultyMini({ label, solved, total, color }: { label: string; solved: number; total: number; color: string }) {
+  return (
+    <div style={{ background: '#333', borderRadius: 5, padding: '8px 10px', textAlign: 'center' }}>
+      <div style={{ color, fontSize: 12, fontWeight: 700 }}>{label}</div>
+      <div style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{solved}/{total}</div>
+    </div>
+  )
+}
+
+function CalendarCard({ data }: { data: LCData }) {
+  const yearOptions = useMemo(() => availableCalendarYears(data.submissionCalendar), [data.submissionCalendar])
+  const [filter, setFilter] = useState<CalendarFilter>('current')
+  const heatmap = useMemo(() => buildCalendarMonths(data.submissionCalendar, filter), [data.submissionCalendar, filter])
+  const stats = useMemo(() => selectedCalendarStats(data.submissionCalendar, filter), [data.submissionCalendar, filter])
+  const heatmapWidth = useMemo(() => calendarWidth(heatmap.months), [heatmap.months])
+
+  return (
+    <Block delay={0.12}>
+      <div style={{ ...PANEL, padding: '16px 16px 18px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <div style={{ color: '#fff', fontSize: 18 }}>
+            <strong>{stats.total}</strong> <span style={{ fontSize: 14 }}>{heatmap.title}</span>
+          </div>
+          <span style={{ width: 14, height: 14, border: '1px solid #777', color: '#999', borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 10 }}>i</span>
+          <div style={{ marginLeft: 'auto', color: '#cfcfcf', fontSize: 12 }}>
+            Total active days: <strong style={{ color: '#fff' }}>{stats.activeDays}</strong>
+            <span style={{ marginLeft: 18 }}>Max streak: <strong style={{ color: '#fff' }}>{stats.maxStreak}</strong></span>
+          </div>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <select
+              value={filter}
+              onChange={(event) => setFilter(event.target.value as CalendarFilter)}
+              aria-label="Filter submission calendar"
+              style={{
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                border: 0,
+                outline: 'none',
+                background: '#3a3a3a',
+                color: '#fff',
+                borderRadius: 5,
+                padding: '8px 30px 8px 13px',
+                fontSize: 12,
+                fontFamily: 'system-ui, -apple-system, Helvetica Neue, sans-serif',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="current">Current</option>
+              {yearOptions.map((year) => (
+                <option key={year} value={String(year)}>
+                  {year}
+                </option>
+              ))}
+            </select>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                right: 10,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+              }}
+            >
+              <path d="m6 9 6 6 6-6" stroke="#bdbdbd" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </div>
+        <div
+          className="leetcode-calendar"
+          style={{
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            scrollbarWidth: 'none',
+            paddingBottom: 2,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: HEATMAP_MONTH_GAP,
+              width: 'max-content',
+              minWidth: heatmapWidth,
+            }}
+          >
+            {heatmap.months.map((month) => (
+              <div key={month.key} style={{ flex: '0 0 auto' }}>
+                <div style={{ display: 'flex', gap: HEATMAP_GAP, height: 75 }}>
+                  {month.weeks.map((week, weekIndex) => (
+                    <div key={weekIndex} style={{ display: 'grid', gridTemplateRows: `repeat(7, ${HEATMAP_CELL}px)`, gap: HEATMAP_GAP }}>
+                      {week.map((day, dayIndex) => (
+                        <div
+                          key={`${weekIndex}-${dayIndex}`}
+                          title={day ? `${day.count} submissions on ${day.date}` : undefined}
+                          style={{
+                            width: HEATMAP_CELL,
+                            height: HEATMAP_CELL,
+                            borderRadius: 2,
+                            background: day ? heatmapColor(day.level) : 'transparent',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ color: '#cfcfcf', fontSize: 14, textAlign: 'center', marginTop: 9 }}>
+                  {month.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Block>
+  )
+}
+
+function LeetCodeProfile({ data, loading, compact }: { data: LCData | null; loading: boolean; compact: boolean }) {
+  if (loading) return <Skeleton />
+  if (!data || data.error) return <ErrorCard platform="LeetCode" />
+
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: compact ? '1fr' : '230px minmax(0, 1fr)',
+        gap: 18,
+        alignItems: 'start',
+      }}
+    >
+      <ProfileRail data={data} compact={compact} />
+      <main style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+        <ContestCard data={data} />
+        <SolvedAndBadges data={data} />
+        <CalendarCard data={data} />
+      </main>
+    </div>
+  )
+}
+
+function ErrorCard({ platform }: { platform: string }) {
+  return (
+    <div style={{ ...PANEL, padding: 48, textAlign: 'center', color: '#bbb' }}>
+      {platform} profile data is unavailable right now.
+    </div>
+  )
+}
+
+function CodeforcesTab({ data, loading }: { data: CFData | null; loading: boolean }) {
   const ratingCount = useCountUp(data?.user?.rating ?? 0)
   const solvedCount = useCountUp(data?.problemsSolved ?? 0, 120)
 
   if (loading) return <Skeleton />
-  if (!data || data.error || !data.user) {
-    return (
-      <ErrorCard
-        platform="Codeforces"
-        href="https://codeforces.com/profile/shajith240"
-      />
-    )
-  }
+  if (!data || data.error || !data.user) return <ErrorCard platform="Codeforces" />
 
   const { user, problemsSolved } = data
   const color = cfColor(user.rank)
-  const rankLabel =
-    user.rank.charAt(0).toUpperCase() + user.rank.slice(1)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-      {/* Block 1 — Rating hero */}
+    <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
       <Block delay={0}>
-        <div
-          style={{
-            ...CARD_ELEVATED,
-            borderColor: `${color}22`,
-            padding: 'clamp(20px, 4vw, 36px) clamp(16px, 4vw, 40px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          {/* LEFT — rating + rank */}
+        <div style={{ ...PANEL, borderColor: `${color}55`, padding: 36, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div
-              style={{
-                fontSize: 'clamp(48px, 12vw, 72px)',
-                fontWeight: 700,
-                color,
-                letterSpacing: '-0.04em',
-                lineHeight: 1,
-              }}
-            >
-              {ratingCount}
-            </div>
-            <div
-              style={{
-                fontSize: 16,
-                color: color + 'b3',
-                marginTop: 8,
-                fontWeight: 500,
-                letterSpacing: '0.02em',
-                textTransform: 'capitalize',
-              }}
-            >
-              {user.rank}
-            </div>
-            <div
-              style={{
-                fontSize: 12,
-                color: 'var(--text-dim)',
-                marginTop: 4,
-              }}
-            >
-              Max: {user.maxRating} · {user.maxRank}
-            </div>
+            <div style={{ fontSize: 72, fontWeight: 700, color, letterSpacing: '-0.04em', lineHeight: 1 }}>{ratingCount}</div>
+            <div style={{ fontSize: 16, color, marginTop: 8, textTransform: 'capitalize' }}>{user.rank}</div>
+            <div style={{ fontSize: 12, color: '#777', marginTop: 5 }}>Max: {user.maxRating} / {user.maxRank}</div>
           </div>
-
-          {/* RIGHT — rank badge pill */}
-          <div
-            style={{
-              background: color + '1e',
-              border: `1px solid ${color}4d`,
-              borderRadius: 10,
-              padding: '14px 22px',
-              textAlign: 'center',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 500,
-                color,
-                textTransform: 'capitalize',
-                letterSpacing: '0.01em',
-              }}
-            >
-              {rankLabel}
-            </div>
+          <div style={{ background: `${color}22`, border: `1px solid ${color}55`, borderRadius: 8, color, padding: '16px 24px', textTransform: 'capitalize' }}>
+            {user.rank}
           </div>
         </div>
       </Block>
-
-      {/* Block 2 — Problems solved */}
       <Block delay={0.08}>
-        <div
-          style={{
-            ...CARD,
-            padding: 'clamp(16px, 3vw, 28px) clamp(16px, 4vw, 40px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
+        <div style={{ ...PANEL, padding: 30, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div
-              style={{
-                fontSize: 'clamp(32px, 8vw, 48px)',
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-                letterSpacing: '-0.02em',
-                lineHeight: 1,
-              }}
-            >
-              {solvedCount}
-            </div>
-            <div
-              style={{
-                fontSize: 13,
-                color: 'var(--text-muted)',
-                marginTop: 8,
-              }}
-            >
-              unique problems solved
-            </div>
+            <div style={{ fontSize: 48, color: '#fff', fontWeight: 700 }}>{solvedCount}</div>
+            <div style={{ color: '#999', fontSize: 13 }}>unique problems solved</div>
           </div>
-
-          {typeof user.contribution === 'number' && (
-            <div style={{ textAlign: 'right' }}>
-              <div
-                style={{
-                  fontSize: 32,
-                  fontWeight: 600,
-                  color: 'var(--text-secondary)',
-                  letterSpacing: '-0.02em',
-                  lineHeight: 1,
-                }}
-              >
-                {user.contribution >= 0
-                  ? `+${user.contribution}`
-                  : user.contribution}
-              </div>
-              <div
-                style={{
-                  fontSize: 10,
-                  color: 'var(--text-dim)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  marginTop: 6,
-                }}
-              >
-                Contribution
-              </div>
-            </div>
-          )}
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 32, color: '#fff' }}>{user.contribution >= 0 ? `+${user.contribution}` : user.contribution}</div>
+            <div style={{ color: '#777', fontSize: 11, textTransform: 'uppercase' }}>Contribution</div>
+          </div>
         </div>
       </Block>
-
-      <ProfileLink
-        href="https://codeforces.com/profile/shajith240"
-        label="View full profile"
-      />
     </div>
   )
 }
-
-/* ─── CodeChef tab ───────────────────────────────────────────── */
-
-function CodeChefTab({
-  data,
-  loading,
-}: {
-  data: CCData | null
-  loading: boolean
-}) {
-  const ratingCount = useCountUp(data?.rating ?? 0)
-
-  if (loading) return <Skeleton />
-
-  if (!data || data.error || typeof data.rating === 'undefined') {
-    return (
-      <ErrorCard
-        platform="CodeChef"
-        href="https://www.codechef.com/users/shajith240"
-      />
-    )
-  }
-
-  const stars = data.stars ?? 1
-  const starColor = CC_STAR_COLORS[stars] ?? '#808080'
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-      {/* Block 1 — Star rating hero */}
-      <Block delay={0}>
-        <div
-          style={{
-            ...CARD_ELEVATED,
-            borderColor: `${starColor}22`,
-            padding: 'clamp(20px, 4vw, 36px) clamp(16px, 4vw, 40px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          {/* LEFT — stars + rating */}
-          <div>
-            <div
-              style={{
-                fontSize: 'clamp(24px, 6vw, 36px)',
-                letterSpacing: 4,
-                lineHeight: 1,
-                marginBottom: 16,
-              }}
-            >
-              {Array(7)
-                .fill(0)
-                .map((_, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      color: i < stars ? starColor : 'var(--border)',
-                    }}
-                  >
-                    ★
-                  </span>
-                ))}
-            </div>
-            <div
-              style={{
-                fontSize: 'clamp(32px, 8vw, 48px)',
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-                letterSpacing: '-0.02em',
-                lineHeight: 1,
-              }}
-            >
-              {ratingCount}
-            </div>
-            <div
-              style={{
-                fontSize: 11,
-                color: '#555555',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                marginTop: 6,
-              }}
-            >
-              CodeChef rating
-            </div>
-          </div>
-
-          {/* RIGHT — rank info */}
-          {(data.globalRank || data.countryRank) && (
-            <div style={{ textAlign: 'right' }}>
-              {data.globalRank && (
-                <>
-                  <div
-                    style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}
-                  >
-                    #{data.globalRank}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: '#555555',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                      marginTop: 2,
-                    }}
-                  >
-                    Global
-                  </div>
-                </>
-              )}
-              {data.countryRank && (
-                <>
-                  <Divider />
-                  <div
-                    style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}
-                  >
-                    #{data.countryRank}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      color: '#555555',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                      marginTop: 2,
-                    }}
-                  >
-                    Country
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </Block>
-
-      <ProfileLink
-        href="https://www.codechef.com/users/shajith240"
-        label="View full profile"
-      />
-    </div>
-  )
-}
-
-/* ─── Tab definitions ────────────────────────────────────────── */
-
-const TABS: { id: Tab; label: string; dot: string }[] = [
-  { id: 'leetcode',   label: 'LeetCode',   dot: '#FFA116' },
-  { id: 'codeforces', label: 'Codeforces', dot: '#318CE7' },
-  { id: 'codechef',   label: 'CodeChef',   dot: '#6B9FD4' },
-]
-
-/* ─── Page ───────────────────────────────────────────────────── */
 
 export default function DsaPage() {
-  const { isSidebarOpen, isNavOpen, isMobileLayout, isTabletLayout } = useLayout()
+  const { isMobileLayout, isTabletLayout } = useLayout()
+  const metrics = useShellMetrics()
   const isPhone = isMobileLayout && !isTabletLayout
+  const availableWidth = metrics.viewportWidth - metrics.contentLeft - metrics.contentRight
+  const compactProfile = availableWidth < 980
 
   const [activeTab, setActiveTab] = useState<Tab>('leetcode')
   const [leetcode, setLeetcode] = useState<LCData | null>(null)
   const [codeforces, setCodeforces] = useState<CFData | null>(null)
-  const [codechef, setCodechef] = useState<CCData | null>(null)
-  const [loading, setLoading] = useState({ lc: true, cc: true, cf: true })
-
-  const ml = !isMobileLayout && isSidebarOpen ? 280 : 0
-  const mr = !isMobileLayout && isNavOpen ? 260 : 0
+  const [loading, setLoading] = useState({ lc: true, cf: true })
 
   useEffect(() => {
     fetch('/api/leetcode')
-      .then(r => r.json())
-      .then(d => { setLeetcode(d); setLoading(p => ({ ...p, lc: false })) })
+      .then((r) => r.json())
+      .then((d) => {
+        setLeetcode(d)
+        setLoading((p) => ({ ...p, lc: false }))
+      })
       .catch(() => {
-        setLeetcode({ error: true } as any)
-        setLoading(p => ({ ...p, lc: false }))
+        setLeetcode({ error: true } as LCData)
+        setLoading((p) => ({ ...p, lc: false }))
       })
 
     fetch('/api/codeforces')
-      .then(r => r.json())
-      .then(d => { setCodeforces(d); setLoading(p => ({ ...p, cf: false })) })
-      .catch(() => {
-        setCodeforces({ error: true } as any)
-        setLoading(p => ({ ...p, cf: false }))
+      .then((r) => r.json())
+      .then((d) => {
+        setCodeforces(d)
+        setLoading((p) => ({ ...p, cf: false }))
       })
-
-    fetch('/api/codechef')
-      .then(r => r.json())
-      .then(d => { setCodechef(d); setLoading(p => ({ ...p, cc: false })) })
       .catch(() => {
-        setCodechef({ error: true } as any)
-        setLoading(p => ({ ...p, cc: false }))
+        setCodeforces({ error: true } as CFData)
+        setLoading((p) => ({ ...p, cf: false }))
       })
   }, [])
 
   return (
     <>
-    <BottomToolbar />
-    <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: 'var(--bg-page)', transition: 'background 0.22s ease' }}>
-      <motion.div
-        animate={{ left: `${ml}px`, right: `${mr}px` }}
-        transition={{ type: 'spring', stiffness: 520, damping: 44, mass: 0.85 }}
-        style={{
-          position: 'absolute',
-          top: 0,
-          bottom: isPhone ? 72 : 0,
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-        }}
-      >
-        <div
+      <BottomToolbar />
+      <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#1a1a1a' }}>
+        <motion.div
+          animate={{ left: `${metrics.contentLeft}px`, right: `${metrics.contentRight}px` }}
+          transition={{ type: 'spring', stiffness: 520, damping: 44, mass: 0.85 }}
           style={{
-            maxWidth: 720,
-            margin: '0 auto',
-            padding: `clamp(32px, 6vw, 48px) clamp(16px, 5vw, 40px) 100px`,
+            position: 'absolute',
+            top: 0,
+            bottom: isPhone ? 72 : 0,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
           }}
         >
-          {/* ── Hero identity block ─────────────────────────── */}
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: 'easeOut' }}
-            style={{ marginBottom: 28 }}
-          >
-            <div
-              style={{
-                fontSize: 11,
-                color: 'var(--text-dim)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.14em',
-                fontWeight: 400,
-                marginBottom: 6,
-              }}
-            >
-              Competitive Programming
-            </div>
-            <div
-              style={{
-                fontSize: 28,
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              shajith240
-            </div>
-          </motion.div>
-
-          {/* Thin rule */}
-          <motion.div
-            initial={{ opacity: 0, scaleX: 0 }}
-            animate={{ opacity: 1, scaleX: 1 }}
-            transition={{ duration: 0.4, ease: 'easeOut', delay: 0.1 }}
+          <div
             style={{
-              height: 1,
-              background: 'var(--border-subtle)',
-              marginBottom: 28,
-              transformOrigin: 'left',
+              width: 'min(1160px, calc(100vw - 56px))',
+              margin: '0 auto',
+              padding: `${isPhone ? 24 : 28}px ${isPhone ? 16 : 24}px 112px`,
             }}
-          />
-
-          {/* ── Tab bar ─────────────────────────────────────── */}
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: 'easeOut', delay: 0.15 }}
-            style={{ marginBottom: 32 }}
           >
-            <div
-              style={{
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border)',
-                borderRadius: 999,
-                padding: 4,
-                display: 'inline-flex',
-                gap: 2,
-                transition: 'background 0.22s ease, border-color 0.22s ease',
-              }}
-            >
-              {TABS.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  style={{
-                    padding: '7px 20px',
-                    borderRadius: 999,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    border: 'none',
-                    outline: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 7,
-                    background:
-                      activeTab === tab.id ? '#FF4500' : 'transparent',
-                    color:
-                      activeTab === tab.id
-                        ? 'white'
-                        : 'var(--text-muted)',
-                    transition: 'background 150ms ease, color 150ms ease',
-                    fontFamily:
-                      'system-ui, -apple-system, Helvetica Neue, sans-serif',
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: '50%',
-                      flexShrink: 0,
-                      background:
-                        activeTab === tab.id
-                          ? 'rgba(255,255,255,0.9)'
-                          : tab.dot,
-                      transition: 'background 150ms ease',
-                    }}
-                  />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </motion.div>
+            <PlatformTabs activeTab={activeTab} onChange={setActiveTab} />
 
-          {/* ── Tab content ─────────────────────────────────── */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ y: 12, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -12, opacity: 0 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-            >
-              {activeTab === 'leetcode' && (
-                <LeetCodeTab data={leetcode} loading={loading.lc} />
-              )}
-              {activeTab === 'codeforces' && (
-                <CodeforcesTab data={codeforces} loading={loading.cf} />
-              )}
-              {activeTab === 'codechef' && (
-                <CodeChefTab data={codechef} loading={loading.cc} />
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </motion.div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ y: 12, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -10, opacity: 0 }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+              >
+                {activeTab === 'leetcode' && (
+                  <LeetCodeProfile data={leetcode} loading={loading.lc} compact={compactProfile || isPhone} />
+                )}
+                {activeTab === 'codeforces' && (
+                  <CodeforcesTab data={codeforces} loading={loading.cf} />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </motion.div>
 
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 0.3; }
-          50%       { opacity: 0.65; }
-        }
-      `}</style>
-    </div>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 0.32; }
+            50% { opacity: 0.68; }
+          }
+
+          .leetcode-calendar::-webkit-scrollbar {
+            display: none;
+          }
+
+          .problem-wheel-solved > span:not(.solved-label) {
+            display: none;
+          }
+        `}</style>
+      </div>
     </>
+  )
+}
+
+function PlatformTabs({ activeTab, onChange }: { activeTab: Tab; onChange: (tab: Tab) => void }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+      <div style={{ ...CARD, background: '#282828', borderRadius: 999, padding: 5, display: 'inline-flex', gap: 4 }}>
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => onChange(tab.id)}
+            style={{
+              border: 0,
+              borderRadius: 999,
+              padding: '8px 24px',
+              background: activeTab === tab.id ? '#333' : 'transparent',
+              color: activeTab === tab.id ? '#fff' : '#9a9a9a',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: tab.dot }} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }

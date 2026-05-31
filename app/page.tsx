@@ -8,6 +8,7 @@ import DragPill from "@/components/ui/DragPill";
 import ScrollDots from "@/components/layout/ScrollDots";
 import BottomToolbar from "@/components/ui/BottomToolbar";
 import { useLayout } from "@/contexts/LayoutContext";
+import { useShellMetrics } from "@/lib/useShellMetrics";
 import { PROJECTS } from "@/data/projects";
 
 interface CardData {
@@ -194,7 +195,8 @@ function SwipeHint({ onDismiss }: { onDismiss: () => void }) {
 }
 
 export default function Home() {
-  const { isNavOpen, isSidebarOpen, isMobileLayout, isTabletLayout } = useLayout();
+  const { isMobileLayout, isTabletLayout } = useLayout();
+  const metrics = useShellMetrics();
   const [cards, setCards] = useState(INITIAL_CARDS);
   const [direction, setDirection] = useState(0);
   const [dotIndex, setDotIndex] = useState(0);
@@ -202,8 +204,17 @@ export default function Home() {
   const dismissHint = useCallback(() => setShowSwipeHint(false), []);
 
   const isPhone = isMobileLayout && !isTabletLayout;
-  const ml = !isMobileLayout && isSidebarOpen ? 280 : 0;
-  const mr = !isMobileLayout && isNavOpen ? 260 : 0;
+  const ml = metrics.contentLeft;
+  const mr = metrics.contentRight;
+  const desktopCardGutter = Math.min(60, Math.max(32, metrics.viewportWidth * 0.032));
+  const desktopAvailableWidth = Math.max(260, metrics.viewportWidth - ml - mr - desktopCardGutter);
+  const desktopMaxHeight = Math.max(
+    360,
+    metrics.viewportHeight - Math.min(240, Math.max(190, metrics.viewportHeight * 0.24))
+  );
+  const desktopCardWidth = Math.floor(
+    Math.max(260, Math.min(desktopAvailableWidth, 1120, desktopMaxHeight * (4 / 3)))
+  );
 
   // Touch-optimized: lower threshold + velocity detection on phones
   const DRAG_THRESHOLD = isPhone ? 50 : 80;
@@ -329,8 +340,9 @@ export default function Home() {
         {/* Card stack container */}
         <div
           style={{
-            width: isPhone ? "calc(100% - 40px)" : "min(1050px, calc(100% - 60px))",
-            height: isPhone ? "calc(100% - 110px)" : "clamp(320px, calc(100dvh - 200px), calc(100dvh - 200px))",
+            width: isPhone ? "calc(100% - 40px)" : `${desktopCardWidth}px`,
+            height: isPhone ? "calc(100% - 110px)" : "auto",
+            aspectRatio: isPhone ? undefined : "4 / 3",
             position: "relative",
           }}
         >
@@ -386,6 +398,7 @@ export default function Home() {
             >
               {frontCard.type === "music" ? (
                 <MusicCard
+                  image={frontCard.image}
                   title={frontCard.title}
                   artist={frontCard.sub}
                   progress={35}

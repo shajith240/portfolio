@@ -7,6 +7,7 @@ interface InfoCardProps {
   label: string;
   cta?: string;
   href?: string;
+  compact?: boolean;
   children: ReactNode | ((hovered: boolean) => ReactNode);
 }
 
@@ -21,7 +22,7 @@ interface InfoCardProps {
 
 const TILT_SPRING = { stiffness: 600, damping: 30, mass: 0.5 };
 
-export default function InfoCard({ label, cta, href, children }: InfoCardProps) {
+export default function InfoCard({ label, cta, href, compact = false, children }: InfoCardProps) {
   const [hovered, setHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -74,8 +75,8 @@ export default function InfoCard({ label, cta, href, children }: InfoCardProps) 
         rotateX: rx,
         rotateY: ry,
         transformPerspective: 700,
-        borderRadius: "16px",
-        padding: "12px",
+        borderRadius: compact ? "14px" : "16px",
+        padding: compact ? "8px 10px" : "12px",
         cursor: "default",
         position: "relative",
         background: "var(--card-gradient)",
@@ -91,7 +92,7 @@ export default function InfoCard({ label, cta, href, children }: InfoCardProps) 
         style={{
           position: "absolute",
           inset: 0,
-          borderRadius: "16px",
+          borderRadius: compact ? "14px" : "16px",
           background: specularBg,
           opacity: hovered ? 1 : 0,
           pointerEvents: "none",
@@ -106,7 +107,7 @@ export default function InfoCard({ label, cta, href, children }: InfoCardProps) 
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: "10px",
+        marginBottom: compact ? "6px" : "10px",
       }}>
         <span style={{
           fontSize: "10px",

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import BottomToolbar from "@/components/ui/BottomToolbar";
 import { useLayout } from "@/contexts/LayoutContext";
+import { useShellMetrics } from "@/lib/useShellMetrics";
 
 /* ── Data ──────────────────────────────────────────────────────────── */
 
@@ -117,12 +118,13 @@ function NoteCard({ note }: { note: typeof NOTES[0] }) {
 
 /* ── Page ──────────────────────────────────────────────────────────── */
 export default function NotesPage() {
-  const { isSidebarOpen, isNavOpen, isMobileLayout, isTabletLayout } = useLayout();
+  const { isMobileLayout, isTabletLayout } = useLayout();
+  const metrics = useShellMetrics();
   const [activeTag, setActiveTag] = useState("ALL");
   const [query, setQuery] = useState("");
 
-  const ml = !isMobileLayout && isSidebarOpen ? 280 : 0;
-  const mr = !isMobileLayout && isNavOpen ? 260 : 0;
+  const ml = metrics.contentLeft;
+  const mr = metrics.contentRight;
   const isPhone = isMobileLayout && !isTabletLayout;
 
   const filtered = NOTES.filter((n) => {
@@ -135,11 +137,12 @@ export default function NotesPage() {
     <>
       <BottomToolbar />
 
-      <div style={{
+      <motion.div
+        animate={{ left: `${ml}px`, right: `${mr}px` }}
+        transition={{ type: "spring", stiffness: 520, damping: 44, mass: 0.85 }}
+        style={{
         position: "fixed",
         top: 0,
-        left: 0,
-        right: 0,
         bottom: isPhone ? 72 : 0,
         background: "var(--bg-page)",
         overflowY: "auto",
@@ -306,7 +309,7 @@ export default function NotesPage() {
           </motion.div>
 
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }

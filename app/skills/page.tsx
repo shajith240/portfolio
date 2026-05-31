@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useLayout } from '@/contexts/LayoutContext'
+import { useShellMetrics } from '@/lib/useShellMetrics'
 import BottomToolbar from '@/components/ui/BottomToolbar'
 
 /* ── Data ─────────────────────────────────────────────────── */
@@ -150,12 +151,13 @@ function AppIcon({
 /* ── Page ────────────────────────────────────────────────── */
 
 export default function SkillsPage() {
-  const { isSidebarOpen, isNavOpen, isMobileLayout, isTabletLayout, isSearchOpen } = useLayout()
+  const { isMobileLayout, isTabletLayout, isSearchOpen } = useLayout()
+  const metrics = useShellMetrics()
   const [search, setSearch] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const ml = !isMobileLayout && isSidebarOpen ? 280 : 0
-  const mr = !isMobileLayout && isNavOpen ? 260 : 0
+  const ml = metrics.contentLeft
+  const mr = metrics.contentRight
   const q = search.toLowerCase().trim()
   const isPhone = isMobileLayout && !isTabletLayout
 

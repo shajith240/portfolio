@@ -10,6 +10,8 @@ interface LayoutContextValue {
   isSoundEnabled: boolean;
   isMobileLayout: boolean;
   isTabletLayout: boolean;
+  viewportWidth: number;
+  viewportHeight: number;
   toggleNav: () => void;
   toggleSidebar: () => void;
   openSearch: () => void;
@@ -25,6 +27,8 @@ const LayoutContext = createContext<LayoutContextValue>({
   isSoundEnabled: true,
   isMobileLayout: false,
   isTabletLayout: false,
+  viewportWidth: 1440,
+  viewportHeight: 900,
   toggleNav: () => {},
   toggleSidebar: () => {},
   openSearch: () => {},
@@ -50,10 +54,13 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   const [isMobileLayout, setIsMobileLayout] = useState(false);
   // isTabletLayout: 640px–1023px (iPad-size range)
   const [isTabletLayout, setIsTabletLayout] = useState(false);
+  const [viewport, setViewport] = useState({ width: 1440, height: 900 });
 
   useEffect(() => {
     const update = () => {
       const w = window.innerWidth;
+      const h = window.innerHeight;
+      setViewport({ width: w, height: h });
       setIsMobileLayout(w < 1024);
       setIsTabletLayout(w >= 640 && w < 1024);
     };
@@ -92,6 +99,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   return (
     <LayoutContext.Provider value={{
       isNavOpen, isSidebarOpen, isSearchOpen, isSoundEnabled, isMobileLayout, isTabletLayout,
+      viewportWidth: viewport.width, viewportHeight: viewport.height,
       toggleNav, toggleSidebar, openSearch, closeSearch, toggleSound, closeSidebars,
     }}>
       {children}
