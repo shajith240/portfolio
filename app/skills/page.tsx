@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useLayout } from '@/contexts/LayoutContext'
 import { useShellMetrics } from '@/lib/useShellMetrics'
-import BottomToolbar from '@/components/ui/BottomToolbar'
 
 /* ── Data ─────────────────────────────────────────────────── */
 
@@ -181,8 +180,6 @@ export default function SkillsPage() {
 
   return (
     <>
-      <BottomToolbar />
-
       {/*
         ── LAYER 0: Bloom ─────────────────────────────────────
         Very subtle warm center glow — gives the frost layer

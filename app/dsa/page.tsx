@@ -5,7 +5,6 @@ import type { CSSProperties } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLayout } from '@/contexts/LayoutContext'
 import { useShellMetrics } from '@/lib/useShellMetrics'
-import BottomToolbar from '@/components/ui/BottomToolbar'
 
 interface LeetCodeUser {
   username: string
@@ -1576,7 +1575,6 @@ export default function DsaPage() {
 
   return (
     <>
-      <BottomToolbar />
       <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#1a1a1a' }}>
         <motion.div
           animate={{ left: `${metrics.contentLeft}px`, right: `${metrics.contentRight}px` }}
