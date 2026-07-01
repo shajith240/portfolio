@@ -102,10 +102,11 @@ export default function BottomToolbar() {
         justifyContent: "space-between",
         alignItems: "center",
         zIndex: 100,
+        pointerEvents: "none",
       }}
     >
       {/* Left — sound toggle + theme toggle pill */}
-      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: "8px", alignItems: "center", pointerEvents: "auto" }}>
 
         {/* Sound toggle */}
         <button
@@ -207,6 +208,7 @@ export default function BottomToolbar() {
           cursor: "pointer",
           color: searchHovered ? "#FF4500" : toolbarSearchIcon,
           transition: "color 0.15s ease, background-color 0.22s ease, border-color 0.22s ease",
+          pointerEvents: "auto",
         }}
       >
         <SearchIcon />
