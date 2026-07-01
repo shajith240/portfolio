@@ -32,7 +32,12 @@ export default function MotivationWidget() {
       onHoverEnd={() => setHovered(false)}
       style={{
         position: "fixed",
-        top: `${metrics.inset + 40}px`,
+        // Bottom-anchored (like the Dock), not top-anchored like the
+        // left widget stack — leaves the entire upper-right area free
+        // for other widgets, without needing a pixel offset that'd
+        // have to be re-tuned every time something new gets added
+        // above this one.
+        bottom: `${metrics.inset + 24}px`,
         right: `${metrics.inset}px`,
         zIndex: 20,
         width: `${FRAME_WIDTH}px`,
