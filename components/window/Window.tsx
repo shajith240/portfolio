@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { motion, useMotionValue, useDragControls, animate } from "framer-motion";
-import { useWindowManager, type WindowState } from "@/contexts/WindowManagerContext";
+import { useWindowManager, getPositionBounds, type WindowState } from "@/contexts/WindowManagerContext";
 
 /* macOS-authentic window chrome. Dragging uses Framer Motion's own
    drag system (dragListener={false} + useDragControls started only
@@ -47,21 +47,41 @@ const TrafficLight = ({
       onMouseLeave={() => setHovered(false)}
       title={title}
       style={{
-        width: "12px",
-        height: "12px",
+        // The visible dot is 12px (matches real macOS), but the
+        // clickable/hoverable area is deliberately larger — a hit box
+        // exactly the size of the dot sits pixel-for-pixel against the
+        // titlebar's "grab" cursor, so a sub-pixel mouse offset flips
+        // between "default" and "grab" and reads as broken. Real macOS
+        // gives these buttons a generously padded hit area for exactly
+        // this reason.
+        width: "20px",
+        height: "20px",
         borderRadius: "50%",
-        background: showColor ? color : grayColor,
+        background: "transparent",
         border: "none",
         padding: 0,
         cursor: "default",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        transition: "background 0.1s ease",
+        flexShrink: 0,
       }}
     >
-      <span style={{ opacity: hovered && showColor ? 1 : 0, display: "flex" }}>
-        {hoverGlyph}
+      <span
+        style={{
+          width: "12px",
+          height: "12px",
+          borderRadius: "50%",
+          background: showColor ? color : grayColor,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          transition: "background 0.1s ease",
+        }}
+      >
+        <span style={{ opacity: hovered && showColor ? 1 : 0, display: "flex" }}>
+          {hoverGlyph}
+        </span>
       </span>
     </button>
   );
@@ -82,6 +102,18 @@ export default function Window({ win, active }: { win: WindowState; active: bool
   const dragControls = useDragControls();
   const rootRef = useRef<HTMLDivElement>(null);
   const [lightsHovered, setLightsHovered] = useState(false);
+
+  // Keeps the titlebar always reachable by drag alone — the bug this
+  // guards against: dragging a window until its titlebar is fully
+  // off-screen leaves no way to grab it back. Recomputed on resize so
+  // shrinking the browser doesn't leave a stale, too-permissive bound.
+  const [dragBounds, setDragBounds] = useState(() => getPositionBounds(win.width));
+  useEffect(() => {
+    const update = () => setDragBounds(getPositionBounds(win.width));
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [win.width]);
 
   const x = useMotionValue(win.x);
   const y = useMotionValue(win.y);
@@ -141,6 +173,7 @@ export default function Window({ win, active }: { win: WindowState; active: bool
       dragListener={false}
       dragMomentum={false}
       dragElastic={0}
+      dragConstraints={{ left: dragBounds.minX, right: dragBounds.maxX, top: dragBounds.minY, bottom: dragBounds.maxY }}
       onDragEnd={() => updateBounds(win.id, { x: x.get(), y: y.get() })}
       onPointerDown={() => bringToFront(win.id)}
       style={{
@@ -185,7 +218,15 @@ export default function Window({ win, active }: { win: WindowState; active: bool
           onPointerDown={(e) => e.stopPropagation()}
           onMouseEnter={() => setLightsHovered(true)}
           onMouseLeave={() => setLightsHovered(false)}
-          style={{ display: "flex", gap: "8px", zIndex: 1, cursor: "default" }}
+          // gap: 0 is intentional — each button is now a 20px hit box
+          // with its 12px visible dot centered inside, so 0 gap between
+          // boxes reproduces the same 20px dot-to-dot pitch real macOS
+          // uses (previously: 12px dot + 8px gap = the same 20px pitch).
+          // marginLeft compensates for the 4px inset the larger hit box
+          // added, so the first dot lands exactly where it did before
+          // (flush with the titlebar's existing 10px padding), not 4px
+          // further right.
+          style={{ display: "flex", gap: "0px", zIndex: 1, cursor: "default", marginLeft: "-4px" }}
         >
           <TrafficLight
             color="#FF5F57"
