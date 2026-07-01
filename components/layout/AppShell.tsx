@@ -11,8 +11,10 @@ import Wallpaper from "@/components/layout/Wallpaper";
 import BootSequence from "@/components/boot/BootSequence";
 import MenuBar from "@/components/layout/MenuBar";
 import DesktopWidgetStack from "@/components/widgets/DesktopWidgetStack";
+import RightWidgetStack from "@/components/widgets/RightWidgetStack";
 import PhotoWidget from "@/components/widgets/PhotoWidget";
 import NowPlayingWidget from "@/components/widgets/NowPlayingWidget";
+import AIToolsWidget from "@/components/widgets/AIToolsWidget";
 import MotivationWidget from "@/components/widgets/MotivationWidget";
 import CommandPalette from "@/components/ui/CommandPalette";
 import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
@@ -80,6 +82,9 @@ function Shell({ children }: { children: ReactNode }) {
                 <PhotoWidget />
                 <NowPlayingWidget />
               </DesktopWidgetStack>
+              <RightWidgetStack>
+                <AIToolsWidget />
+              </RightWidgetStack>
               <MotivationWidget />
             </>
           )}
