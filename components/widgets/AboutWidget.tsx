@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useShellMetrics } from "@/lib/useShellMetrics";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
 
 /* macOS-style info widget — sits directly below PhotoWidget (same
@@ -14,11 +13,8 @@ import { useWindowManager } from "@/contexts/WindowManagerContext";
    the app), Regular for body copy. */
 
 const WIDGET_WIDTH = 260;
-const PHOTO_WIDGET_HEIGHT = 260;
-const WIDGET_GAP = 14;
 
 export default function AboutWidget() {
-  const metrics = useShellMetrics();
   const { openWindow } = useWindowManager();
   const [hovered, setHovered] = useState(false);
 
@@ -30,10 +26,6 @@ export default function AboutWidget() {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        position: "fixed",
-        top: `${metrics.inset + 40 + PHOTO_WIDGET_HEIGHT + WIDGET_GAP}px`,
-        left: `${metrics.inset}px`,
-        zIndex: 20,
         width: `${WIDGET_WIDTH}px`,
         padding: "16px",
         borderRadius: "20px",

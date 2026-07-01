@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useShellMetrics } from "@/lib/useShellMetrics";
 
 /* macOS "Photos" widget — a single photo, edge to edge, no text.
    Liquid Glass isn't appropriate here (a photo widget is opaque, not
@@ -12,7 +11,6 @@ import { useShellMetrics } from "@/lib/useShellMetrics";
 const WIDGET_WIDTH = 260;
 
 export default function PhotoWidget() {
-  const metrics = useShellMetrics();
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -24,10 +22,6 @@ export default function PhotoWidget() {
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       style={{
-        position: "fixed",
-        top: `${metrics.inset + 40}px`,
-        left: `${metrics.inset}px`,
-        zIndex: 20,
         width: `${WIDGET_WIDTH}px`,
         height: `${WIDGET_WIDTH}px`,
         borderRadius: "20px",
