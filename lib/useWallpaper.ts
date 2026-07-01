@@ -7,6 +7,7 @@ const STORAGE_KEY = "portfolio.wallpaper";
 export const WALLPAPERS = [
   "abstract-background-3840x2160-11753.jpeg",
   "dahlia-flower-orange-flower-black-background-amoled-5k-8k-3840x2160-8535.jpg",
+  "ea-sports-fc-26-key-3840x2160-26590.jpg",
   "maserati-gt2-3840x2160-26562.jpg",
   "microsoft-surface-3840x2160-9246.png",
   "orange-tulips-black-background-spring-flowers-colorful-4096x2160-2339.jpg",

@@ -53,7 +53,7 @@ export const PROJECTS: Project[] = [
     description: 'Autonomous AI debate agent built for Agent SLAM 2026, a live competitive tournament — connects to a central WebSocket server and argues assigned topics in Finance, Marketing, and Ethics with zero human intervention once a match starts.',
     github: 'https://github.com/shajith240/Agent-slam',
     live: '',
-    image: 'https://placehold.co/800x600/242424/555555',
+    image: '/project-photos/agent_slam.png',
   },
   {
     id: 5,
