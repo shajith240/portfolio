@@ -1,11 +1,12 @@
 "use client";
 
 import { type ReactNode, useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LayoutProvider, useLayout } from "@/contexts/LayoutContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { WindowManagerProvider } from "@/contexts/WindowManagerContext";
+import { WindowManagerProvider, useWindowManager } from "@/contexts/WindowManagerContext";
 import { usePerformance } from "@/lib/usePerformance";
+import { NAV_ITEMS } from "@/data/nav";
 import Wallpaper from "@/components/layout/Wallpaper";
 import BootSequence from "@/components/boot/BootSequence";
 import MenuBar from "@/components/layout/MenuBar";
@@ -21,7 +22,27 @@ function Shell({ children }: { children: ReactNode }) {
   const { isMobileLayout, isTabletLayout } = useLayout();
   const { tier } = usePerformance();
   const pathname = usePathname();
+  const router = useRouter();
+  const { openWindow } = useWindowManager();
   const isHome = pathname === "/";
+  const isPhone = isMobileLayout && !isTabletLayout;
+
+  // Closes the loophole no individual link fix can fully cover: a
+  // direct visit to /about (typed URL, bookmark, browser back/forward,
+  // or any link this session hasn't found yet) would otherwise always
+  // render as its own full top-level page — Next.js routes just work
+  // that way. Instead of chasing every possible entry point, enforce
+  // the invariant at the root: any non-embedded, non-home NAV_ITEMS
+  // route redirects to "/" and opens the same content as a window.
+  const strayNavItem = !isHome && !isPhone ? NAV_ITEMS.find((item) => item.href === pathname) : undefined;
+
+  useEffect(() => {
+    if (strayNavItem) {
+      openWindow(strayNavItem.href, strayNavItem.label);
+      router.replace("/");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   // Set performance tier class on <html> for CSS-level optimizations
   useEffect(() => {
@@ -29,7 +50,6 @@ function Shell({ children }: { children: ReactNode }) {
     html.classList.remove("perf-full", "perf-reduced", "perf-minimal");
     html.classList.add(`perf-${tier}`);
   }, [tier]);
-  const isPhone = isMobileLayout && !isTabletLayout;
 
   return (
     <div
@@ -39,7 +59,9 @@ function Shell({ children }: { children: ReactNode }) {
       <Wallpaper />
       <BootSequence />
 
-      {/* Phone layout: no menu bar/widgets — tab bar handles navigation */}
+      {/* Phone layout: no menu bar/widgets — tab bar handles navigation.
+          Phone intentionally keeps real page navigation (no window
+          system there), so it's excluded from the redirect above. */}
       {isPhone ? (
         <>
           <PageBreadcrumb />
@@ -57,7 +79,10 @@ function Shell({ children }: { children: ReactNode }) {
             </>
           )}
           <PageBreadcrumb />
-          {children}
+          {/* Suppress the raw page while the redirect above is in
+              flight, so a stray /about visit never flashes as a full
+              page before it's relocated into a window. */}
+          {!strayNavItem && children}
           <WindowLayer />
           <Dock />
           <CommandPalette />
@@ -73,14 +98,23 @@ export default function AppShell({ children }: { children: ReactNode }) {
   // desktop chrome, or every window would recursively nest a whole second
   // desktop (menu bar, dock, wallpaper) inside itself.
   //
-  // Defaults to false (matching the server's render) and flips after
-  // mount, the same hydration-safe pattern used elsewhere in this
-  // codebase (MenuBar's clock) — avoids needing useSearchParams()
-  // wrapped in a Suspense boundary just for this one client-only check.
-  const [isEmbedded, setIsEmbedded] = useState(false);
+  // null = "not yet determined". This used to default to false (assume
+  // not embedded) and flip after mount, but that meant Shell — and its
+  // stray-route redirect effect — mounted for one tick inside every
+  // iframe too, since child effects fire before parent effects: the
+  // iframe's own Shell would see e.g. pathname "/about", not yet know
+  // it was embedded, and redirect ITSELF to "/", leaving every window
+  // blank. Rendering nothing until the check completes (a same-tick
+  // effect, imperceptible) means Shell never mounts prematurely inside
+  // an iframe at all.
+  const [isEmbedded, setIsEmbedded] = useState<boolean | null>(null);
   useEffect(() => {
-    if (window.location.search.includes("__window")) setIsEmbedded(true);
+    setIsEmbedded(window.location.search.includes("__window"));
   }, []);
+
+  if (isEmbedded === null) {
+    return null;
+  }
 
   if (isEmbedded) {
     return (
