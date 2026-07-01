@@ -8,9 +8,9 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useShellMetrics } from "@/lib/useShellMetrics";
 
 /*
-  Physical layout constants — must match LeftSidebar and RightNav exactly.
+  Physical layout constants — must match LeftSidebar exactly.
   LeftSidebar: left: 20px, width: 360px  → right edge at 380px
-  RightNav:    right: 20px, width: 480px → from-right edge at 500px
+  (RightNav removed in a prior session)
 */
 
 /* ── Icons ───────────────────────────────────────────────────────── */

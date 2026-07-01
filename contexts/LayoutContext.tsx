@@ -4,7 +4,6 @@ import { createContext, useContext, useState, useCallback, useEffect, type React
 import { usePathname } from "next/navigation";
 
 interface LayoutContextValue {
-  isNavOpen: boolean;
   isSidebarOpen: boolean;
   isSearchOpen: boolean;
   isSoundEnabled: boolean;
@@ -12,7 +11,6 @@ interface LayoutContextValue {
   isTabletLayout: boolean;
   viewportWidth: number;
   viewportHeight: number;
-  toggleNav: () => void;
   toggleSidebar: () => void;
   openSearch: () => void;
   closeSearch: () => void;
@@ -21,7 +19,6 @@ interface LayoutContextValue {
 }
 
 const LayoutContext = createContext<LayoutContextValue>({
-  isNavOpen: false,
   isSidebarOpen: false,
   isSearchOpen: false,
   isSoundEnabled: true,
@@ -29,7 +26,6 @@ const LayoutContext = createContext<LayoutContextValue>({
   isTabletLayout: false,
   viewportWidth: 1440,
   viewportHeight: 900,
-  toggleNav: () => {},
   toggleSidebar: () => {},
   openSearch: () => {},
   closeSearch: () => {},
@@ -46,7 +42,6 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     This ensures SSR output matches client initial render on every page —
     eliminating the hydration mismatch on the sidebar transform attribute.
   */
-  const [isNavOpen, setIsNavOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
@@ -70,7 +65,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /*
-    Route change handler — close both panels on any sub-page.
+    Route change handler — close the sidebar on any sub-page.
     On home, reopen the sidebar so navigating back feels natural.
   */
   useEffect(() => {
@@ -78,29 +73,21 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
       // Only auto-open sidebar on desktop/tablet — phones have no sidebar
       setIsSidebarOpen(!isMobileLayout || isTabletLayout);
     } else {
-      setIsNavOpen(false);
       setIsSidebarOpen(false);
     }
   }, [isHome, isMobileLayout, isTabletLayout]);
 
-  const toggleNav = useCallback(() => {
-    setIsNavOpen((v) => !v);
-    if (isMobileLayout) setIsSidebarOpen(false);
-  }, [isMobileLayout]);
-  const toggleSidebar = useCallback(() => {
-    setIsSidebarOpen((v) => !v);
-    if (isMobileLayout) setIsNavOpen(false);
-  }, [isMobileLayout]);
+  const toggleSidebar = useCallback(() => setIsSidebarOpen((v) => !v), []);
   const openSearch = useCallback(() => setIsSearchOpen(true), []);
   const closeSearch = useCallback(() => setIsSearchOpen(false), []);
   const toggleSound = useCallback(() => setIsSoundEnabled((v) => !v), []);
-  const closeSidebars = useCallback(() => { setIsNavOpen(false); setIsSidebarOpen(false); }, []);
+  const closeSidebars = useCallback(() => setIsSidebarOpen(false), []);
 
   return (
     <LayoutContext.Provider value={{
-      isNavOpen, isSidebarOpen, isSearchOpen, isSoundEnabled, isMobileLayout, isTabletLayout,
+      isSidebarOpen, isSearchOpen, isSoundEnabled, isMobileLayout, isTabletLayout,
       viewportWidth: viewport.width, viewportHeight: viewport.height,
-      toggleNav, toggleSidebar, openSearch, closeSearch, toggleSound, closeSidebars,
+      toggleSidebar, openSearch, closeSearch, toggleSound, closeSidebars,
     }}>
       {children}
     </LayoutContext.Provider>

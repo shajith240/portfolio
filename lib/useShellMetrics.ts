@@ -40,15 +40,11 @@ export function useShellMetrics() {
     contentLeft: !layout.isMobileLayout && layout.isSidebarOpen
       ? metrics.sidebarRightEdge + metrics.gap
       : 0,
-    contentRight: !layout.isMobileLayout && layout.isNavOpen
-      ? metrics.navFromRightEdge + metrics.gap
-      : 0,
+    contentRight: 0,
     toolbarLeft: !layout.isMobileLayout && layout.isSidebarOpen
       ? metrics.sidebarRightEdge + metrics.gap
       : 16,
-    toolbarRight: !layout.isMobileLayout && layout.isNavOpen
-      ? metrics.navFromRightEdge + metrics.gap
-      : 16,
+    toolbarRight: 16,
     dotsLeft: !layout.isMobileLayout && layout.isSidebarOpen
       ? metrics.sidebarRightEdge + clamp(8, metrics.viewportWidth * 0.006, 12)
       : 8,
