@@ -16,21 +16,29 @@ import { CATEGORIES } from "@/data/skills";
    docs/superpowers/specs/2026-07-01-genie-effect-and-finder-design.md */
 
 type FinderNode =
-  | { kind: "folder"; name: string; children: FinderNode[] }
+  | { kind: "folder"; name: string; children: FinderNode[]; iconFile?: string }
   | { kind: "app"; name: string; iconFile: string; route: string; label: string }
-  | { kind: "document"; name: string; route: string; label: string }
+  | { kind: "document"; name: string; iconFile?: string; route: string; label: string }
   | { kind: "project"; name: string; project: Project }
   | { kind: "skill"; name: string; iconFile: string };
+
+// Every project shows the same generic dev-project icon rather than
+// the earlier per-project cycling through unrelated tool icons.
+const PROJECT_ICON_FILE = "developer_code_flder";
 
 const PROJECTS_FOLDER: FinderNode = {
   kind: "folder",
   name: "Projects",
+  // Matches the Dock's own "/projects" icon — see Dock.tsx's ICON_FILE.
+  iconFile: "projects",
   children: PROJECTS.map((p) => ({ kind: "project", name: `${p.title}.app`, project: p })),
 };
 
 const SKILLS_FOLDER: FinderNode = {
   kind: "folder",
   name: "Skills",
+  // Matches the Dock's own "/skills" icon — see Dock.tsx's ICON_FILE.
+  iconFile: "skills",
   children: CATEGORIES.map((cat) => ({
     kind: "folder",
     name: cat.label,
@@ -38,16 +46,19 @@ const SKILLS_FOLDER: FinderNode = {
   })),
 };
 
+// Root-level Macintosh HD icons all match the Dock's own icon files
+// for the same route (see Dock.tsx's ICON_FILE) — Finder and the Dock
+// should never show two different icons for the same destination.
 const ROOT: FinderNode = {
   kind: "folder",
   name: "Macintosh HD",
   children: [
-    { kind: "document", name: "About Me.rtf", route: "/about", label: "About" },
+    { kind: "document", name: "About Me.rtf", iconFile: "contact", route: "/about", label: "About" },
     PROJECTS_FOLDER,
     SKILLS_FOLDER,
-    { kind: "app", name: "DSA.app", iconFile: "javascript", route: "/dsa", label: "DSA" },
-    { kind: "app", name: "Notes.app", iconFile: "claude", route: "/notes", label: "Notes" },
-    { kind: "app", name: "Uses.app", iconFile: "linux", route: "/uses", label: "Uses" },
+    { kind: "app", name: "DSA.app", iconFile: "xcode", route: "/dsa", label: "DSA" },
+    { kind: "app", name: "Notes.app", iconFile: "notes", route: "/notes", label: "Notes" },
+    { kind: "app", name: "Uses.app", iconFile: "settings", route: "/uses", label: "Uses" },
   ],
 };
 
@@ -111,7 +122,9 @@ function GridItem({ node, onOpen }: { node: FinderNode; onOpen: () => void }) {
   const [hovered, setHovered] = useState(false);
   const name = node.name;
   const iconFile =
-    node.kind === "app" ? node.iconFile : node.kind === "skill" ? node.iconFile : null;
+    node.kind === "app" || node.kind === "skill" || node.kind === "folder" || node.kind === "document"
+      ? node.iconFile
+      : null;
 
   return (
     <button
@@ -133,14 +146,14 @@ function GridItem({ node, onOpen }: { node: FinderNode; onOpen: () => void }) {
       title={name}
     >
       <div style={{ width: "52px", height: "52px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {node.kind === "folder" ? (
-          <FolderIcon />
-        ) : node.kind === "document" ? (
-          <DocumentIcon />
-        ) : node.kind === "project" ? (
-          <img src={`/icons/${projectIcon(node.project)}`} alt={name} style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "22%" }} />
-        ) : (
+        {node.kind === "project" ? (
+          <img src={`/icons/${PROJECT_ICON_FILE}.png`} alt={name} style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "22%" }} />
+        ) : iconFile ? (
           <img src={`/icons/${iconFile}.png`} alt={name} style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "22%" }} />
+        ) : node.kind === "folder" ? (
+          <FolderIcon />
+        ) : (
+          <DocumentIcon />
         )}
       </div>
       <span
@@ -158,15 +171,6 @@ function GridItem({ node, onOpen }: { node: FinderNode; onOpen: () => void }) {
       </span>
     </button>
   );
-}
-
-// Projects don't have a bespoke icon file — reuse the same dummy dev-tool
-// icon set the Dock uses, picked deterministically per project so it's
-// at least stable/consistent rather than random.
-const PROJECT_ICON_FILES = ["react", "vscode", "python", "javascript"];
-function projectIcon(project: Project): string {
-  const idx = PROJECTS.findIndex((p) => p.id === project.id);
-  return `${PROJECT_ICON_FILES[idx % PROJECT_ICON_FILES.length]}.png`;
 }
 
 function QuickLook({ node, onClose, onOpenProjects }: { node: FinderNode; onClose: () => void; onOpenProjects: () => void }) {
@@ -200,7 +204,7 @@ function QuickLook({ node, onClose, onOpenProjects }: { node: FinderNode; onClos
         {node.kind === "project" ? (
           <>
             <img
-              src={`/icons/${projectIcon(node.project)}`}
+              src={`/icons/${PROJECT_ICON_FILE}.png`}
               alt={node.project.title}
               style={{ width: "56px", height: "56px", objectFit: "contain", borderRadius: "22%", marginBottom: "12px" }}
             />
