@@ -3,6 +3,7 @@ export interface NowPlayingTrack {
   artist: string
   src: string
   artwork: string | null
+  lyricsSrc: string | null
 }
 
 export const NOW_PLAYING: NowPlayingTrack = {
@@ -10,4 +11,5 @@ export const NOW_PLAYING: NowPlayingTrack = {
   artist: 'Lewis Capaldi',
   src: '/songs/someone-you-loved.m4a',
   artwork: '/songs/someone-you-loved-cover.webp',
+  lyricsSrc: '/songs/Lewis-Capaldi-Someone-You-Loved-(Official-Audio).lrc',
 }
