@@ -13,6 +13,8 @@ import MenuBar from "@/components/layout/MenuBar";
 import DesktopWidgetStack from "@/components/widgets/DesktopWidgetStack";
 import PhotoWidget from "@/components/widgets/PhotoWidget";
 import AboutWidget from "@/components/widgets/AboutWidget";
+import NowPlayingWidget from "@/components/widgets/NowPlayingWidget";
+import CurrentlyBuildingWidget from "@/components/widgets/CurrentlyBuildingWidget";
 import CommandPalette from "@/components/ui/CommandPalette";
 import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
 import MobileTabBar from "@/components/ui/MobileTabBar";
@@ -77,6 +79,8 @@ function Shell({ children }: { children: ReactNode }) {
             <DesktopWidgetStack>
               <PhotoWidget />
               <AboutWidget />
+              <NowPlayingWidget />
+              <CurrentlyBuildingWidget />
             </DesktopWidgetStack>
           )}
           <PageBreadcrumb />
