@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useCallback, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useCallback, useRef, useState, useEffect, type ReactNode } from "react";
 
 export interface WindowState {
   id: string;
@@ -35,6 +35,39 @@ const DEFAULT_HEIGHT = 640;
 const CASCADE_STEP = 28;
 const CASCADE_WRAP = 6; // after this many cascades, restart near the top-left
 
+// Keeps a window's titlebar always reachable — the bug this guards
+// against: dragging a window until its titlebar is fully off-screen
+// leaves no way to grab it back. MIN_VISIBLE is how much of the
+// titlebar (horizontally) must stay on screen; TOP/BOTTOM keep it
+// below the MenuBar and above the Dock.
+const MIN_VISIBLE_X = 120;
+const TOP_BOUND = 30;
+const BOTTOM_RESERVE = 110;
+
+// Shared with Window.tsx (as Framer Motion `dragConstraints`) so a drag
+// can never produce a position this same clamp would then have to fix.
+export function getPositionBounds(width: number) {
+  if (typeof window === "undefined") {
+    return { minX: 0, maxX: 0, minY: TOP_BOUND, maxY: TOP_BOUND };
+  }
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  return {
+    minX: -(width - MIN_VISIBLE_X),
+    maxX: vw - MIN_VISIBLE_X,
+    minY: TOP_BOUND,
+    maxY: Math.max(TOP_BOUND, vh - BOTTOM_RESERVE),
+  };
+}
+
+function clampPosition(x: number, y: number, width: number) {
+  const { minX, maxX, minY, maxY } = getPositionBounds(width);
+  return {
+    x: Math.min(Math.max(x, minX), maxX),
+    y: Math.min(Math.max(y, minY), maxY),
+  };
+}
+
 export function WindowManagerProvider({ children }: { children: ReactNode }) {
   const [windows, setWindows] = useState<WindowState[]>([]);
   const topZIndexRef = useRef(100);
@@ -53,7 +86,12 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
       topZIndexRef.current += 1;
       const z = topZIndexRef.current;
       if (existing) {
-        return prev.map((w) => (w.id === existing.id ? { ...w, minimized: false, zIndex: z } : w));
+        // Recovery path: if a previous drag left this window with its
+        // titlebar unreachable (or a viewport resize did), clicking its
+        // Dock icon again snaps it back into view instead of just
+        // un-minimizing it in place.
+        const clamped = clampPosition(existing.x, existing.y, existing.width);
+        return prev.map((w) => (w.id === existing.id ? { ...w, ...clamped, minimized: false, zIndex: z } : w));
       }
 
       const width = Math.min(DEFAULT_WIDTH, typeof window !== "undefined" ? window.innerWidth * 0.7 : DEFAULT_WIDTH);
@@ -115,6 +153,22 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
 
   const updateBounds = useCallback((id: string, bounds: Partial<Pick<WindowState, "x" | "y" | "width" | "height">>) => {
     setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, ...bounds } : w)));
+  }, []);
+
+  // Safety net for the same class of bug on window resize: shrinking the
+  // browser can leave an existing window's titlebar off the new,
+  // smaller viewport even though nothing was dragged.
+  useEffect(() => {
+    const handleResize = () => {
+      setWindows((prev) =>
+        prev.map((w) => {
+          const clamped = clampPosition(w.x, w.y, w.width);
+          return clamped.x === w.x && clamped.y === w.y ? w : { ...w, ...clamped };
+        })
+      );
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const registerDockIconEl = useCallback((route: string, el: HTMLElement | null) => {
