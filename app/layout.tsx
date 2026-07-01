@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Geist, Caveat } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
@@ -16,6 +16,16 @@ const vg5000 = localFont({
   display: "swap",
 });
 
+// Handwritten script for the Clock widget's day name — the reference
+// Lock Screen clock style pairs a casual script day label against
+// heavy glass numerals; nothing already loaded in this project has
+// that character.
+const caveat = Caveat({
+  variable: "--font-caveat",
+  subsets: ["latin"],
+  weight: ["600"],
+});
+
 export const metadata: Metadata = {
   title: "Portfolio",
   description: "Personal developer portfolio",
@@ -28,7 +38,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistDisplay.variable} ${vg5000.variable} antialiased`}>
+      <body className={`${geistDisplay.variable} ${vg5000.variable} ${caveat.variable} antialiased`}>
         <AppShell>{children}</AppShell>
       </body>
     </html>
