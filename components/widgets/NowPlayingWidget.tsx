@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { NOW_PLAYING } from "@/data/nowPlaying";
 import LyricsPanel from "@/components/widgets/LyricsPanel";
@@ -64,11 +64,37 @@ function SkipGlyph({ direction }: { direction: "prev" | "next" }) {
   );
 }
 
+// Matches SF Symbols' speaker.wave.2.fill / speaker.slash.fill — the
+// two states real macOS volume controls actually use (not a
+// low/medium/high three-way split, which would need a third glyph
+// with no clear real-world trigger point).
+function SpeakerGlyph({ muted }: { muted: boolean }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
+      <path d="M2 7.5H5L9 4V16L5 12.5H2V7.5Z" fill="var(--text-muted)" />
+      {muted ? (
+        <>
+          <line x1="12.5" y1="7.5" x2="17.5" y2="12.5" stroke="var(--text-muted)" strokeWidth="1.4" strokeLinecap="round" />
+          <line x1="17.5" y1="7.5" x2="12.5" y2="12.5" stroke="var(--text-muted)" strokeWidth="1.4" strokeLinecap="round" />
+        </>
+      ) : (
+        <>
+          <path d="M12.3 7.2a3.2 3.2 0 0 1 0 5.6" stroke="var(--text-muted)" strokeWidth="1.3" strokeLinecap="round" fill="none" />
+          <path d="M14.3 5a6 6 0 0 1 0 10" stroke="var(--text-muted)" strokeWidth="1.3" strokeLinecap="round" fill="none" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 export default function NowPlayingWidget() {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [muted, setMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const scrubberRef = useRef<HTMLDivElement>(null);
+  const volumeTrackRef = useRef<HTMLDivElement>(null);
 
   const togglePlay = () => {
     const audio = audioRef.current;
@@ -81,6 +107,40 @@ export default function NowPlayingWidget() {
         // stay paused rather than throwing an unhandled rejection.
       });
     }
+  };
+
+  // Single source of truth for the audio element's real volume —
+  // whatever changes `volume`/`muted`, the <audio> element is kept in
+  // sync here rather than set ad hoc at each call site.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.volume = muted ? 0 : volume;
+  }, [volume, muted]);
+
+  const toggleMute = () => setMuted((m) => !m);
+
+  const setVolumeFromClientX = (clientX: number) => {
+    const track = volumeTrackRef.current;
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    setVolume(ratio);
+    // Dragging the slider un-mutes, matching real macOS volume sliders
+    // — there's no reason to leave it muted once the user has
+    // explicitly picked a level.
+    if (ratio > 0) setMuted(false);
+  };
+
+  const onVolumePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    setVolumeFromClientX(e.clientX);
+    const onMove = (ev: PointerEvent) => setVolumeFromClientX(ev.clientX);
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
   };
 
   // There's only one track (no playlist/queue in scope), so prev/next
@@ -277,6 +337,59 @@ export default function NowPlayingWidget() {
         >
           <SkipGlyph direction="next" />
         </button>
+      </div>
+
+      {/* Volume — speaker icon toggles mute, slider is click-and-drag
+          (not click-only like the scrubber intentionally is; a volume
+          slider is the one control real macOS always lets you drag).
+          Same neutral white fill / track treatment as the scrubber
+          above for visual consistency between the two sliders in this
+          widget. */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "12px" }}>
+        <button
+          onClick={toggleMute}
+          aria-label={muted ? "Unmute" : "Mute"}
+          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", flexShrink: 0 }}
+        >
+          <SpeakerGlyph muted={muted || volume === 0} />
+        </button>
+        <div style={{ position: "relative", flex: 1 }}>
+          <div
+            ref={volumeTrackRef}
+            onPointerDown={onVolumePointerDown}
+            style={{
+              height: "3px",
+              borderRadius: "2px",
+              background: "rgba(255, 255, 255, 0.14)",
+              overflow: "hidden",
+              cursor: "pointer",
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                width: `${(muted ? 0 : volume) * 100}%`,
+                background: "rgba(255, 255, 255, 0.85)",
+                borderRadius: "2px",
+              }}
+            />
+          </div>
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: `${(muted ? 0 : volume) * 100}%`,
+              width: "8px",
+              height: "8px",
+              borderRadius: "50%",
+              background: "#fff",
+              transform: "translate(-50%, -50%)",
+              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.45)",
+              pointerEvents: "none",
+            }}
+          />
+        </div>
       </div>
 
       <LyricsPanel audioRef={audioRef} playing={playing} />

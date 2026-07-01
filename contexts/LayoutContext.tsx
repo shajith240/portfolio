@@ -4,31 +4,26 @@ import { createContext, useContext, useState, useCallback, useEffect, type React
 
 interface LayoutContextValue {
   isSearchOpen: boolean;
-  isSoundEnabled: boolean;
   isMobileLayout: boolean;
   isTabletLayout: boolean;
   viewportWidth: number;
   viewportHeight: number;
   openSearch: () => void;
   closeSearch: () => void;
-  toggleSound: () => void;
 }
 
 const LayoutContext = createContext<LayoutContextValue>({
   isSearchOpen: false,
-  isSoundEnabled: true,
   isMobileLayout: false,
   isTabletLayout: false,
   viewportWidth: 1440,
   viewportHeight: 900,
   openSearch: () => {},
   closeSearch: () => {},
-  toggleSound: () => {},
 });
 
 export function LayoutProvider({ children }: { children: ReactNode }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   // SSR-safe: default false (desktop) → updates after mount
   const [isMobileLayout, setIsMobileLayout] = useState(false);
   // isTabletLayout: 640px–1023px (iPad-size range)
@@ -50,13 +45,12 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
 
   const openSearch = useCallback(() => setIsSearchOpen(true), []);
   const closeSearch = useCallback(() => setIsSearchOpen(false), []);
-  const toggleSound = useCallback(() => setIsSoundEnabled((v) => !v), []);
 
   return (
     <LayoutContext.Provider value={{
-      isSearchOpen, isSoundEnabled, isMobileLayout, isTabletLayout,
+      isSearchOpen, isMobileLayout, isTabletLayout,
       viewportWidth: viewport.width, viewportHeight: viewport.height,
-      openSearch, closeSearch, toggleSound,
+      openSearch, closeSearch,
     }}>
       {children}
     </LayoutContext.Provider>
