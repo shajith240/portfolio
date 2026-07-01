@@ -10,6 +10,7 @@ import { NAV_ITEMS } from "@/data/nav";
 import Wallpaper from "@/components/layout/Wallpaper";
 import BootSequence from "@/components/boot/BootSequence";
 import MenuBar from "@/components/layout/MenuBar";
+import DesktopWidgetStack from "@/components/widgets/DesktopWidgetStack";
 import PhotoWidget from "@/components/widgets/PhotoWidget";
 import AboutWidget from "@/components/widgets/AboutWidget";
 import CommandPalette from "@/components/ui/CommandPalette";
@@ -73,10 +74,10 @@ function Shell({ children }: { children: ReactNode }) {
         <>
           <MenuBar />
           {isHome && (
-            <>
+            <DesktopWidgetStack>
               <PhotoWidget />
               <AboutWidget />
-            </>
+            </DesktopWidgetStack>
           )}
           <PageBreadcrumb />
           {/* Suppress the raw page while the redirect above is in
