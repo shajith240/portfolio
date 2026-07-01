@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useShellMetrics } from "@/lib/useShellMetrics";
+import { BOTTOM_RESERVE } from "@/contexts/WindowManagerContext";
 import { MOTIVATION_IMAGE } from "@/data/motivation";
 
 /* macOS "Photos" widget, right-hand side — same opaque, edge-to-edge
@@ -36,8 +37,12 @@ export default function MotivationWidget() {
         // left widget stack — leaves the entire upper-right area free
         // for other widgets, without needing a pixel offset that'd
         // have to be re-tuned every time something new gets added
-        // above this one.
-        bottom: `${metrics.inset + 24}px`,
+        // above this one. Real macOS reserves dedicated space above
+        // the Dock so nothing overlaps it; BOTTOM_RESERVE is this
+        // codebase's already-established value for that (the same
+        // clearance windows are kept above in WindowManagerContext),
+        // not a fresh guess.
+        bottom: `${BOTTOM_RESERVE}px`,
         right: `${metrics.inset}px`,
         zIndex: 20,
         width: `${FRAME_WIDTH}px`,

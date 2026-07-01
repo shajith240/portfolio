@@ -44,7 +44,11 @@ const CASCADE_WRAP = 6; // after this many cascades, restart near the top-left
 // below the MenuBar and above the Dock.
 const MIN_VISIBLE_X = 120;
 const TOP_BOUND = 30;
-const BOTTOM_RESERVE = 110;
+// Exported — this is the single source of truth for "how much space to
+// leave clear above the Dock" on this desktop. Any fixed-position
+// element that needs to stay clear of the Dock (desktop widgets, not
+// just windows) should reuse this instead of picking its own offset.
+export const BOTTOM_RESERVE = 110;
 
 // Shared with Window.tsx (as Framer Motion `dragConstraints`) so a drag
 // can never produce a position this same clamp would then have to fix.
