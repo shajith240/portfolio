@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from "react";
 import { motion, useMotionValue, useDragControls, animate } from "framer-motion";
 import { useWindowManager, getPositionBounds, type WindowState } from "@/contexts/WindowManagerContext";
+import { genieClipPath } from "@/lib/genieClipPath";
 
 /* macOS-authentic window chrome. Dragging uses Framer Motion's own
    drag system (dragListener={false} + useDragControls started only
@@ -12,8 +13,20 @@ import { useWindowManager, getPositionBounds, type WindowState } from "@/context
    drag/position tracking by hand; Framer already owns this correctly.
    See docs/superpowers/specs/2026-07-01-window-manager-design.md. */
 
-const OPEN_SPRING = { type: "spring", stiffness: 300, damping: 28, mass: 0.9 } as const;
 const BOUNDS_SPRING = { type: "spring", stiffness: 340, damping: 32, mass: 0.9 } as const;
+
+// Genie open/minimize: every animated property (position, scale,
+// opacity, clip-path funnel) uses this exact same duration/ease, not a
+// mix of springs and fixed durations. A spring has no precisely
+// predictable finish time — mixing one with the clip-path's fixed
+// 380ms meant the opacity fade (previously a separate, shorter 180ms
+// tween) completed and unmounted the window BEFORE the position/scale
+// animation had actually reached the Dock icon, cutting the
+// convergence off mid-flight. Same duration everywhere means nothing
+// finishes early or late relative to anything else.
+const GENIE_DURATION = 0.38;
+const GENIE_EASE = [0.4, 0, 0.2, 1] as const;
+const GENIE_TWEEN = { duration: GENIE_DURATION, ease: GENIE_EASE } as const;
 
 const TrafficLight = ({
   color,
@@ -121,23 +134,60 @@ export default function Window({ win, active }: { win: WindowState; active: bool
   const height = useMotionValue(win.height);
   const scale = useMotionValue(1);
   const opacity = useMotionValue(1);
+  // Drives the genie clip-path funnel: 0 = full rectangle, 1 = fully
+  // collapsed into a narrow neck. clipPathStr is the derived CSS string —
+  // Framer motion values don't interpolate strings on their own, so
+  // genieProgress (a plain number) is what actually gets animated, and
+  // its onUpdate recomputes clipPathStr each frame. See lib/genieClipPath.ts.
+  const genieProgress = useMotionValue(1);
+  const clipPathStr = useMotionValue(genieClipPath(1));
 
-  // Play the "genie" open animation once, from the triggering Dock icon.
+  // Genie convergence math. Fixed to a single mechanism: `scale` only
+  // (never also resize the width/height motion values — animating both
+  // at once, as an earlier version did, means there's no one stable
+  // point to converge on, which is exactly why it read as imprecise/
+  // "falling apart"). transformOrigin is bottom-center (see the style
+  // block below) to match the clip-path funnel's neck, which also sits
+  // at bottom-center. With that anchor fixed, scaling toward 0 always
+  // shrinks the box toward whatever point `x + width/2, y + height`
+  // currently is — so animating x/y to the values below makes that
+  // exact point converge on the Dock icon's center, not just its
+  // top-left corner.
+  const genieTarget = (iconRect: DOMRect | null) => {
+    if (!iconRect) return { x: win.x, y: win.y };
+    const iconCenterX = iconRect.left + iconRect.width / 2;
+    const iconCenterY = iconRect.top + iconRect.height / 2;
+    return {
+      x: iconCenterX - win.width / 2,
+      y: iconCenterY - win.height,
+    };
+  };
+
+  // Play the "genie" open animation once, from the triggering Dock icon —
+  // starts fully collapsed (genieProgress 1) and unfurls to a full
+  // rectangle (0), reversing the same funnel the minimize animation uses.
   useEffect(() => {
     const iconRect = getDockIconRect(win.route);
     if (iconRect) {
-      x.set(iconRect.left);
-      y.set(iconRect.top);
-      width.set(iconRect.width);
-      height.set(iconRect.height);
-      scale.set(0.3);
+      const start = genieTarget(iconRect);
+      x.set(start.x);
+      y.set(start.y);
+      scale.set(0.04);
       opacity.set(0);
-      animate(x, win.x, OPEN_SPRING);
-      animate(y, win.y, OPEN_SPRING);
-      animate(width, win.width, OPEN_SPRING);
-      animate(height, win.height, OPEN_SPRING);
-      animate(scale, 1, OPEN_SPRING);
-      animate(opacity, 1, { duration: 0.2 });
+      genieProgress.set(1);
+      clipPathStr.set(genieClipPath(1));
+      animate(x, win.x, GENIE_TWEEN);
+      animate(y, win.y, GENIE_TWEEN);
+      animate(scale, 1, GENIE_TWEEN);
+      // Mirrors the minimize keyframing: opacity snaps up quickly at
+      // the start rather than fading in linearly, since the real
+      // effect appears already-opaque as a tiny sliver at the icon and
+      // stays that way while it unfurls.
+      animate(opacity, [0, 1, 1], { ...GENIE_TWEEN, times: [0, 0.15, 1] });
+      animate(genieProgress, 0, {
+        ...GENIE_TWEEN,
+        onUpdate: (p) => clipPathStr.set(genieClipPath(p)),
+      });
     }
     // Only on mount — this is the window's one-time launch animation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -157,12 +207,27 @@ export default function Window({ win, active }: { win: WindowState; active: bool
 
   const handleMinimize = () => {
     const iconRect = getDockIconRect(win.route);
-    const targetX = iconRect ? iconRect.left : win.x;
-    const targetY = iconRect ? iconRect.top : win.y;
-    animate(x, targetX, OPEN_SPRING);
-    animate(y, targetY, OPEN_SPRING);
-    animate(scale, 0.25, OPEN_SPRING);
-    animate(opacity, 0, { duration: 0.18, onComplete: () => minimizeWindow(win.id) });
+    const target = genieTarget(iconRect);
+    animate(x, target.x, GENIE_TWEEN);
+    animate(y, target.y, GENIE_TWEEN);
+    animate(scale, 0.04, GENIE_TWEEN);
+    // onComplete lives here, not on a separate shorter fade — this is
+    // now the same duration as every other property in this gesture,
+    // so unmounting via minimizeWindow() only happens once the
+    // position/scale/clip-path convergence has actually finished.
+    // Keyframed rather than a linear 1->0 fade: real macOS doesn't turn
+    // translucent mid-shrink, it stays opaque and only vanishes once
+    // it's collapsed to essentially the icon's size, so opacity holds
+    // at 1 for the first 85% and only drops in the final stretch.
+    animate(opacity, [1, 1, 0], {
+      ...GENIE_TWEEN,
+      times: [0, 0.85, 1],
+      onComplete: () => minimizeWindow(win.id),
+    });
+    animate(genieProgress, 1, {
+      ...GENIE_TWEEN,
+      onUpdate: (p) => clipPathStr.set(genieClipPath(p)),
+    });
   };
 
   return (
@@ -185,7 +250,10 @@ export default function Window({ win, active }: { win: WindowState; active: bool
         width,
         height,
         scale,
+        transformOrigin: "50% 100%",
         opacity,
+        clipPath: clipPathStr,
+        WebkitClipPath: clipPathStr,
         zIndex: win.zIndex,
         borderRadius: "12px",
         overflow: "hidden",
