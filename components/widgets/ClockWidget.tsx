@@ -59,19 +59,29 @@ export default function ClockWidget() {
       style={{
         position: "relative",
         width: `${WIDGET_WIDTH}px`,
-        padding: "16px 14px 14px",
+        padding: "16px 16px 14px",
         borderRadius: "20px",
-        // Cool blue glass tint, matching the reference exactly instead
-        // of this site's default neutral gray glass — a deliberate
-        // per-widget override of --glass-regular-bg, not the usual
-        // token.
-        background: "linear-gradient(165deg, rgba(74, 129, 201, 0.55) 0%, rgba(42, 82, 148, 0.62) 100%)",
+        // Blue glass tint anchored to Apple's actual systemBlue —
+        // #0A84FF (dark mode), the widely-used community-measured
+        // value; Apple doesn't publish official hex codes since its
+        // system colors are adaptive by design, but this is the de
+        // facto reference every design system built against Apple's
+        // palette uses. Lightened for the top-left specular highlight,
+        // deepened for the bottom-right glass falloff — one hue
+        // family, not an unrelated second color guessed at.
+        background: "linear-gradient(165deg, rgba(90, 170, 255, 0.55) 0%, rgba(10, 90, 200, 0.65) 100%)",
         border: "1px solid rgba(255, 255, 255, 0.18)",
         backdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
         WebkitBackdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
         boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.12)",
         overflow: "hidden",
-        textAlign: "center",
+        // Left-aligned, not centered — the time, day, and date all
+        // start from the same left edge. An earlier version centered
+        // everything and rotated the day text; both were wrong. The
+        // reference photo itself was shot at a slight tilt, which read
+        // as "the design is rotated" — it isn't; every line shares one
+        // flush-left starting point.
+        textAlign: "left",
       }}
     >
       {/* Soft top-light bloom behind everything — the layer between the
@@ -108,18 +118,16 @@ export default function ClockWidget() {
         {timeLabel}
       </p>
 
-      {/* 2 — the day, handwritten, scrawled diagonally across the
-          numerals' lower half (not just touching the bottom edge —
-          the reference overlap cuts well into the digits themselves).
-          A slight rotation matches the organic, hand-scrawled tilt
-          real Lock Screen script customization has. zIndex keeps the
-          script above the glass digits. */}
+      {/* 2 — the day, handwritten script, overlapping the numerals'
+          lower half (not just touching the bottom edge — the
+          reference overlap cuts well into the digits). No rotation:
+          flush left, same starting edge as the time above it. zIndex
+          keeps the script above the glass digits. */}
       <p
         style={{
           position: "relative",
           zIndex: 1,
           margin: "-38px 0 0 0",
-          transform: "rotate(-3deg)",
           fontFamily: "var(--font-caveat), cursive",
           fontWeight: 600,
           fontSize: "36px",

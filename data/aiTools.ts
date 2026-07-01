@@ -13,4 +13,5 @@ export const AI_TOOLS: AITool[] = [
   { name: 'ChatGPT',     file: 'chatgpt',       url: 'https://chatgpt.com' },
   { name: 'Antigravity', file: 'anitigravity',  url: 'https://antigravity.google' },
   { name: 'Codex',       file: 'codex',         url: 'https://openai.com/codex' },
+  { name: 'Cursor',      file: 'cursor',        url: 'https://cursor.com' },
 ]
