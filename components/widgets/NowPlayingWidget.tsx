@@ -1,15 +1,28 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion, useMotionValue, animate } from "framer-motion";
 import { NOW_PLAYING } from "@/data/nowPlaying";
 
 /* macOS "Now Playing" widget — real <audio> playback (no Spotify
    OAuth/infra), collapsed by default, hover-expands to a scrubber +
-   prev/next glyphs via Framer's `layout` prop. Spring/card styling
-   match docs/design-system/motion.md's `entrance` preset and the
-   existing PhotoWidget/AboutWidget Liquid Glass card exactly — see
-   docs/superpowers/specs/2026-07-01-desktop-widgets-design.md. */
+   prev/next glyphs. Spring/card styling match
+   docs/design-system/motion.md's `entrance` preset and the existing
+   PhotoWidget/AboutWidget Liquid Glass card exactly — see
+   docs/superpowers/specs/2026-07-01-desktop-widgets-design.md.
+
+   Deliberately NOT using Framer's `layout` prop for the expand/collapse
+   (no other component in this codebase does — Window.tsx animates
+   explicit numeric width/height motion values instead, never auto
+   layout). `layout` measures a FLIP transform and, when the box's
+   height changes because new content mounted, scales the whole
+   subtree — including text — via a CSS transform for the duration of
+   the animation. Text doesn't reflow correctly under a scale
+   transform, so it visibly stretches/squishes for the transition's
+   duration: exactly what reads as "sticky/laggy" instead of a clean
+   reveal. Animating a real `height` motion value on an
+   always-rendered, overflow-hidden wrapper avoids this entirely —
+   nothing is ever scaled, only clipped. */
 
 const WIDGET_WIDTH = 260;
 const ENTRANCE_SPRING = { type: "spring", stiffness: 520, damping: 44, mass: 0.85, restDelta: 0.01 } as const;
@@ -56,6 +69,14 @@ export default function NowPlayingWidget() {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const expandRef = useRef<HTMLDivElement>(null);
+  const expandHeight = useMotionValue(0);
+
+  useEffect(() => {
+    const target = hovered ? (expandRef.current?.scrollHeight ?? 0) : 0;
+    const controls = animate(expandHeight, target, ENTRANCE_SPRING);
+    return () => controls.stop();
+  }, [hovered, expandHeight]);
 
   const togglePlay = () => {
     const audio = audioRef.current;
@@ -72,7 +93,6 @@ export default function NowPlayingWidget() {
 
   return (
     <motion.div
-      layout
       initial={{ y: 16, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={ENTRANCE_SPRING}
@@ -182,8 +202,15 @@ export default function NowPlayingWidget() {
         </button>
       </div>
 
-      {hovered && (
-        <div style={{ marginTop: "12px" }}>
+      {/* Always rendered (never conditionally mounted) so expandRef has
+          real content to measure at all times, including while
+          collapsed — only `height` is animated, nothing is scaled, so
+          text never distorts mid-transition. paddingTop (not
+          marginTop) on the measured element: a child's top margin can
+          collapse into its parent's box and silently vanish from
+          scrollHeight, padding never does. */}
+      <motion.div style={{ height: expandHeight, overflow: "hidden" }}>
+        <div ref={expandRef} style={{ paddingTop: "12px" }}>
           <div
             style={{
               height: "3px",
@@ -211,7 +238,7 @@ export default function NowPlayingWidget() {
             </span>
           </div>
         </div>
-      )}
+      </motion.div>
     </motion.div>
   );
 }

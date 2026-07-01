@@ -1,13 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion, useMotionValue, animate } from "framer-motion";
 import { UPDATES } from "@/data/updates";
 
 /* macOS "Stickies"-style widget for the site's own changelog. Reads
    UPDATES[0] only (newest-first array, manually maintained) — no
    in-widget history/pagination. See
-   docs/superpowers/specs/2026-07-01-desktop-widgets-design.md. */
+   docs/superpowers/specs/2026-07-01-desktop-widgets-design.md.
+
+   Deliberately NOT using Framer's `layout` prop for the hover reveal —
+   see the equivalent note in NowPlayingWidget.tsx: `layout` scales the
+   whole subtree (including text) via a transform while the box's
+   height is changing, which visibly stretches text for the
+   animation's duration. The date line below is height-animated via a
+   real motion value on an always-rendered, overflow-hidden wrapper
+   instead — nothing is ever scaled. The blurb's own truncated↔wrapped
+   switch stays a plain, instant style toggle (ellipsis/white-space
+   aren't CSS-animatable either way, so there's nothing to smooth
+   there). */
 
 const WIDGET_WIDTH = 260;
 const ENTRANCE_SPRING = { type: "spring", stiffness: 520, damping: 44, mass: 0.85, restDelta: 0.01 } as const;
@@ -33,10 +44,17 @@ function formatUpdateDate(iso: string): string {
 export default function CurrentlyBuildingWidget() {
   const [hovered, setHovered] = useState(false);
   const latest = UPDATES[0];
+  const dateRef = useRef<HTMLParagraphElement>(null);
+  const dateHeight = useMotionValue(0);
+
+  useEffect(() => {
+    const target = hovered ? (dateRef.current?.scrollHeight ?? 0) : 0;
+    const controls = animate(dateHeight, target, ENTRANCE_SPRING);
+    return () => controls.stop();
+  }, [hovered, dateHeight]);
 
   return (
     <motion.div
-      layout
       initial={{ y: 16, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={ENTRANCE_SPRING}
@@ -87,11 +105,15 @@ export default function CurrentlyBuildingWidget() {
           >
             {latest.blurb}
           </p>
-          {hovered && (
-            <p style={{ margin: "6px 0 0 0", fontSize: "10px", color: "var(--text-ghost)" }}>
+          {/* Always rendered, height-clipped via a real motion value —
+              paddingTop (not the paragraph's own margin) carries the
+              6px gap, since a child's top margin can collapse into
+              this wrapper and silently vanish from scrollHeight. */}
+          <motion.div style={{ height: dateHeight, overflow: "hidden" }}>
+            <p ref={dateRef} style={{ margin: 0, paddingTop: "6px", fontSize: "10px", color: "var(--text-ghost)" }}>
               {formatUpdateDate(latest.date)}
             </p>
-          )}
+          </motion.div>
         </div>
       </div>
     </motion.div>
