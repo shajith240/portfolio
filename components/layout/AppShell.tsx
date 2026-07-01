@@ -8,6 +8,7 @@ import LeftSidebar from "@/components/layout/LeftSidebar";
 import CommandPalette from "@/components/ui/CommandPalette";
 import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
 import MobileTabBar from "@/components/ui/MobileTabBar";
+import Dock from "@/components/ui/Dock";
 
 function Shell({ children }: { children: ReactNode }) {
   const { isMobileLayout, isTabletLayout, isSidebarOpen, closeSidebars } = useLayout();
@@ -58,6 +59,7 @@ function Shell({ children }: { children: ReactNode }) {
           <PageBreadcrumb />
           <LeftSidebar />
           {children}
+          <Dock />
           <CommandPalette />
         </>
       )}
