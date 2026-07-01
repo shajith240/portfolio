@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from "react";
 import { motion, useMotionValue, useDragControls, animate } from "framer-motion";
 import { useWindowManager, getPositionBounds, type WindowState } from "@/contexts/WindowManagerContext";
 import { genieClipPath } from "@/lib/genieClipPath";
+import FinderApp from "@/components/window/FinderApp";
 
 /* macOS-authentic window chrome. Dragging uses Framer Motion's own
    drag system (dragListener={false} + useDragControls started only
@@ -115,6 +116,17 @@ export default function Window({ win, active }: { win: WindowState; active: bool
   const dragControls = useDragControls();
   const rootRef = useRef<HTMLDivElement>(null);
   const [lightsHovered, setLightsHovered] = useState(false);
+  // clip-path takes precedence over border-radius for clipping a
+  // element's own children (border-radius still governs the border/
+  // box-shadow, which is why this bug only ever showed up as a faint
+  // square sliver right at the rounded corners, not a fully square
+  // window). Leaving clipPathStr's genie funnel applied at rest —
+  // even fully unfurled it's still a sharp-cornered rectangle polygon
+  // — silently overrode the 12px border-radius clipping for real. Only
+  // apply clip-path while a genie animation is actually in flight;
+  // otherwise omit it so plain border-radius + overflow:hidden clips
+  // the corners correctly.
+  const [clipActive, setClipActive] = useState(true);
 
   // Keeps the titlebar always reachable by drag alone — the bug this
   // guards against: dragging a window until its titlebar is fully
@@ -187,7 +199,10 @@ export default function Window({ win, active }: { win: WindowState; active: bool
       animate(genieProgress, 0, {
         ...GENIE_TWEEN,
         onUpdate: (p) => clipPathStr.set(genieClipPath(p)),
+        onComplete: () => setClipActive(false),
       });
+    } else {
+      setClipActive(false);
     }
     // Only on mount — this is the window's one-time launch animation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -206,6 +221,7 @@ export default function Window({ win, active }: { win: WindowState; active: bool
   }, [win.x, win.y, win.width, win.height]);
 
   const handleMinimize = () => {
+    setClipActive(true);
     const iconRect = getDockIconRect(win.route);
     const target = genieTarget(iconRect);
     animate(x, target.x, GENIE_TWEEN);
@@ -252,8 +268,7 @@ export default function Window({ win, active }: { win: WindowState; active: bool
         scale,
         transformOrigin: "50% 100%",
         opacity,
-        clipPath: clipPathStr,
-        WebkitClipPath: clipPathStr,
+        ...(clipActive ? { clipPath: clipPathStr, WebkitClipPath: clipPathStr } : {}),
         zIndex: win.zIndex,
         borderRadius: "12px",
         overflow: "hidden",
@@ -263,6 +278,27 @@ export default function Window({ win, active }: { win: WindowState; active: bool
         border: "0.5px solid var(--glass-border)",
       }}
     >
+      {/* Blur lives on its own plain (non-transformed) layer, not the
+          outer motion.div — Chromium/WebKit have a long-standing bug
+          where backdrop-filter + border-radius + a CSS transform on the
+          SAME element lets a hairline sliver of unclipped blur bleed
+          past the rounded corner (reads as a faint square notch right
+          at the corner). Since overflow:hidden on the outer element
+          still clips a plain child correctly, moving backdrop-filter to
+          this absolutely-positioned child sidesteps the bug entirely
+          while still reading as one continuous frosted material behind
+          the titlebar + body tint layers. */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 0,
+          backdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
+          WebkitBackdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
+        }}
+      />
+      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
       {/* Titlebar — only this initiates drag, so iframe content never fights it */}
       <div
         onPointerDown={(e) => dragControls.start(e)}
@@ -274,8 +310,6 @@ export default function Window({ win, active }: { win: WindowState; active: bool
           alignItems: "center",
           padding: "0 10px",
           background: "var(--glass-regular-bg)",
-          backdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
-          WebkitBackdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
           borderBottom: "0.5px solid var(--glass-border)",
           cursor: "grab",
           touchAction: "none",
@@ -341,11 +375,16 @@ export default function Window({ win, active }: { win: WindowState; active: bool
         </span>
       </div>
 
-      <iframe
-        src={`${win.route}${win.route.includes("?") ? "&" : "?"}__window=1`}
-        title={win.title}
-        style={{ flex: 1, border: "none", background: "var(--bg-page)" }}
-      />
+      {win.kind === "finder" ? (
+        <FinderApp />
+      ) : (
+        <iframe
+          src={`${win.route}${win.route.includes("?") ? "&" : "?"}__window=1`}
+          title={win.title}
+          style={{ flex: 1, border: "none", background: "var(--bg-page)" }}
+        />
+      )}
+      </div>
     </motion.div>
   );
 }
