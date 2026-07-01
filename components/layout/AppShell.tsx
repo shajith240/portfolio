@@ -14,6 +14,7 @@ import DesktopWidgetStack from "@/components/widgets/DesktopWidgetStack";
 import PhotoWidget from "@/components/widgets/PhotoWidget";
 import AboutWidget from "@/components/widgets/AboutWidget";
 import NowPlayingWidget from "@/components/widgets/NowPlayingWidget";
+import MotivationWidget from "@/components/widgets/MotivationWidget";
 import CommandPalette from "@/components/ui/CommandPalette";
 import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
 import MobileTabBar from "@/components/ui/MobileTabBar";
@@ -75,11 +76,14 @@ function Shell({ children }: { children: ReactNode }) {
         <>
           <MenuBar />
           {isHome && (
-            <DesktopWidgetStack>
-              <PhotoWidget />
-              <AboutWidget />
-              <NowPlayingWidget />
-            </DesktopWidgetStack>
+            <>
+              <DesktopWidgetStack>
+                <PhotoWidget />
+                <AboutWidget />
+                <NowPlayingWidget />
+              </DesktopWidgetStack>
+              <MotivationWidget />
+            </>
           )}
           <PageBreadcrumb />
           {/* Suppress the raw page while the redirect above is in
