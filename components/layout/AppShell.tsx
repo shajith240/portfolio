@@ -15,6 +15,7 @@ import RightWidgetStack from "@/components/widgets/RightWidgetStack";
 import PhotoWidget from "@/components/widgets/PhotoWidget";
 import NowPlayingWidget from "@/components/widgets/NowPlayingWidget";
 import AIToolsWidget from "@/components/widgets/AIToolsWidget";
+import ClockWidget from "@/components/widgets/ClockWidget";
 import MotivationWidget from "@/components/widgets/MotivationWidget";
 import CommandPalette from "@/components/ui/CommandPalette";
 import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
@@ -84,6 +85,7 @@ function Shell({ children }: { children: ReactNode }) {
               </DesktopWidgetStack>
               <RightWidgetStack>
                 <AIToolsWidget />
+                <ClockWidget />
               </RightWidgetStack>
               <MotivationWidget />
             </>

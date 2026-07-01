@@ -51,3 +51,30 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Liquid Glass "frosted glass text" — the numerals themselves are made
+   of glass (the blurred content behind the widget shows through the
+   letterforms), not just sitting on a glass card background. Two-tier
+   fallback, same pattern as docs/design-system/materials-glass.md's
+   enhanced-tier recipe: baseline is solid, legible bright text with a
+   soft glow; the @supports block only fires where backdrop-filter +
+   background-clip: text actually compose correctly (Chromium/Safari —
+   Firefox's support has historically been inconsistent), clipping a
+   blurred/brightened backdrop to the text shape for a real refractive
+   look instead of a flat color. */
+.glass-clock-time {
+  color: var(--text-primary);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 26px rgba(255, 255, 255, 0.14);
+}
+
+@supports (background-clip: text) and (backdrop-filter: blur(1px)) {
+  .glass-clock-time {
+    color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.08));
+    backdrop-filter: blur(7px) brightness(1.6) saturate(1.5);
+    -webkit-backdrop-filter: blur(7px) brightness(1.6) saturate(1.5);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35), 0 -1px 3px rgba(0, 0, 0, 0.25);
+  }
+}
