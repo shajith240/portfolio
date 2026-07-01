@@ -1,28 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { motion, useMotionValue, animate } from "framer-motion";
+import { useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { NOW_PLAYING } from "@/data/nowPlaying";
 
 /* macOS "Now Playing" widget — real <audio> playback (no Spotify
-   OAuth/infra), collapsed by default, hover-expands to a scrubber +
-   prev/next glyphs. Spring/card styling match
-   docs/design-system/motion.md's `entrance` preset and the existing
-   PhotoWidget/AboutWidget Liquid Glass card exactly — see
-   docs/superpowers/specs/2026-07-01-desktop-widgets-design.md.
-
-   Deliberately NOT using Framer's `layout` prop for the expand/collapse
-   (no other component in this codebase does — Window.tsx animates
-   explicit numeric width/height motion values instead, never auto
-   layout). `layout` measures a FLIP transform and, when the box's
-   height changes because new content mounted, scales the whole
-   subtree — including text — via a CSS transform for the duration of
-   the animation. Text doesn't reflow correctly under a scale
-   transform, so it visibly stretches/squishes for the transition's
-   duration: exactly what reads as "sticky/laggy" instead of a clean
-   reveal. Animating a real `height` motion value on an
-   always-rendered, overflow-hidden wrapper avoids this entirely —
-   nothing is ever scaled, only clipped. */
+   OAuth/infra). Matches the real macOS Control Center Now Playing
+   panel's actual layout, which has no collapsed/hover-expanded state
+   at all: album art + title/artist sit on top, a full-width scrubber
+   spans the whole card below that, and a centered prev/play/next row
+   sits below the scrubber — everything visible permanently, not
+   revealed on hover (an earlier version of this widget invented a
+   hover-to-reveal interaction that isn't how the real widget behaves
+   at all, which is why it read as inauthentic). Spring/card styling
+   match docs/design-system/motion.md's `entrance` preset and the
+   existing PhotoWidget/AboutWidget Liquid Glass card exactly — see
+   docs/superpowers/specs/2026-07-01-desktop-widgets-design.md. */
 
 const WIDGET_WIDTH = 260;
 const ENTRANCE_SPRING = { type: "spring", stiffness: 520, damping: 44, mass: 0.85, restDelta: 0.01 } as const;
@@ -39,7 +32,7 @@ function MusicNoteGlyph() {
 
 function PlayGlyph() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+    <svg width="19" height="19" viewBox="0 0 16 16" fill="none">
       <path d="M3.5 2.5L13 8L3.5 13.5V2.5Z" fill="var(--text-primary)" />
     </svg>
   );
@@ -47,36 +40,31 @@ function PlayGlyph() {
 
 function PauseGlyph() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+    <svg width="19" height="19" viewBox="0 0 16 16" fill="none">
       <rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="var(--text-primary)" />
       <rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="var(--text-primary)" />
     </svg>
   );
 }
 
+// Matches the real "skip to previous/next track" glyph (a single
+// triangle + a trailing bar — SF Symbols' backward.end.fill /
+// forward.end.fill), not the double-triangle "fast forward" glyph.
 function SkipGlyph({ direction }: { direction: "prev" | "next" }) {
   const flip = direction === "prev" ? "scale(-1, 1)" : undefined;
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ transform: flip }}>
-      <path d="M3 2.5L10 8L3 13.5V2.5Z" fill="var(--text-muted)" />
-      <rect x="11" y="2.5" width="2" height="11" fill="var(--text-muted)" />
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ transform: flip }}>
+      <path d="M3 2.5L10 8L3 13.5V2.5Z" fill="var(--text-primary)" />
+      <rect x="11" y="2.5" width="2" height="11" fill="var(--text-primary)" />
     </svg>
   );
 }
 
 export default function NowPlayingWidget() {
-  const [hovered, setHovered] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const expandRef = useRef<HTMLDivElement>(null);
-  const expandHeight = useMotionValue(0);
-
-  useEffect(() => {
-    const target = hovered ? (expandRef.current?.scrollHeight ?? 0) : 0;
-    const controls = animate(expandHeight, target, ENTRANCE_SPRING);
-    return () => controls.stop();
-  }, [hovered, expandHeight]);
+  const scrubberRef = useRef<HTMLDivElement>(null);
 
   const togglePlay = () => {
     const audio = audioRef.current;
@@ -91,13 +79,32 @@ export default function NowPlayingWidget() {
     }
   };
 
+  // There's only one track (no playlist/queue in scope), so prev/next
+  // both restart it — a real, honest action rather than a dead button
+  // that looks clickable but does nothing.
+  const restart = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.currentTime = 0;
+  };
+
+  // Real macOS's scrubber is draggable/click-to-seek, not just a
+  // read-only progress display — clicking anywhere on the track jumps
+  // playback to that position.
+  const seekToClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const audio = audioRef.current;
+    const track = scrubberRef.current;
+    if (!audio || !track || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+    const rect = track.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    audio.currentTime = ratio * audio.duration;
+  };
+
   return (
     <motion.div
       initial={{ y: 16, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={ENTRANCE_SPRING}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
         width: `${WIDGET_WIDTH}px`,
         padding: "14px",
@@ -129,11 +136,13 @@ export default function NowPlayingWidget() {
         }}
       />
 
+      {/* Top row: album art + title/artist only — no controls here,
+          matching the real widget's layout. */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <div
           style={{
-            width: "52px",
-            height: "52px",
+            width: "56px",
+            height: "56px",
             flexShrink: 0,
             borderRadius: "22%",
             overflow: "hidden",
@@ -181,64 +190,60 @@ export default function NowPlayingWidget() {
             {NOW_PLAYING.artist}
           </p>
         </div>
+      </div>
 
+      {/* Scrubber — full card width, click/drag-to-seek, a neutral
+          white fill (not the site's orange accent) matching real
+          macOS's Now Playing scrubber. */}
+      <div
+        ref={scrubberRef}
+        onClick={seekToClick}
+        style={{
+          marginTop: "12px",
+          height: "3px",
+          borderRadius: "2px",
+          background: "rgba(255, 255, 255, 0.14)",
+          overflow: "hidden",
+          cursor: "pointer",
+        }}
+      >
+        <div
+          style={{
+            height: "100%",
+            width: `${progress}%`,
+            background: "rgba(255, 255, 255, 0.85)",
+            borderRadius: "2px",
+          }}
+        />
+      </div>
+
+      {/* Controls row — prev / play-pause / next, centered under the
+          full card width, always visible (never dimmed/disabled) with
+          play-pause visually larger than prev/next, matching the real
+          widget's control hierarchy. */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "28px", marginTop: "10px" }}>
+        <button
+          onClick={restart}
+          aria-label="Previous"
+          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex" }}
+        >
+          <SkipGlyph direction="prev" />
+        </button>
         <button
           onClick={togglePlay}
           aria-label={playing ? "Pause" : "Play"}
-          style={{
-            width: "28px",
-            height: "28px",
-            flexShrink: 0,
-            borderRadius: "50%",
-            border: "none",
-            background: "rgba(255, 255, 255, 0.12)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-          }}
+          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex" }}
         >
           {playing ? <PauseGlyph /> : <PlayGlyph />}
         </button>
+        <button
+          onClick={restart}
+          aria-label="Next"
+          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex" }}
+        >
+          <SkipGlyph direction="next" />
+        </button>
       </div>
-
-      {/* Always rendered (never conditionally mounted) so expandRef has
-          real content to measure at all times, including while
-          collapsed — only `height` is animated, nothing is scaled, so
-          text never distorts mid-transition. paddingTop (not
-          marginTop) on the measured element: a child's top margin can
-          collapse into its parent's box and silently vanish from
-          scrollHeight, padding never does. */}
-      <motion.div style={{ height: expandHeight, overflow: "hidden" }}>
-        <div ref={expandRef} style={{ paddingTop: "12px" }}>
-          <div
-            style={{
-              height: "3px",
-              borderRadius: "2px",
-              background: "rgba(255, 255, 255, 0.14)",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                height: "100%",
-                width: `${progress}%`,
-                background: "#FF4500",
-                borderRadius: "2px",
-              }}
-            />
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "18px", marginTop: "10px" }}>
-            <span style={{ opacity: 0.35, pointerEvents: "none", display: "flex" }}>
-              <SkipGlyph direction="prev" />
-            </span>
-            <span style={{ opacity: 0.35, pointerEvents: "none", display: "flex" }}>
-              <SkipGlyph direction="next" />
-            </span>
-          </div>
-        </div>
-      </motion.div>
     </motion.div>
   );
 }
