@@ -6,6 +6,7 @@ export interface WindowState {
   id: string;
   route: string;
   title: string;
+  kind: "iframe" | "finder";
   x: number;
   y: number;
   width: number;
@@ -19,6 +20,7 @@ export interface WindowState {
 interface WindowManagerContextValue {
   windows: WindowState[];
   openWindow: (route: string, title: string) => void;
+  openFinder: () => void;
   closeWindow: (id: string) => void;
   minimizeWindow: (id: string) => void;
   toggleMaximize: (id: string) => void;
@@ -80,7 +82,7 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
     setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, zIndex: z } : w)));
   }, []);
 
-  const openWindow = useCallback((route: string, title: string) => {
+  const openWindowOfKind = useCallback((route: string, title: string, kind: "iframe" | "finder", size?: { width: number; height: number }) => {
     setWindows((prev) => {
       const existing = prev.find((w) => w.route === route);
       topZIndexRef.current += 1;
@@ -94,10 +96,10 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
         return prev.map((w) => (w.id === existing.id ? { ...w, ...clamped, minimized: false, zIndex: z } : w));
       }
 
-      const width = Math.min(DEFAULT_WIDTH, typeof window !== "undefined" ? window.innerWidth * 0.7 : DEFAULT_WIDTH);
-      const height = Math.min(DEFAULT_HEIGHT, typeof window !== "undefined" ? window.innerHeight * 0.75 : DEFAULT_HEIGHT);
       const viewportW = typeof window !== "undefined" ? window.innerWidth : 1440;
       const viewportH = typeof window !== "undefined" ? window.innerHeight : 900;
+      const width = size ? size.width : Math.min(DEFAULT_WIDTH, viewportW * 0.7);
+      const height = size ? size.height : Math.min(DEFAULT_HEIGHT, viewportH * 0.75);
 
       const cascadeIndex = cascadeCountRef.current % CASCADE_WRAP;
       cascadeCountRef.current += 1;
@@ -108,6 +110,7 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
         id: route,
         route,
         title,
+        kind,
         x: Math.max(40, baseX + cascadeIndex * CASCADE_STEP),
         y: Math.max(50, baseY + cascadeIndex * CASCADE_STEP),
         width,
@@ -120,6 +123,19 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
       return [...prev, newWindow];
     });
   }, []);
+
+  const openWindow = useCallback((route: string, title: string) => {
+    openWindowOfKind(route, title, "iframe");
+  }, [openWindowOfKind]);
+
+  // Finder isn't an iframe of a real route — it's its own React UI
+  // (components/window/FinderApp.tsx). "finder" is a sentinel route,
+  // never actually requested over the network. Real macOS's default
+  // window size for Finder is roomier than a typical content window,
+  // hence the explicit larger default here.
+  const openFinder = useCallback(() => {
+    openWindowOfKind("finder", "Finder", "finder", { width: 960, height: 620 });
+  }, [openWindowOfKind]);
 
   const closeWindow = useCallback((id: string) => {
     setWindows((prev) => prev.filter((w) => w.id !== id));
@@ -186,6 +202,7 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
       value={{
         windows,
         openWindow,
+        openFinder,
         closeWindow,
         minimizeWindow,
         toggleMaximize,

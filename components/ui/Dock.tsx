@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { Fragment, useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useShellMetrics } from "@/lib/useShellMetrics";
@@ -10,17 +10,57 @@ import { NAV_ITEMS } from "@/data/nav";
 /* ── Icon art — plain /icons/*.png, no clip mask or box-shadow "chip"
    imposed on top (that was the "invisible border" bug — a rectangular
    box-shadow ignores a transparent PNG's real silhouette and reads as
-   a border around it). Placeholder mapping — not semantically final. */
+   a border around it). Real icon set (extracted from the .icns files
+   dropped into public/icons/ — see the ic10 1024x1024 PNG chunk each
+   one embeds). "/skills" intentionally uses skills.png — despite the
+   filename, that file is a terminal-glyph icon, not the skills.icns
+   originally extracted for "/dsa"'s old slot. "/dsa" uses xcode.png.
+   dsa.icns/dsa.png also exist but aren't used by any Dock slot. */
 
 const ICON_FILE: Record<string, string> = {
-  "/": "react",
-  "/about": "github",
-  "/projects": "vscode",
-  "/skills": "python",
-  "/dsa": "javascript",
-  "/notes": "claude",
-  "/uses": "linux",
+  finder: "finder",
+  "/about": "contact",
+  "/projects": "projects",
+  "/skills": "skills",
+  "/dsa": "xcode",
+  "/notes": "notes",
+  "/uses": "settings",
+  "external:github": "github",
+  "external:linkedin": "linkedin",
+  "external:leetcode": "leetcode",
 };
+
+/* Real profile links (data/nav.ts and CommandPalette.tsx both already
+   point here) — these open the actual external profile in a new tab,
+   same as real macOS opening a web link from an app, not an internal
+   window. "external:*" is a sentinel href, like Finder's, that never
+   collides with a real window route so isActive/registerDockIconEl
+   stay correct for free. LeetCode username matches the hardcoded
+   fallback in app/api/leetcode/route.ts. */
+const EXTERNAL_LINKS: { href: string; label: string; url: string }[] = [
+  { href: "external:github", label: "GitHub", url: "https://github.com/shajith240" },
+  { href: "external:linkedin", label: "LinkedIn", url: "https://linkedin.com/in/shajith240" },
+  { href: "external:leetcode", label: "LeetCode", url: "https://leetcode.com/u/shajith240/" },
+];
+
+/* Finder is a permanent Dock item, always leftmost, same as real macOS
+   — it isn't a NAV_ITEMS entry (those are real routed pages; Finder's
+   route is the "finder" sentinel handled by WindowManagerContext) but
+   it shares the exact same magnification physics, so it's folded into
+   one combined list below rather than rendered as a separate,
+   un-magnified icon. Home ("/") is deliberately excluded — the user
+   asked for it removed from the Dock; NAV_ITEMS itself (shared with
+   MobileTabBar/CommandPalette/MenuBar) is left untouched, so mobile
+   nav and the command palette still list Home. External profile links
+   sit last, after a divider, matching where real macOS puts Trash/the
+   Downloads stack — persistent utilities separated from the running
+   apps rather than mixed in with them. */
+const DOCK_ITEMS: { href: string; label: string; isFinder: boolean; external?: string }[] = [
+  { href: "finder", label: "Finder", isFinder: true },
+  ...NAV_ITEMS.filter((item) => item.href !== "/").map((item) => ({ href: item.href, label: item.label, isFinder: false })),
+  ...EXTERNAL_LINKS.map((item) => ({ href: item.href, label: item.label, isFinder: false, external: item.url })),
+];
+const FIRST_EXTERNAL_INDEX = DOCK_ITEMS.length - EXTERNAL_LINKS.length;
 
 /* ── Authentic macOS Dock magnification ───────────────────────────
    Faithful port of the reference implementation (cosine-based
@@ -48,10 +88,10 @@ const BASE_SPACING = 14;
 const PADDING = 14;
 
 function targetScales(mouseX: number | null) {
-  if (mouseX === null) return NAV_ITEMS.map(() => MIN_SCALE);
+  if (mouseX === null) return DOCK_ITEMS.map(() => MIN_SCALE);
   const minX = mouseX - EFFECT_WIDTH / 2;
   const maxX = mouseX + EFFECT_WIDTH / 2;
-  return NAV_ITEMS.map((_, index) => {
+  return DOCK_ITEMS.map((_, index) => {
     const center = index * (BASE_ICON_SIZE + BASE_SPACING) + BASE_ICON_SIZE / 2;
     if (center < minX || center > maxX) return MIN_SCALE;
     const theta = ((center - minX) / EFFECT_WIDTH) * 2 * Math.PI;
@@ -74,10 +114,10 @@ function positionsFromScales(scales: number[]) {
 export default function Dock() {
   const { isDarkTheme } = useTheme();
   const metrics = useShellMetrics();
-  const { windows, openWindow, registerDockIconEl } = useWindowManager();
+  const { windows, openWindow, openFinder, registerDockIconEl } = useWindowManager();
 
-  const [scales, setScales] = useState<number[]>(() => NAV_ITEMS.map(() => MIN_SCALE));
-  const [positions, setPositions] = useState<number[]>(() => positionsFromScales(NAV_ITEMS.map(() => MIN_SCALE)));
+  const [scales, setScales] = useState<number[]>(() => DOCK_ITEMS.map(() => MIN_SCALE));
+  const [positions, setPositions] = useState<number[]>(() => positionsFromScales(DOCK_ITEMS.map(() => MIN_SCALE)));
   const [bounced, setBounced] = useState<number | null>(null);
 
   const dockRef = useRef<HTMLDivElement>(null);
@@ -126,12 +166,14 @@ export default function Dock() {
   }, []);
 
   const handleClick = useCallback(
-    (href: string, label: string, index: number) => {
+    (href: string, label: string, index: number, isFinder: boolean, external?: string) => {
       setBounced(index);
       setTimeout(() => setBounced(null), 200);
-      openWindow(href, label);
+      if (external) window.open(external, "_blank", "noopener,noreferrer");
+      else if (isFinder) openFinder();
+      else openWindow(href, label);
     },
-    [openWindow]
+    [openWindow, openFinder]
   );
 
   // Single source of truth for the pill's own width — derived from the
@@ -139,7 +181,7 @@ export default function Dock() {
   // frame (or a whole separate spring) out of sync with the icons.
   const contentWidth = positions.length
     ? Math.max(...positions.map((pos, i) => pos + (BASE_ICON_SIZE * scales[i]) / 2))
-    : NAV_ITEMS.length * (BASE_ICON_SIZE + BASE_SPACING) - BASE_SPACING;
+    : DOCK_ITEMS.length * (BASE_ICON_SIZE + BASE_SPACING) - BASE_SPACING;
 
   const glassBg = isDarkTheme ? "rgba(28, 28, 30, 0.78)" : "rgba(255, 255, 255, 0.78)";
   const glassBorder = isDarkTheme ? "rgba(255, 255, 255, 0.10)" : "rgba(0, 0, 0, 0.06)";
@@ -185,17 +227,39 @@ export default function Dock() {
           pointerEvents: "auto",
         }}
       >
-        {NAV_ITEMS.map((item, i) => {
+        {DOCK_ITEMS.map((item, i) => {
           const scale = scales[i] ?? MIN_SCALE;
           const position = positions[i] ?? 0;
           const scaledSize = BASE_ICON_SIZE * scale;
           const isActive = windows.some((w) => w.route === item.href);
 
+          // Divider before the external-links group — a static hairline
+          // in the gap before this icon, same spot real macOS puts the
+          // line separating running apps from Trash/Downloads.
+          const prevScale = scales[i - 1] ?? MIN_SCALE;
+          const prevPosition = positions[i - 1] ?? 0;
+          const showDivider = i === FIRST_EXTERNAL_INDEX && i > 0;
+          const dividerX = showDivider
+            ? (prevPosition + (BASE_ICON_SIZE * prevScale) / 2 + (position - (BASE_ICON_SIZE * scale) / 2)) / 2
+            : 0;
+
           return (
-            <div
-              key={item.href}
+            <Fragment key={item.href}>
+              {showDivider && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: `${PADDING + dividerX}px`,
+                    bottom: "10px",
+                    width: "1px",
+                    height: `${BASE_ICON_SIZE}px`,
+                    background: glassBorder,
+                  }}
+                />
+              )}
+              <div
               ref={(el) => registerDockIconEl(item.href, el)}
-              onClick={() => handleClick(item.href, item.label, i)}
+              onClick={() => handleClick(item.href, item.label, i, item.isFinder, item.external)}
               title={item.label}
               style={{
                 position: "absolute",
@@ -207,19 +271,22 @@ export default function Dock() {
                 zIndex: Math.round(scale * 10),
               }}
             >
-              <motion.img
-                src={`/icons/${ICON_FILE[item.href] ?? "react"}.png`}
-                alt={item.label}
-                draggable={false}
+              <motion.div
                 animate={bounced === i ? { y: [-0, -8, 0] } : { y: 0 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
                 style={{
                   width: "100%",
                   height: "100%",
-                  objectFit: "contain",
                   filter: `drop-shadow(0 ${scale > 1.2 ? 3 : 2}px ${scale > 1.2 ? 6 : 4}px rgba(0, 0, 0, ${0.25 + (scale - 1) * 0.15}))`,
                 }}
-              />
+              >
+                <img
+                  src={`/icons/${ICON_FILE[item.href] ?? "react"}.png`}
+                  alt={item.label}
+                  draggable={false}
+                  style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                />
+              </motion.div>
 
               {/* Active route indicator — a plain dot, matching real
                   macOS Dock convention for open/active apps. */}
@@ -237,7 +304,8 @@ export default function Dock() {
                   }}
                 />
               )}
-            </div>
+              </div>
+            </Fragment>
           );
         })}
       </motion.div>
