@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useClickSound } from "@/lib/useClickSound";
 import { useShellMetrics } from "@/lib/useShellMetrics";
 
 /*
@@ -66,7 +65,6 @@ export default function BottomToolbar() {
   const { isDarkTheme, toggleTheme } = useTheme();
   const pathname = usePathname();
   const metrics = useShellMetrics();
-  const playClick = useClickSound(isSoundEnabled);
   const [soundHovered, setSoundHovered] = useState(false);
   const [searchHovered, setSearchHovered] = useState(false);
   const forceDarkChrome = pathname === "/dsa";
@@ -149,7 +147,7 @@ export default function BottomToolbar() {
         }}>
           {/* Light (sun) */}
           <button
-            onClick={() => { playClick(); if (isDarkTheme) toggleTheme(); }}
+            onClick={() => { if (isDarkTheme) toggleTheme(); }}
             title="Light theme"
             style={{
               width: "26px",
@@ -171,7 +169,7 @@ export default function BottomToolbar() {
 
           {/* Dark (moon) */}
           <button
-            onClick={() => { playClick(); if (!isDarkTheme) toggleTheme(); }}
+            onClick={() => { if (!isDarkTheme) toggleTheme(); }}
             title="Dark theme"
             style={{
               width: "26px",
@@ -195,7 +193,7 @@ export default function BottomToolbar() {
 
       {/* Right — command palette trigger */}
       <button
-        onClick={() => { playClick(); openSearch(); }}
+        onClick={openSearch}
         onMouseEnter={() => setSearchHovered(true)}
         onMouseLeave={() => setSearchHovered(false)}
         style={{

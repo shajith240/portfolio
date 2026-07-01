@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
 import { NAV_ITEMS } from "@/data/nav";
-import { useHoverSound } from "@/lib/useHoverSound";
 
 /* ─── SVG icon components ────────────────────────────────────────── */
 
@@ -177,24 +176,19 @@ const itemVariants = {
   5. All transitions use spring, never ease curves
 */
 function PaletteItem({
-  icon, label, hint, shortcut, active, onClick, onHover,
+  icon, label, hint, shortcut, active, onClick,
 }: {
   icon: React.ReactNode; label: string; hint?: string; shortcut?: string;
-  active: boolean; onClick: () => void; onHover: () => void;
+  active: boolean; onClick: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const highlighted = hovered || active;
-
-  const handleEnter = useCallback(() => {
-    setHovered(true);
-    onHover();
-  }, [onHover]);
 
   return (
     <motion.button
       variants={itemVariants}
       onClick={onClick}
-      onMouseEnter={handleEnter}
+      onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       animate={{ x: hovered ? 2 : 0 }}
       whileTap={{ scale: 0.985 }}
@@ -328,8 +322,7 @@ const listVariants = {
 };
 
 export default function CommandPalette() {
-  const { isSearchOpen, openSearch, closeSearch, isSoundEnabled } = useLayout();
-  const playHover = useHoverSound(isSoundEnabled);
+  const { isSearchOpen, openSearch, closeSearch } = useLayout();
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
@@ -625,7 +618,6 @@ export default function CommandPalette() {
                               shortcut={item.shortcut}
                               active={isActive}
                               onClick={() => handleSelect(item)}
-                              onHover={playHover}
                             />
                           </div>
                         );
