@@ -6,7 +6,14 @@ import { motion } from "framer-motion";
 /* macOS "Photos" widget — a single photo, edge to edge, no text.
    Liquid Glass isn't appropriate here (a photo widget is opaque, not
    translucent, in real macOS) — just a squircle-clipped image with a
-   soft shadow. See docs/design-system/materials-glass.md. */
+   soft shadow. See docs/design-system/materials-glass.md.
+
+   Shadow is deliberately tight (small blur/offset), not a big diffuse
+   glow: real macOS desktop widgets rest close to the surface rather
+   than levitating dramatically. A wide blur radius here would also
+   exceed DesktopWidgetStack's 14px inter-widget gap and visibly bleed
+   into the next widget, reading as one merged blob instead of two
+   distinct floating cards. */
 
 const WIDGET_WIDTH = 260;
 
@@ -27,8 +34,8 @@ export default function PhotoWidget() {
         borderRadius: "20px",
         overflow: "hidden",
         boxShadow: hovered
-          ? "0 20px 44px rgba(0, 0, 0, 0.45)"
-          : "0 16px 36px rgba(0, 0, 0, 0.38)",
+          ? "0 6px 18px rgba(0, 0, 0, 0.34)"
+          : "0 4px 12px rgba(0, 0, 0, 0.28)",
         transition: "box-shadow 0.22s ease",
       }}
     >
