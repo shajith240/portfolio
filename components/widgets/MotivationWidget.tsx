@@ -8,15 +8,25 @@ import { MOTIVATION_IMAGE } from "@/data/motivation";
 
 /* macOS "Photos" widget, right-hand side — same opaque, edge-to-edge
    treatment as PhotoWidget (no Liquid Glass; a photo widget is opaque
-   in real macOS, not translucent — see materials-glass.md), same
-   260px width as every other widget on this desktop (PhotoWidget,
-   AboutWidget, NowPlayingWidget) so it reads as one consistent set,
-   not an oversized outlier. Height follows the source image's real
-   736x864 aspect ratio exactly (not a square crop) — object-fit:
-   contain never needs to letterbox, and nothing is cropped, per an
-   explicit no-crop requirement. */
+   in real macOS, not translucent — see materials-glass.md).
 
-const FRAME_WIDTH = 260;
+   Deliberately NOT the same 260px width as the left-hand widgets:
+   PhotoWidget/AboutWidget/NowPlayingWidget already scale up Apple's
+   real systemSmall widget (169pt) by ~1.54x for visual weight on a
+   text-heavy left column, and a dense, high-detail photo reads as
+   much "louder" than a text card at the same physical size.
+
+   169px (systemSmall's literal, un-scaled width) was tried and was
+   too small — this specific image has a quote baked into the artwork
+   itself, and at 169px wide the text became illegible. 210px is the
+   balance point: still visibly smaller/quieter than the other
+   widgets' 260px, but wide enough to keep the baked-in quote
+   readable. Height still follows the source image's real 736x864
+   aspect ratio exactly (not a square crop) — object-fit: contain
+   never needs to letterbox, and nothing is cropped, per an explicit
+   no-crop requirement. */
+
+const FRAME_WIDTH = 210;
 const FRAME_HEIGHT = Math.round(FRAME_WIDTH * (MOTIVATION_IMAGE.height / MOTIVATION_IMAGE.width));
 
 export default function MotivationWidget() {
