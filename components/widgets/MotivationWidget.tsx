@@ -7,27 +7,15 @@ import { MOTIVATION_IMAGE } from "@/data/motivation";
 
 /* macOS "Photos" widget, right-hand side — same opaque, edge-to-edge
    treatment as PhotoWidget (no Liquid Glass; a photo widget is opaque
-   in real macOS, not translucent — see materials-glass.md), sized to
-   Apple's largest real widget tier instead of the small one
-   PhotoWidget uses, and to the source image's own aspect ratio rather
-   than a square crop.
+   in real macOS, not translucent — see materials-glass.md), same
+   260px width as every other widget on this desktop (PhotoWidget,
+   AboutWidget, NowPlayingWidget) so it reads as one consistent set,
+   not an oversized outlier. Height follows the source image's real
+   736x864 aspect ratio exactly (not a square crop) — object-fit:
+   contain never needs to letterbox, and nothing is cropped, per an
+   explicit no-crop requirement. */
 
-   Real WidgetKit family sizes (widely documented, e.g.
-   developer.apple.com/documentation/widgetkit/supporting-additional-widget-sizes):
-   systemSmall 169x169pt, systemMedium 360x169pt, systemLarge
-   360x376pt. PhotoWidget already scales systemSmall's 169pt width up
-   to this site's 260px column convention (a ~1.54x scale). Applying
-   that same scale factor to systemLarge's width gives this widget's
-   frame width; height then follows the real image's own 736x864
-   aspect ratio exactly (not systemLarge's near-square ratio) — so
-   object-fit: contain never needs to letterbox, and nothing is
-   cropped, per an explicit no-crop requirement. */
-
-const SYSTEM_SMALL_WIDTH_PT = 169;
-const SYSTEM_LARGE_WIDTH_PT = 360;
-const PHOTO_WIDGET_SCALE = 260 / SYSTEM_SMALL_WIDTH_PT;
-
-const FRAME_WIDTH = Math.round(SYSTEM_LARGE_WIDTH_PT * PHOTO_WIDGET_SCALE);
+const FRAME_WIDTH = 260;
 const FRAME_HEIGHT = Math.round(FRAME_WIDTH * (MOTIVATION_IMAGE.height / MOTIVATION_IMAGE.width));
 
 export default function MotivationWidget() {
