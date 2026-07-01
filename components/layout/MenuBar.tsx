@@ -82,6 +82,7 @@ export default function MenuBar() {
   const { isDarkTheme, toggleTheme } = useTheme();
   const [controlCenterOpen, setControlCenterOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const now = useClock();
 
   const pageName = NAV_ITEMS.find((item) => item.href === pathname)?.label ?? "Home";
@@ -89,7 +90,15 @@ export default function MenuBar() {
   useEffect(() => {
     if (!controlCenterOpen) return;
     const handleClick = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      // Exclude the toggle button itself — otherwise this mousedown
+      // handler closes the panel first, then the button's own onClick
+      // (which fires after mousedown) immediately toggles it back open,
+      // so a second click on the button appeared to do nothing.
+      if (
+        panelRef.current && !panelRef.current.contains(target) &&
+        buttonRef.current && !buttonRef.current.contains(target)
+      ) {
         setControlCenterOpen(false);
       }
     };
@@ -127,6 +136,7 @@ export default function MenuBar() {
 
       <div style={{ display: "flex", alignItems: "center", gap: "16px", position: "relative" }}>
         <button
+          ref={buttonRef}
           onClick={() => setControlCenterOpen((v) => !v)}
           style={{
             background: "transparent",

@@ -7,7 +7,8 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { usePerformance } from "@/lib/usePerformance";
 import Wallpaper from "@/components/layout/Wallpaper";
 import MenuBar from "@/components/layout/MenuBar";
-import ProfileWidget from "@/components/widgets/ProfileWidget";
+import PhotoWidget from "@/components/widgets/PhotoWidget";
+import AboutWidget from "@/components/widgets/AboutWidget";
 import CommandPalette from "@/components/ui/CommandPalette";
 import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
 import MobileTabBar from "@/components/ui/MobileTabBar";
@@ -45,7 +46,12 @@ function Shell({ children }: { children: ReactNode }) {
       ) : (
         <>
           <MenuBar />
-          {isHome && <ProfileWidget />}
+          {isHome && (
+            <>
+              <PhotoWidget />
+              <AboutWidget />
+            </>
+          )}
           <PageBreadcrumb />
           {children}
           <Dock />

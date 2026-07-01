@@ -170,7 +170,13 @@ export default function Dock() {
           width: `${contentWidth + PADDING * 2}px`,
           height: `${BASE_ICON_SIZE + 20}px`,
           padding: `10px ${PADDING}px`,
-          borderRadius: "32px",
+          // Real macOS Dock reads as a rounded rectangle, not a stadium/
+          // pill — roughly 22% of its own height, the same squircle
+          // ratio already used on the icons themselves (borderRadius:
+          // "22%" below). The previous 32px (~46% of the 70px height)
+          // was nearly semicircular at the ends, which is why it looked
+          // over-rounded compared to the real thing.
+          borderRadius: `${Math.round((BASE_ICON_SIZE + 20) * 0.22)}px`,
           background: glassBg,
           border: `0.5px solid ${glassBorder}`,
           backdropFilter: "blur(24px) saturate(180%)",
