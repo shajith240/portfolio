@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useShellMetrics } from "@/lib/useShellMetrics";
+import { useWindowManager } from "@/contexts/WindowManagerContext";
 
 /* macOS-style info widget — sits directly below PhotoWidget (same
    width, small gap). Liquid Glass material + widget-scale radius, per
@@ -18,6 +19,7 @@ const WIDGET_GAP = 14;
 
 export default function AboutWidget() {
   const metrics = useShellMetrics();
+  const { openWindow } = useWindowManager();
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -79,18 +81,21 @@ export default function AboutWidget() {
         CS student at IIT(ISM) Dhanbad. I learn by building.
       </p>
 
-      <a
-        href="/about"
+      <button
+        onClick={() => openWindow("/about", "About")}
         style={{
           fontSize: "12px",
           fontWeight: 500,
           color: hovered ? "#FF4500" : "var(--text-ghost)",
-          textDecoration: "none",
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
           transition: "color 0.15s ease",
         }}
       >
         Read more →
-      </a>
+      </button>
     </motion.div>
   );
 }
