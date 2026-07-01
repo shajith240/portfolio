@@ -118,7 +118,7 @@ let _sidebarAnimated = false;
 export default function LeftSidebar() {
   const { isSidebarOpen, toggleSidebar, isSoundEnabled, isMobileLayout } = useLayout();
   const metrics = useShellMetrics();
-  const compactSocialCards = metrics.viewportHeight < 820;
+  const compactSocialCards = metrics.viewportHeight < 940;
   const playClick = useClickSound(isSoundEnabled);
   const pathname = usePathname();
   const isHome = pathname === "/";
@@ -219,9 +219,26 @@ export default function LeftSidebar() {
           variants={container}
           initial={false}
           animate={controls}
-          style={{ display: "flex", flexDirection: "column", gap: compactSocialCards ? "8px" : "10px", marginTop: compactSocialCards ? "42px" : "44px", marginLeft: "-8px", marginRight: "-8px", padding: "8px 8px 34px", flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+          style={{ display: "flex", flexDirection: "column", gap: compactSocialCards ? "8px" : "10px", marginTop: compactSocialCards ? "56px" : "64px", marginLeft: "-8px", marginRight: "-8px", padding: "8px 8px 34px", flex: 1, overflowY: "auto", overflowX: "hidden", scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
         >
           {/* Card 1 — Profile */}
+          <motion.div
+            variants={cardVariant}
+            style={{
+              padding: "0 14px",
+              marginBottom: compactSocialCards ? "10px" : "18px",
+              color: "var(--text-primary)",
+              transition: "color 0.22s ease",
+            }}
+          >
+            <p style={{ margin: 0, fontSize: compactSocialCards ? "17px" : "18px", fontWeight: 700, lineHeight: 1.25, letterSpacing: "-0.01em" }}>
+              Hey, I'm Shajith.
+            </p>
+            <p style={{ margin: 0, fontSize: compactSocialCards ? "17px" : "18px", fontWeight: 700, lineHeight: 1.25, letterSpacing: "-0.01em" }}>
+              I build things people want to use.
+            </p>
+          </motion.div>
+
           <motion.div variants={cardVariant}>
             <InfoCard label="SHAJITH" cta="Read more →" href="/about">
               {(hovered) => (
@@ -233,7 +250,7 @@ export default function LeftSidebar() {
                       decoding="async"
                       style={{
                         width: "min(250px, 100%)",
-                        height: isMobileLayout ? "220px" : "250px",
+                        height: "250px",
                         objectFit: "cover",
                         objectPosition: "center 10%",
                         borderRadius: "10px",
@@ -262,13 +279,13 @@ export default function LeftSidebar() {
               <InfoCard label="PLATFORMS" compact>
                 {(hovered) => (
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <CompactSocialRow href="https://github.com/shajith240" title="@shajith240" description="Open source tools & experiments">
+                    <CompactSocialRow href="https://github.com/shajith240" title="@shajith240" description="Open source tools">
                       <GithubIcon color={hovered ? "#FF4500" : "var(--icon-stroke)"} />
                     </CompactSocialRow>
-                    <CompactSocialRow href="https://leetcode.com/shajith240" title="shajith240" description="Solving DSA problems daily">
+                    <CompactSocialRow href="https://leetcode.com/shajith240" title="shajith240" description="DSA practice daily">
                       <LeetcodeIcon color={hovered ? "#FF4500" : "var(--icon-stroke)"} />
                     </CompactSocialRow>
-                    <CompactSocialRow href="https://linkedin.com/in/shajith240" title="shajith240" description="Connect & work experience">
+                    <CompactSocialRow href="https://linkedin.com/in/shajith240" title="shajith240" description="Work experience">
                       <LinkedinIcon color={hovered ? "#FF4500" : "var(--icon-stroke)"} />
                     </CompactSocialRow>
                   </div>

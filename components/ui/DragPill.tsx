@@ -2,60 +2,63 @@
 
 import { motion } from "framer-motion";
 
-/* ── Icons — strokes use CSS variables via currentColor ─────────── */
-
-const TrackpadIcon = () => (
-  <svg width="15" height="13" viewBox="0 0 15 13" fill="none" style={{ color: "var(--drag-icon-stroke)" }}>
-    <rect x="0.5" y="0.5" width="14" height="9" rx="1.5" stroke="currentColor" strokeWidth="1" />
-    <line x1="0.5" y1="6.5" x2="14.5" y2="6.5" stroke="currentColor" strokeWidth="1" />
-    <line x1="3" y1="10" x2="3" y2="12.5" stroke="var(--drag-icon-legs)" strokeWidth="1" strokeLinecap="round" />
-    <line x1="7.5" y1="10" x2="7.5" y2="12.5" stroke="var(--drag-icon-legs)" strokeWidth="1" strokeLinecap="round" />
-    <line x1="12" y1="10" x2="12" y2="12.5" stroke="var(--drag-icon-legs)" strokeWidth="1" strokeLinecap="round" />
+const DragDeviceIcon = () => (
+  <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true" style={{ color: "var(--drag-icon-stroke)" }}>
+    <path d="M2 3.25H14" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" opacity="0.72" />
+    <rect x="3" y="6" width="10" height="3.15" rx="1.2" fill="currentColor" opacity="0.86" />
+    <path d="M5.2 10.75H10.8" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" opacity="0.42" />
   </svg>
 );
 
 const ChevronUp = () => (
-  <svg width="10" height="7" viewBox="0 0 10 7" fill="none">
-    <path d="M1 6L5 2L9 6" stroke="var(--arrow-chevron)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  <svg width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden="true">
+    <path d="M2.3 5.55 4.5 3.35l2.2 2.2" stroke="var(--arrow-chevron)" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
 const ChevronDown = () => (
-  <svg width="10" height="7" viewBox="0 0 10 7" fill="none">
-    <path d="M1 1L5 5L9 1" stroke="var(--arrow-chevron)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  <svg width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden="true">
+    <path d="M2.3 3.45 4.5 5.65l2.2-2.2" stroke="var(--arrow-chevron)" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
-/* ── Arrow button ──────────────────────────────────────────────────── */
-
-function ArrowBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+function ArrowBtn({
+  onClick,
+  label,
+  children,
+}: {
+  onClick: () => void;
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <motion.button
       onClick={onClick}
-      whileHover={{ scale: 1.08, backgroundColor: "var(--arrow-btn-hover-bg)" }}
-      whileTap={{ scale: 0.92 }}
-      transition={{ type: "spring", stiffness: 500, damping: 32 }}
+      aria-label={label}
+      title={label}
+      whileHover={{ scale: 1.06, backgroundColor: "var(--arrow-btn-hover-bg)" }}
+      whileTap={{ scale: 0.94 }}
+      transition={{ type: "spring", stiffness: 560, damping: 34 }}
       style={{
-        width: "26px",
-        height: "26px",
-        borderRadius: "7px",
+        width: "18px",
+        height: "18px",
+        borderRadius: "5px",
         background: "var(--arrow-btn-bg)",
-        border: "0.5px solid var(--arrow-btn-border)",
+        border: "0.5px solid transparent",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         cursor: "pointer",
         padding: 0,
         flexShrink: 0,
-        transition: "background 0.22s ease, border-color 0.22s ease",
+        color: "var(--arrow-chevron)",
+        transition: "background 0.18s ease, color 0.18s ease",
       }}
     >
       {children}
     </motion.button>
   );
 }
-
-/* ── Component ─────────────────────────────────────────────────────── */
 
 interface DragPillProps {
   ml: number;
@@ -85,32 +88,38 @@ export default function DragPill({ ml, mr, onNext, onPrev }: DragPillProps) {
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
           border: "0.5px solid var(--drag-border)",
-          borderRadius: "12px",
-          padding: "6px 8px 6px 12px",
+          borderRadius: "15px",
+          padding: "7px 8px 7px 11px",
           display: "flex",
           alignItems: "center",
-          gap: "10px",
+          gap: "8px",
           boxShadow: "var(--drag-shadow)",
           transition: "background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease",
         }}
       >
-        <TrackpadIcon />
+        <DragDeviceIcon />
 
-        <span style={{
-          fontSize: "12px",
-          fontWeight: 500,
-          color: "var(--drag-text)",
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          letterSpacing: "-0.01em",
-          userSelect: "none",
-          transition: "color 0.22s ease",
-        }}>
+        <span
+          style={{
+            fontSize: "12px",
+            fontWeight: 600,
+            color: "var(--drag-text)",
+            fontFamily: "system-ui, -apple-system, sans-serif",
+            letterSpacing: "0",
+            userSelect: "none",
+            transition: "color 0.22s ease",
+          }}
+        >
           Drag or use
         </span>
 
         <div style={{ display: "flex", gap: "4px" }}>
-          <ArrowBtn onClick={onNext}><ChevronUp /></ArrowBtn>
-          <ArrowBtn onClick={onPrev}><ChevronDown /></ArrowBtn>
+          <ArrowBtn onClick={onNext} label="Next project">
+            <ChevronUp />
+          </ArrowBtn>
+          <ArrowBtn onClick={onPrev} label="Previous project">
+            <ChevronDown />
+          </ArrowBtn>
         </div>
       </div>
     </motion.div>
