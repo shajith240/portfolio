@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { NOW_PLAYING } from "@/data/nowPlaying";
 
@@ -17,18 +17,8 @@ import { NOW_PLAYING } from "@/data/nowPlaying";
    existing PhotoWidget/AboutWidget Liquid Glass card exactly — see
    docs/superpowers/specs/2026-07-01-desktop-widgets-design.md.
 
-   Real macOS's Now Playing UI (Lock Screen, and Apple Music's own
-   adaptive backgrounds) samples the dominant color out of the album
-   art and uses it to tint a blurred backdrop behind the content —
-   confirmed via research, not assumed. Reproduced here by drawing the
-   artwork into an offscreen canvas, averaging its pixels for a
-   dominant color, and layering a blurred copy of the artwork plus a
-   color-tinted scrim behind the actual content. The blur/tint layer is
-   a plain, non-transformed absolutely-positioned child of the card —
-   never backdrop-filter directly on the same element that also has
-   border-radius + a transform (the outer motion.div's mount
-   animation), which is the exact Chromium/WebKit corner-bleed bug
-   already fixed once in Window.tsx this session. */
+   An album-art color-extraction tinted backdrop was tried and then
+   explicitly reverted — kept to the plain glass card instead. */
 
 const WIDGET_WIDTH = 260;
 const ENTRANCE_SPRING = { type: "spring", stiffness: 520, damping: 44, mass: 0.85, restDelta: 0.01 } as const;
@@ -76,45 +66,8 @@ function SkipGlyph({ direction }: { direction: "prev" | "next" }) {
 export default function NowPlayingWidget() {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  // null until the canvas sampling below resolves (or forever, if
-  // there's no artwork to sample) — the card falls back to the plain
-  // glass background until then, so there's nothing locale/env
-  // dependent to mismatch between server and client render.
-  const [dominantColor, setDominantColor] = useState<[number, number, number] | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const scrubberRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!NOW_PLAYING.artwork) return;
-    let cancelled = false;
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      if (cancelled) return;
-      // Downscale to a tiny canvas — only the average matters, not
-      // per-pixel detail, and this keeps the sampling cost trivial.
-      const size = 24;
-      const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.drawImage(img, 0, 0, size, size);
-      const { data } = ctx.getImageData(0, 0, size, size);
-      let r = 0, g = 0, b = 0;
-      const pixelCount = data.length / 4;
-      for (let i = 0; i < data.length; i += 4) {
-        r += data[i];
-        g += data[i + 1];
-        b += data[i + 2];
-      }
-      setDominantColor([Math.round(r / pixelCount), Math.round(g / pixelCount), Math.round(b / pixelCount)]);
-    };
-    img.src = NOW_PLAYING.artwork;
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const togglePlay = () => {
     const audio = audioRef.current;
@@ -150,76 +103,41 @@ export default function NowPlayingWidget() {
     audio.currentTime = ratio * audio.duration;
   };
 
-  const [r, g, b] = dominantColor ?? [0, 0, 0];
-
   return (
     <motion.div
       initial={{ y: 16, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={ENTRANCE_SPRING}
       style={{
-        position: "relative",
         width: `${WIDGET_WIDTH}px`,
+        padding: "14px",
         borderRadius: "20px",
+        background: "var(--glass-regular-bg)",
         border: "1px solid var(--glass-border)",
+        backdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
+        WebkitBackdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
         boxShadow: "0 16px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
         overflow: "hidden",
       }}
     >
-      {/* Backdrop layer(s) — plain, non-transformed children so the
-          outer element's overflow:hidden clips them correctly (see the
-          file header comment for why backdrop-filter never lives
-          directly on a transformed/border-radius element in this
-          codebase). Overscanning the inset hides the blur's own soft
-          edge from ever peeking past the card's rounded corner. */}
-      {NOW_PLAYING.artwork && (
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: "-20px",
-            backgroundImage: `url(${NOW_PLAYING.artwork})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            filter: "blur(28px) saturate(160%) brightness(0.55)",
-            zIndex: 0,
-          }}
-        />
-      )}
-      <div
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: 1,
-          background: dominantColor
-            ? `linear-gradient(165deg, rgba(${r}, ${g}, ${b}, 0.55), rgba(10, 10, 14, 0.72))`
-            : "var(--glass-regular-bg)",
-          backdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
-          WebkitBackdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
-          transition: "background 0.4s ease",
+      <audio
+        ref={audioRef}
+        src={NOW_PLAYING.src}
+        preload="none"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={(e) => {
+          setPlaying(false);
+          e.currentTarget.currentTime = 0;
+        }}
+        onTimeUpdate={(e) => {
+          const audio = e.currentTarget;
+          // duration is NaN until loadedmetadata fires — guard to 0
+          // rather than letting a NaN% width leak into the scrubber.
+          const pct = Number.isFinite(audio.duration) && audio.duration > 0 ? (audio.currentTime / audio.duration) * 100 : 0;
+          setProgress(pct);
         }}
       />
-
-      <div style={{ position: "relative", zIndex: 2, padding: "14px" }}>
-        <audio
-          ref={audioRef}
-          src={NOW_PLAYING.src}
-          preload="none"
-          onPlay={() => setPlaying(true)}
-          onPause={() => setPlaying(false)}
-          onEnded={(e) => {
-            setPlaying(false);
-            e.currentTarget.currentTime = 0;
-          }}
-          onTimeUpdate={(e) => {
-            const audio = e.currentTarget;
-            // duration is NaN until loadedmetadata fires — guard to 0
-            // rather than letting a NaN% width leak into the scrubber.
-            const pct = Number.isFinite(audio.duration) && audio.duration > 0 ? (audio.currentTime / audio.duration) * 100 : 0;
-            setProgress(pct);
-          }}
-        />
 
       {/* Top row: album art + title/artist only — no controls here,
           matching the real widget's layout. */}
@@ -279,25 +197,50 @@ export default function NowPlayingWidget() {
 
       {/* Scrubber — full card width, click/drag-to-seek, a neutral
           white fill (not the site's orange accent) matching real
-          macOS's Now Playing scrubber. */}
-      <div
-        ref={scrubberRef}
-        onClick={seekToClick}
-        style={{
-          marginTop: "12px",
-          height: "3px",
-          borderRadius: "2px",
-          background: "rgba(255, 255, 255, 0.14)",
-          overflow: "hidden",
-          cursor: "pointer",
-        }}
-      >
+          macOS's Now Playing scrubber. A visible playhead thumb is
+          load-bearing, not decorative: at 0% progress the fill is 0
+          width, so without a thumb the bar is just one flat "unplayed
+          track" color with nothing to anchor "this is the start" —
+          indistinguishable at a glance from "fully played." Real
+          macOS/Apple Music scrubbers always show this dot for exactly
+          that reason. The thumb lives outside the track's own
+          overflow:hidden (a sibling, not a child) so it's never
+          clipped at the 0%/100% extremes, where it straddles the
+          track's edge — the same way a native slider thumb does. */}
+      <div style={{ position: "relative", marginTop: "12px" }}>
         <div
+          ref={scrubberRef}
+          onClick={seekToClick}
           style={{
-            height: "100%",
-            width: `${progress}%`,
-            background: "rgba(255, 255, 255, 0.85)",
+            height: "3px",
             borderRadius: "2px",
+            background: "rgba(255, 255, 255, 0.14)",
+            overflow: "hidden",
+            cursor: "pointer",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${progress}%`,
+              background: "rgba(255, 255, 255, 0.85)",
+              borderRadius: "2px",
+            }}
+          />
+        </div>
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: `${progress}%`,
+            width: "8px",
+            height: "8px",
+            borderRadius: "50%",
+            background: "#fff",
+            transform: "translate(-50%, -50%)",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.45)",
+            pointerEvents: "none",
           }}
         />
       </div>
@@ -328,7 +271,6 @@ export default function NowPlayingWidget() {
         >
           <SkipGlyph direction="next" />
         </button>
-      </div>
       </div>
     </motion.div>
   );
