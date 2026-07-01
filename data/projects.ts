@@ -19,8 +19,8 @@ export const PROJECTS: Project[] = [
     tech: ['Next.js', 'React', 'TypeScript', 'Tailwind', 'Supabase'],
     description: 'Community app for human-powered resume feedback — upload a resume, get structured critiques from students, recruiters, and working professionals in threaded discussions, and build reviewer reputation through public profiles and a leaderboard.',
     github: 'https://github.com/shajith240/ResumeRoster',
-    live: 'https://resume-roster-beige.vercel.app',
-    image: 'https://placehold.co/800x600/242424/555555',
+    live: 'https://linted.space',
+    image: '/project-photos/linted.png',
   },
   {
     id: 2,
@@ -75,6 +75,6 @@ export const PROJECTS: Project[] = [
     description: 'Landing page for an at-home veterinary care service.',
     github: 'https://github.com/shajith240/vet_landing_page',
     live: 'https://vet-landing-page-coral.vercel.app',
-    image: 'https://placehold.co/800x600/242424/555555',
+    image: '/project-photos/vetlandingpage.png',
   },
 ]
