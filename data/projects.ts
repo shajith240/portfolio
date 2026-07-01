@@ -25,17 +25,6 @@ export const PROJECTS: Project[] = [
   {
     id: 2,
     type: 'image',
-    title: 'SHARPFLOW',
-    sub: 'AI voice agent SaaS',
-    tech: ['React', 'TypeScript', 'Vite', 'Tailwind', 'Framer Motion'],
-    description: 'AI-powered voice agents that handle customer calls, book appointments, and manage conversations with human-like precision, powered by ElevenLabs voice AI.',
-    github: 'https://github.com/shajith240/sharpflow-apple-inspired-landing',
-    live: 'https://sharpflow.vercel.app',
-    image: 'https://placehold.co/800x600/242424/555555',
-  },
-  {
-    id: 3,
-    type: 'image',
     title: 'IntelliDesk',
     sub: 'productivity app',
     tech: ['TypeScript', 'Next.js', 'Node.js'],
@@ -45,7 +34,7 @@ export const PROJECTS: Project[] = [
     image: 'https://placehold.co/800x600/242424/555555',
   },
   {
-    id: 4,
+    id: 3,
     type: 'image',
     title: 'WIFI-AUTOMATION',
     sub: 'automation tool',
@@ -56,7 +45,7 @@ export const PROJECTS: Project[] = [
     image: 'https://placehold.co/800x600/242424/555555',
   },
   {
-    id: 5,
+    id: 4,
     type: 'image',
     title: 'Agent SLAM',
     sub: 'AI debate agent',
@@ -67,7 +56,7 @@ export const PROJECTS: Project[] = [
     image: 'https://placehold.co/800x600/242424/555555',
   },
   {
-    id: 6,
+    id: 5,
     type: 'image',
     title: 'Invoice Processing System',
     sub: 'ML automation',
@@ -78,7 +67,7 @@ export const PROJECTS: Project[] = [
     image: 'https://placehold.co/800x600/242424/555555',
   },
   {
-    id: 7,
+    id: 6,
     type: 'image',
     title: 'VetDoc',
     sub: 'landing page',
