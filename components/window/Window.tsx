@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { motion, useMotionValue, useDragControls, animate } from "framer-motion";
 import { useWindowManager, type WindowState } from "@/contexts/WindowManagerContext";
 
@@ -17,37 +17,55 @@ const BOUNDS_SPRING = { type: "spring", stiffness: 340, damping: 32, mass: 0.9 }
 
 const TrafficLight = ({
   color,
+  grayColor,
   hoverGlyph,
   onClick,
   title,
+  active,
+  groupHovered,
 }: {
   color: string;
+  grayColor: string;
   hoverGlyph: React.ReactNode;
   onClick: () => void;
   title: string;
-}) => (
-  <button
-    onClick={onClick}
-    title={title}
-    className="group"
-    style={{
-      width: "12px",
-      height: "12px",
-      borderRadius: "50%",
-      background: color,
-      border: "none",
-      padding: 0,
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-    }}
-  >
-    <span style={{ opacity: 0, display: "flex" }} className="group-hover:opacity-100">
-      {hoverGlyph}
-    </span>
-  </button>
-);
+  active: boolean;
+  groupHovered: boolean;
+}) => {
+  const [hovered, setHovered] = useState(false);
+  // Real macOS: an unfocused window's traffic lights sit gray until you
+  // hover the titlebar's button cluster (any of the three), at which
+  // point all three preview their true colors — not just the one under
+  // the cursor.
+  const showColor = active || groupHovered;
+
+  return (
+    <button
+      onClick={onClick}
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      title={title}
+      style={{
+        width: "12px",
+        height: "12px",
+        borderRadius: "50%",
+        background: showColor ? color : grayColor,
+        border: "none",
+        padding: 0,
+        cursor: "default",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "background 0.1s ease",
+      }}
+    >
+      <span style={{ opacity: hovered && showColor ? 1 : 0, display: "flex" }}>
+        {hoverGlyph}
+      </span>
+    </button>
+  );
+};
 
 const CloseGlyph = () => (
   <svg width="7" height="7" viewBox="0 0 8 8"><path d="M1 1L7 7M7 1L1 7" stroke="rgba(0,0,0,0.55)" strokeWidth="1.2" strokeLinecap="round" /></svg>
@@ -59,10 +77,11 @@ const ZoomGlyph = () => (
   <svg width="6" height="6" viewBox="0 0 8 8"><path d="M1 5L5 1M5 1H2M5 1V4" stroke="rgba(0,0,0,0.55)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
 );
 
-export default function Window({ win }: { win: WindowState }) {
+export default function Window({ win, active }: { win: WindowState; active: boolean }) {
   const { closeWindow, minimizeWindow, toggleMaximize, bringToFront, updateBounds, getDockIconRect } = useWindowManager();
   const dragControls = useDragControls();
   const rootRef = useRef<HTMLDivElement>(null);
+  const [lightsHovered, setLightsHovered] = useState(false);
 
   const x = useMotionValue(win.x);
   const y = useMotionValue(win.y);
@@ -162,10 +181,39 @@ export default function Window({ win }: { win: WindowState }) {
           userSelect: "none",
         }}
       >
-        <div style={{ display: "flex", gap: "8px", zIndex: 1 }}>
-          <TrafficLight color="#FF5F57" hoverGlyph={<CloseGlyph />} onClick={() => closeWindow(win.id)} title="Close" />
-          <TrafficLight color="#FEBC2E" hoverGlyph={<MinimizeGlyph />} onClick={handleMinimize} title="Minimize" />
-          <TrafficLight color="#28C840" hoverGlyph={<ZoomGlyph />} onClick={() => toggleMaximize(win.id)} title="Zoom" />
+        <div
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseEnter={() => setLightsHovered(true)}
+          onMouseLeave={() => setLightsHovered(false)}
+          style={{ display: "flex", gap: "8px", zIndex: 1, cursor: "default" }}
+        >
+          <TrafficLight
+            color="#FF5F57"
+            grayColor="rgba(255, 255, 255, 0.10)"
+            hoverGlyph={<CloseGlyph />}
+            onClick={() => closeWindow(win.id)}
+            title="Close"
+            active={active}
+            groupHovered={lightsHovered}
+          />
+          <TrafficLight
+            color="#FEBC2E"
+            grayColor="rgba(255, 255, 255, 0.10)"
+            hoverGlyph={<MinimizeGlyph />}
+            onClick={handleMinimize}
+            title="Minimize"
+            active={active}
+            groupHovered={lightsHovered}
+          />
+          <TrafficLight
+            color="#28C840"
+            grayColor="rgba(255, 255, 255, 0.10)"
+            hoverGlyph={<ZoomGlyph />}
+            onClick={() => toggleMaximize(win.id)}
+            title="Zoom"
+            active={active}
+            groupHovered={lightsHovered}
+          />
         </div>
         <span
           style={{
@@ -175,8 +223,9 @@ export default function Window({ win }: { win: WindowState }) {
             textAlign: "center",
             fontSize: "13px",
             fontWeight: 600,
-            color: "var(--text-primary)",
+            color: active ? "var(--text-primary)" : "var(--text-dim)",
             pointerEvents: "none",
+            transition: "color 0.15s ease",
           }}
         >
           {win.title}
