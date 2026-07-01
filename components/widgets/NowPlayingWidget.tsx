@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { NOW_PLAYING } from "@/data/nowPlaying";
+import LyricsPanel from "@/components/widgets/LyricsPanel";
 
 /* macOS "Now Playing" widget — real <audio> playback (no Spotify
    OAuth/infra). Matches the real macOS Control Center Now Playing
@@ -277,6 +278,8 @@ export default function NowPlayingWidget() {
           <SkipGlyph direction="next" />
         </button>
       </div>
+
+      <LyricsPanel audioRef={audioRef} playing={playing} />
     </motion.div>
   );
 }
