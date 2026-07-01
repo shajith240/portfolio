@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { WindowManagerProvider } from "@/contexts/WindowManagerContext";
 import { usePerformance } from "@/lib/usePerformance";
 import Wallpaper from "@/components/layout/Wallpaper";
+import BootSequence from "@/components/boot/BootSequence";
 import MenuBar from "@/components/layout/MenuBar";
 import PhotoWidget from "@/components/widgets/PhotoWidget";
 import AboutWidget from "@/components/widgets/AboutWidget";
@@ -36,6 +37,7 @@ function Shell({ children }: { children: ReactNode }) {
       style={{ color: "var(--text-primary)", background: "var(--bg-page)" }}
     >
       <Wallpaper />
+      <BootSequence />
 
       {/* Phone layout: no menu bar/widgets — tab bar handles navigation */}
       {isPhone ? (
