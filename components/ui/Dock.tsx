@@ -2,8 +2,9 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useShellMetrics } from "@/lib/useShellMetrics";
 import { NAV_ITEMS } from "@/data/nav";
 
 /* ── Icon art — plain /icons/*.png, no clip mask or box-shadow "chip"
@@ -74,6 +75,7 @@ export default function Dock() {
   const pathname = usePathname();
   const router = useRouter();
   const { isDarkTheme } = useTheme();
+  const metrics = useShellMetrics();
 
   const [scales, setScales] = useState<number[]>(() => NAV_ITEMS.map(() => MIN_SCALE));
   const [positions, setPositions] = useState<number[]>(() => positionsFromScales(NAV_ITEMS.map(() => MIN_SCALE)));
@@ -144,12 +146,12 @@ export default function Dock() {
   const glassBorder = isDarkTheme ? "rgba(255, 255, 255, 0.10)" : "rgba(0, 0, 0, 0.06)";
 
   return (
-    <div
+    <motion.div
+      animate={{ left: `${metrics.contentLeft}px`, right: `${metrics.inset}px` }}
+      transition={{ type: "spring", stiffness: 520, damping: 44, mass: 0.85 }}
       style={{
         position: "fixed",
         bottom: "24px",
-        left: 0,
-        right: 0,
         zIndex: 90,
         display: "flex",
         justifyContent: "center",
@@ -233,6 +235,6 @@ export default function Dock() {
           );
         })}
       </motion.div>
-    </div>
+    </motion.div>
   );
 }
