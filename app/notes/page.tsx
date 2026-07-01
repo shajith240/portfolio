@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import BottomToolbar from "@/components/ui/BottomToolbar";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useShellMetrics } from "@/lib/useShellMetrics";
 
@@ -135,8 +134,6 @@ export default function NotesPage() {
 
   return (
     <>
-      <BottomToolbar />
-
       <motion.div
         animate={{ left: `${ml}px`, right: `${mr}px` }}
         transition={{ type: "spring", stiffness: 520, damping: 44, mass: 0.85 }}

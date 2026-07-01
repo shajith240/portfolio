@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useLayout } from '@/contexts/LayoutContext'
 import { useShellMetrics } from '@/lib/useShellMetrics'
-import BottomToolbar from '@/components/ui/BottomToolbar'
 import { PROJECTS, type Project } from '@/data/projects'
 
 /* ─────────────────────────────────────────────────────────────────
@@ -505,8 +504,6 @@ export default function ProjectsPage() {
 
   return (
     <>
-      <BottomToolbar />
-
       <div
         style={{
           position: 'fixed',

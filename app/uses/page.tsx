@@ -3,7 +3,6 @@
 import { motion } from 'framer-motion'
 import { useLayout } from '@/contexts/LayoutContext'
 import { useShellMetrics } from '@/lib/useShellMetrics'
-import BottomToolbar from '@/components/ui/BottomToolbar'
 
 const USES = [
   {
@@ -87,7 +86,6 @@ export default function UsesPage() {
 
   return (
     <>
-      <BottomToolbar />
       <div style={{
         position: 'fixed',
         top: 0,

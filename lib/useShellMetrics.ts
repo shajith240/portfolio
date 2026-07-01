@@ -10,22 +10,12 @@ export function calculateShellMetrics(viewportWidth = 1440, viewportHeight = 900
   const height = Math.max(320, viewportHeight || 900);
   const inset = clamp(12, width * 0.0108, 20);
   const gap = clamp(10, width * 0.0086, 16);
-  const sidebarWidth = clamp(300, width * 0.19, 360);
-  const navWidth = clamp(360, width * 0.23, 480);
-  const sidebarRightEdge = inset + sidebarWidth;
-  const navFromRightEdge = inset + navWidth;
 
   return {
     viewportWidth: width,
     viewportHeight: height,
     inset,
     gap,
-    sidebarWidth,
-    navWidth,
-    sidebarRightEdge,
-    navFromRightEdge,
-    sidebarHiddenX: -(sidebarWidth + inset + 32),
-    navHiddenX: navWidth + inset + 32,
   };
 }
 
@@ -37,16 +27,12 @@ export function useShellMetrics() {
   return {
     ...metrics,
     isPhone,
-    contentLeft: !layout.isMobileLayout && layout.isSidebarOpen
-      ? metrics.sidebarRightEdge + metrics.gap
-      : 0,
-    contentRight: 0,
-    toolbarLeft: !layout.isMobileLayout && layout.isSidebarOpen
-      ? metrics.sidebarRightEdge + metrics.gap
-      : 16,
-    toolbarRight: 16,
-    dotsLeft: !layout.isMobileLayout && layout.isSidebarOpen
-      ? metrics.sidebarRightEdge + clamp(8, metrics.viewportWidth * 0.006, 12)
-      : 8,
+    // No sidebar reserves space anymore — every page gets a plain,
+    // symmetric inset margin on both sides.
+    contentLeft: metrics.inset,
+    contentRight: metrics.inset,
+    toolbarLeft: metrics.inset,
+    toolbarRight: metrics.inset,
+    dotsLeft: 8,
   };
 }

@@ -144,36 +144,15 @@
   --kbd-border: rgba(255, 255, 255, 0.10);
   --kbd-color:  rgba(255, 255, 255, 0.32);
 
-  /* ── DragPill ──────────────────────────────────────── */
-  --drag-bg:          rgba(14, 14, 14, 0.92);
-  --drag-border:      rgba(255, 255, 255, 0.11);
-  --drag-text:        rgba(255, 255, 255, 0.56);
-  --drag-icon-stroke: rgba(255, 255, 255, 0.52);
-  --drag-icon-legs:   rgba(255, 255, 255, 0.34);
-  --drag-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.40),
-    inset 0  1px 0 rgba(255, 255, 255, 0.06),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.30);
-  --arrow-btn-bg:       rgba(255, 255, 255, 0.14);
-  --arrow-btn-border:   rgba(255, 255, 255, 0.12);
-  --arrow-btn-hover-bg: rgba(255, 255, 255, 0.12);
-  --arrow-chevron:      rgba(255, 255, 255, 0.75);
-
-  /* ── BottomToolbar ─────────────────────────────────── */
-  --toolbar-btn-bg:        #1a1a1a;
-  --toolbar-btn-border:    #333333;
-  --toolbar-search-bg:     #242424;
-  --toolbar-search-border: rgba(255, 255, 255, 0.12);
-  --toolbar-pill-active:   #2c2c2c;
-  --toolbar-icon-active:   rgba(255, 255, 255, 0.70);
-  --toolbar-icon-inactive: #444444;
-  --toolbar-search-text:   #888888;
-
-  /* ── ScrollDots ────────────────────────────────────── */
-  --dots-bg:     #0D0D0D;
-  --dots-border: #2a2a2a;
-  --dot-inactive: #333333;
-  --dot-active:   #FF4500;
+  /* ── Liquid Glass materials (see docs/design-system/materials-glass.md) */
+  --glass-thin-bg:     rgba(28, 28, 30, 0.62);
+  --glass-regular-bg:  rgba(28, 28, 30, 0.78);
+  --glass-thick-bg:    rgba(20, 20, 22, 0.90);
+  --glass-border:      rgba(255, 255, 255, 0.10);
+  --glass-blur-thin:    16px;
+  --glass-blur-regular: 24px;
+  --glass-blur-thick:   40px;
+  --glass-saturate:     180%;
 
   /* ── Skills page ────────────────────────────────────── */
   --frost-overlay-bg:    rgba(8, 8, 8, 0.86);
@@ -187,16 +166,6 @@
   --breadcrumb-link-hover: rgba(255, 255, 255, 0.72);
   --breadcrumb-sep:        rgba(255, 255, 255, 0.16);
   --breadcrumb-current:    rgba(255, 255, 255, 0.55);
-
-  /* ── MenuButton ────────────────────────────────────── */
-  --menu-btn-border: #333333;
-  --menu-btn-text:   #dddddd;
-
-  /* ── Canvas / page backgrounds ─────────────────────── */
-  --canvas-bg:          #000000;
-  --card-label-primary: #888888;
-  --card-label-sub:     #555555;
-  --stack-card-bg:      #242424;
 
   /* ── glass-system.css variables ────────────────────── */
   --glass-page-bg:
@@ -353,35 +322,15 @@
   --kbd-border: rgba(0, 0, 0, 0.10);
   --kbd-color:  rgba(0, 0, 0, 0.35);
 
-  /* ── DragPill ──────────────────────────────────────── */
-  --drag-bg:          rgba(252, 250, 246, 0.94);
-  --drag-border:      rgba(0, 0, 0, 0.09);
-  --drag-text:        rgba(0, 0, 0, 0.56);
-  --drag-icon-stroke: rgba(0, 0, 0, 0.48);
-  --drag-icon-legs:   rgba(0, 0, 0, 0.30);
-  --drag-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.08),
-    0 0 0 0.5px rgba(0, 0, 0, 0.08);
-  --arrow-btn-bg:       rgba(0, 0, 0, 0.15);
-  --arrow-btn-border:   rgba(0, 0, 0, 0.09);
-  --arrow-btn-hover-bg: rgba(0, 0, 0, 0.10);
-  --arrow-chevron:      rgba(0, 0, 0, 0.55);
-
-  /* ── BottomToolbar ─────────────────────────────────── */
-  --toolbar-btn-bg:        #EDEBE5;
-  --toolbar-btn-border:    rgba(0, 0, 0, 0.10);
-  --toolbar-search-bg:     #FFFFFF;
-  --toolbar-search-border: rgba(0, 0, 0, 0.12);
-  --toolbar-pill-active:   rgba(0, 0, 0, 0.08);
-  --toolbar-icon-active:   rgba(0, 0, 0, 0.65);
-  --toolbar-icon-inactive: rgba(0, 0, 0, 0.28);
-  --toolbar-search-text:   #7A746C;
-
-  /* ── ScrollDots ────────────────────────────────────── */
-  --dots-bg:     #EDEBE5;
-  --dots-border: rgba(0, 0, 0, 0.09);
-  --dot-inactive: rgba(0, 0, 0, 0.18);
-  --dot-active:   #FF4500;
+  /* ── Liquid Glass materials (see docs/design-system/materials-glass.md) */
+  --glass-thin-bg:     rgba(255, 255, 255, 0.62);
+  --glass-regular-bg:  rgba(255, 255, 255, 0.78);
+  --glass-thick-bg:    rgba(255, 255, 255, 0.92);
+  --glass-border:      rgba(0, 0, 0, 0.06);
+  --glass-blur-thin:    16px;
+  --glass-blur-regular: 24px;
+  --glass-blur-thick:   40px;
+  --glass-saturate:     180%;
 
   /* ── Skills page ────────────────────────────────────── */
   --frost-overlay-bg:    rgba(238, 236, 232, 0.88);
@@ -395,16 +344,6 @@
   --breadcrumb-link-hover: rgba(0, 0, 0, 0.72);
   --breadcrumb-sep:        rgba(0, 0, 0, 0.18);
   --breadcrumb-current:    rgba(0, 0, 0, 0.55);
-
-  /* ── MenuButton ────────────────────────────────────── */
-  --menu-btn-border: rgba(0, 0, 0, 0.12);
-  --menu-btn-text:   rgba(15, 15, 13, 0.72);
-
-  /* ── Canvas / page backgrounds ─────────────────────── */
-  --canvas-bg:          #EEECE8;
-  --card-label-primary: #7A746C;
-  --card-label-sub:     #B8B0A6;
-  --stack-card-bg:      #F0EDE8;
 
   /* ── glass-system.css variables ────────────────────── */
   --glass-page-bg:

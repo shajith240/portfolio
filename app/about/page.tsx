@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import BottomToolbar from "@/components/ui/BottomToolbar";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useShellMetrics } from "@/lib/useShellMetrics";
 
@@ -15,8 +14,6 @@ export default function AboutPage() {
 
   return (
     <>
-      <BottomToolbar />
-
       {/* Canvas */}
       <motion.div
         animate={{ left: `${ml}px`, right: `${mr}px` }}
