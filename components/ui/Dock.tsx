@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useShellMetrics } from "@/lib/useShellMetrics";
+import { useWindowManager } from "@/contexts/WindowManagerContext";
 import { NAV_ITEMS } from "@/data/nav";
 
 /* ── Icon art — plain /icons/*.png, no clip mask or box-shadow "chip"
@@ -72,10 +72,9 @@ function positionsFromScales(scales: number[]) {
 }
 
 export default function Dock() {
-  const pathname = usePathname();
-  const router = useRouter();
   const { isDarkTheme } = useTheme();
   const metrics = useShellMetrics();
+  const { windows, openWindow, registerDockIconEl } = useWindowManager();
 
   const [scales, setScales] = useState<number[]>(() => NAV_ITEMS.map(() => MIN_SCALE));
   const [positions, setPositions] = useState<number[]>(() => positionsFromScales(NAV_ITEMS.map(() => MIN_SCALE)));
@@ -127,12 +126,12 @@ export default function Dock() {
   }, []);
 
   const handleClick = useCallback(
-    (href: string, index: number) => {
+    (href: string, label: string, index: number) => {
       setBounced(index);
       setTimeout(() => setBounced(null), 200);
-      router.push(href);
+      openWindow(href, label);
     },
-    [router]
+    [openWindow]
   );
 
   // Single source of truth for the pill's own width — derived from the
@@ -190,12 +189,13 @@ export default function Dock() {
           const scale = scales[i] ?? MIN_SCALE;
           const position = positions[i] ?? 0;
           const scaledSize = BASE_ICON_SIZE * scale;
-          const isActive = pathname === item.href;
+          const isActive = windows.some((w) => w.route === item.href);
 
           return (
             <div
               key={item.href}
-              onClick={() => handleClick(item.href, i)}
+              ref={(el) => registerDockIconEl(item.href, el)}
+              onClick={() => handleClick(item.href, item.label, i)}
               title={item.label}
               style={{
                 position: "absolute",
