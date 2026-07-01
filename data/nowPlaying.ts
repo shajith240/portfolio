@@ -5,12 +5,9 @@ export interface NowPlayingTrack {
   artwork: string | null
 }
 
-// Placeholder track — no audio file exists yet. Swap `src`/`artwork` in
-// once a real file is dropped into public/audio/; nothing in
-// NowPlayingWidget.tsx needs to change to pick up the swap.
 export const NOW_PLAYING: NowPlayingTrack = {
-  title: 'Untitled Track',
-  artist: 'Shajith Bathina',
-  src: '/audio/now-playing.mp3',
+  title: 'Someone You Loved',
+  artist: 'Lewis Capaldi',
+  src: '/songs/someone-you-loved.m4a',
   artwork: null,
 }
