@@ -1,9 +1,10 @@
 "use client";
 
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { LayoutProvider, useLayout } from "@/contexts/LayoutContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { WindowManagerProvider } from "@/contexts/WindowManagerContext";
 import { usePerformance } from "@/lib/usePerformance";
 import Wallpaper from "@/components/layout/Wallpaper";
 import MenuBar from "@/components/layout/MenuBar";
@@ -13,6 +14,7 @@ import CommandPalette from "@/components/ui/CommandPalette";
 import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
 import MobileTabBar from "@/components/ui/MobileTabBar";
 import Dock from "@/components/ui/Dock";
+import WindowLayer from "@/components/window/WindowLayer";
 
 function Shell({ children }: { children: ReactNode }) {
   const { isMobileLayout, isTabletLayout } = useLayout();
@@ -54,6 +56,7 @@ function Shell({ children }: { children: ReactNode }) {
           )}
           <PageBreadcrumb />
           {children}
+          <WindowLayer />
           <Dock />
           <CommandPalette />
         </>
@@ -63,10 +66,34 @@ function Shell({ children }: { children: ReactNode }) {
 }
 
 export default function AppShell({ children }: { children: ReactNode }) {
+  // Pages loaded as a Window's iframe content (see components/window/Window.tsx)
+  // request their own route with ?__window=1 — render them bare, with no
+  // desktop chrome, or every window would recursively nest a whole second
+  // desktop (menu bar, dock, wallpaper) inside itself.
+  //
+  // Defaults to false (matching the server's render) and flips after
+  // mount, the same hydration-safe pattern used elsewhere in this
+  // codebase (MenuBar's clock) — avoids needing useSearchParams()
+  // wrapped in a Suspense boundary just for this one client-only check.
+  const [isEmbedded, setIsEmbedded] = useState(false);
+  useEffect(() => {
+    if (window.location.search.includes("__window")) setIsEmbedded(true);
+  }, []);
+
+  if (isEmbedded) {
+    return (
+      <ThemeProvider>
+        <LayoutProvider>{children}</LayoutProvider>
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider>
       <LayoutProvider>
-        <Shell>{children}</Shell>
+        <WindowManagerProvider>
+          <Shell>{children}</Shell>
+        </WindowManagerProvider>
       </LayoutProvider>
     </ThemeProvider>
   );
