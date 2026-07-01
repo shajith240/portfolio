@@ -28,9 +28,8 @@ export const CATEGORIES: SkillCategory[] = [
   {
     label: 'Frameworks',
     icons: [
-      { name: 'React',       file: 'react',        search: 'react' },
-      { name: 'Node.js',     file: 'nodejs',       search: 'node nodejs' },
-      { name: 'Antigravity', file: 'anitigravity',  search: 'antigravity animation ui' },
+      { name: 'React',   file: 'react',  search: 'react' },
+      { name: 'Node.js', file: 'nodejs', search: 'node nodejs' },
     ],
   },
   {
@@ -47,16 +46,17 @@ export const CATEGORIES: SkillCategory[] = [
   {
     label: 'Databases',
     icons: [
-      { name: 'MongoDB',    file: 'mongodb',  search: 'mongodb mongo nosql database' },
+      { name: 'MongoDB',    file: 'mongo_db', search: 'mongodb mongo nosql database' },
       { name: 'PostgreSQL', file: 'postgres', search: 'postgresql postgres sql database' },
     ],
   },
   {
     label: 'AI Tools',
     icons: [
-      { name: 'ChatGPT', file: 'chatgpt',       search: 'chatgpt openai gpt ai' },
-      { name: 'Claude',  file: 'claude',        search: 'claude anthropic ai' },
-      { name: 'Gemini',  file: 'gemini_google', search: 'gemini google ai' },
+      { name: 'ChatGPT',     file: 'chatgpt',       search: 'chatgpt openai gpt ai' },
+      { name: 'Claude',      file: 'claude',        search: 'claude anthropic ai' },
+      { name: 'Gemini',      file: 'gemini_google', search: 'gemini google ai' },
+      { name: 'Antigravity', file: 'anitigravity',  search: 'antigravity animation ui' },
     ],
   },
 ]
