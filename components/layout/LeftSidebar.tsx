@@ -5,7 +5,6 @@ import { motion, useAnimation } from "framer-motion";
 import { usePathname } from "next/navigation";
 import InfoCard from "@/components/cards/InfoCard";
 import { useLayout } from "@/contexts/LayoutContext";
-import { useClickSound } from "@/lib/useClickSound";
 import { useShellMetrics } from "@/lib/useShellMetrics";
 
 const container = {
@@ -116,10 +115,9 @@ function CompactSocialRow({
 let _sidebarAnimated = false;
 
 export default function LeftSidebar() {
-  const { isSidebarOpen, toggleSidebar, isSoundEnabled, isMobileLayout } = useLayout();
+  const { isSidebarOpen, toggleSidebar, isMobileLayout } = useLayout();
   const metrics = useShellMetrics();
   const compactSocialCards = metrics.viewportHeight < 940;
-  const playClick = useClickSound(isSoundEnabled);
   const pathname = usePathname();
   const isHome = pathname === "/";
   const [playEntrance] = useState(() => {
@@ -146,7 +144,7 @@ export default function LeftSidebar() {
     <>
       {/* Toggle button — only shown on home */}
       {isHome && <motion.button
-        onClick={() => { playClick(); toggleSidebar(); }}
+        onClick={toggleSidebar}
         style={{
           position: "fixed",
           left: isMobileLayout ? "16px" : "32px",
