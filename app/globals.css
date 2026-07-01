@@ -55,27 +55,29 @@ body {
 /* Liquid Glass "frosted glass text" — the numerals read as translucent
    glass cut into the widget: the wallpaper's color glows through the
    letterforms (low-alpha white fill lets the glass card's own blurred
-   backdrop show through), with a bright top-edge highlight and a soft
-   dark under-edge giving the embossed, light-catching look of real
-   glass.
+   backdrop show through).
 
-   Deliberately NO backdrop-filter here: an earlier version put
-   backdrop-filter on this text and it painted a visible rectangular
-   slab behind the numerals — backdrop-filter applies to the element's
-   whole box and is NOT clipped by background-clip: text, so it can
-   never produce per-letterform refraction. Everything below IS
-   clipped to the glyph shapes (fill, gradient, stroke, shadow), which
-   is what makes it read as glass text instead of text-on-a-box. */
+   Two things were tried and rejected here, both for the same
+   reason — they paint a visible rectangular box behind the numerals
+   instead of staying clipped to the individual glyph shapes:
+   1. backdrop-filter on the text — applies to the element's whole
+      box, is NOT clipped by background-clip: text.
+   2. filter: drop-shadow() stacked with -webkit-text-stroke — in
+      practice this rendered as a soft rectangular slab too, not a
+      per-letter shadow; -webkit-text-stroke doesn't reliably respect
+      background-clip: text either.
+
+   What's left below only uses properties that are guaranteed to
+   follow the actual glyph outlines: a clipped gradient fill, and
+   plain text-shadow (a text-native property, not a general filter —
+   it draws relative to each glyph's own rendered shape, never the
+   element's box). */
 .glass-clock-time {
   color: transparent;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.30) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.28) 60%, rgba(255, 255, 255, 0.4) 100%);
   background-clip: text;
   -webkit-background-clip: text;
-  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.22);
-  filter:
-    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.28))
-    drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.22))
-    drop-shadow(0 4px 10px rgba(0, 0, 0, 0.18));
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 /* Solid legible fallback where background-clip: text isn't supported —
@@ -85,8 +87,6 @@ body {
   .glass-clock-time {
     color: rgba(255, 255, 255, 0.85);
     background: none;
-    -webkit-text-stroke: 0;
-    filter: none;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   }
 }
