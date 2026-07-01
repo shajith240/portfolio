@@ -4,15 +4,13 @@ import { type ReactNode, useEffect } from "react";
 import { LayoutProvider, useLayout } from "@/contexts/LayoutContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { usePerformance } from "@/lib/usePerformance";
-import RightNav from "@/components/layout/RightNav";
 import LeftSidebar from "@/components/layout/LeftSidebar";
-import MenuButton from "@/components/ui/MenuButton";
 import CommandPalette from "@/components/ui/CommandPalette";
 import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
 import MobileTabBar from "@/components/ui/MobileTabBar";
 
 function Shell({ children }: { children: ReactNode }) {
-  const { isMobileLayout, isTabletLayout, isNavOpen, isSidebarOpen, closeSidebars } = useLayout();
+  const { isMobileLayout, isTabletLayout, isSidebarOpen, closeSidebars } = useLayout();
   const { tier } = usePerformance();
 
   // Set performance tier class on <html> for CSS-level optimizations
@@ -23,18 +21,18 @@ function Shell({ children }: { children: ReactNode }) {
   }, [tier]);
   const isPhone = isMobileLayout && !isTabletLayout;
 
-  // Phone: completely different shell — bottom tab bar, no sidebars, no MenuButton
-  // Tablet: sidebars as overlays with backdrop
+  // Phone: completely different shell — bottom tab bar, no sidebars
+  // Tablet: sidebar as overlay with backdrop
   // Desktop: full panel layout
-  // Backdrop only for tablet (overlay sidebars) — never on phones (no sidebars exist)
-  const showBackdrop = !isPhone && isMobileLayout && (isNavOpen || isSidebarOpen);
+  // Backdrop only for tablet (overlay sidebar) — never on phones (no sidebar exists)
+  const showBackdrop = !isPhone && isMobileLayout && isSidebarOpen;
 
   return (
     <div
       className="h-screen overflow-hidden"
       style={{ color: "var(--text-primary)", background: "var(--bg-page)" }}
     >
-      {/* Backdrop — closes panels when tapped (tablet + phone when sidebars forced open) */}
+      {/* Backdrop — closes panel when tapped (tablet + phone when sidebar forced open) */}
       {showBackdrop && (
         <div
           onClick={closeSidebars}
@@ -47,7 +45,7 @@ function Shell({ children }: { children: ReactNode }) {
         />
       )}
 
-      {/* Phone layout: no sidebars, no MenuButton — tab bar handles navigation */}
+      {/* Phone layout: no sidebar — tab bar handles navigation */}
       {isPhone ? (
         <>
           <PageBreadcrumb />
@@ -60,8 +58,6 @@ function Shell({ children }: { children: ReactNode }) {
           <PageBreadcrumb />
           <LeftSidebar />
           {children}
-          <RightNav />
-          <MenuButton />
           <CommandPalette />
         </>
       )}
