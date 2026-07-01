@@ -6,67 +6,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
 import { NAV_ITEMS } from "@/data/nav";
 
-/* ── Icons (22px, matches MobileTabBar's SF-style set) ────────────── */
+/* ── Icon art — same /icons/*.png set + rounded-square treatment
+   used by the Skills page's macOS App Library grid (app/skills/page.tsx),
+   swapped in here for a consistent "real app icon" look instead of flat
+   line-SVGs, which read as too plain for a Dock. Placeholder mapping —
+   not meant to be semantically perfect per nav item yet. ────────────── */
 
-const HomeIcon = ({ active }: { active: boolean }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 0 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-    {!active && <polyline points="9,22 9,12 15,12 15,22" />}
-  </svg>
-);
-
-const AboutIcon = ({ active }: { active: boolean }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
-);
-
-const ProjectsIcon = ({ active }: { active: boolean }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-    <line x1="8" y1="21" x2="16" y2="21" />
-    <line x1="12" y1="17" x2="12" y2="21" />
-  </svg>
-);
-
-const SkillsIcon = ({ active }: { active: boolean }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth={active ? 0 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" />
-  </svg>
-);
-
-const DsaIcon = ({ active }: { active: boolean }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="8,6 3,12 8,18" />
-    <polyline points="16,6 21,12 16,18" />
-  </svg>
-);
-
-const NotesIcon = ({ active }: { active: boolean }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
-    <polyline points="14,3 14,9 20,9" />
-    <line x1="8" y1="13" x2="16" y2="13" />
-    <line x1="8" y1="17" x2="13" y2="17" />
-  </svg>
-);
-
-const UsesIcon = ({ active }: { active: boolean }) => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="3" />
-    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-  </svg>
-);
-
-const ICONS: Record<string, (props: { active: boolean }) => React.ReactElement> = {
-  "/": HomeIcon,
-  "/about": AboutIcon,
-  "/projects": ProjectsIcon,
-  "/skills": SkillsIcon,
-  "/dsa": DsaIcon,
-  "/notes": NotesIcon,
-  "/uses": UsesIcon,
+const ICON_FILE: Record<string, string> = {
+  "/": "react",
+  "/about": "github",
+  "/projects": "vscode",
+  "/skills": "python",
+  "/dsa": "javascript",
+  "/notes": "claude",
+  "/uses": "linux",
 };
 
 /* ── Authentic macOS magnification curve ──────────────────────────
@@ -193,7 +146,7 @@ export default function Dock() {
         }}
       >
         {NAV_ITEMS.map((item, i) => {
-          const Icon = ICONS[item.href] ?? HomeIcon;
+          const iconFile = ICON_FILE[item.href] ?? "react";
           const isActive = pathname === item.href;
           const scale = scales[i] ?? MIN_SCALE;
           const size = BASE_ICON_SIZE * scale;
@@ -254,14 +207,27 @@ export default function Dock() {
                   background: "transparent",
                   cursor: "pointer",
                   padding: 0,
-                  display: "flex",
-                  alignItems: "flex-end",
-                  justifyContent: "center",
-                  color: isActive ? "#FF4500" : "var(--text-dim)",
-                  transition: "color 0.15s ease",
+                  display: "block",
                 }}
               >
-                <Icon active={isActive} />
+                <img
+                  src={`/icons/${iconFile}.png`}
+                  alt={item.label}
+                  draggable={false}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "block",
+                    objectFit: "cover",
+                    borderRadius: `${size * 0.22}px`,
+                    boxShadow: isActive
+                      ? "0 2px 10px rgba(255, 69, 0, 0.35)"
+                      : "0 2px 8px rgba(0, 0, 0, 0.35)",
+                    outline: isActive ? "1.5px solid #FF4500" : "1.5px solid transparent",
+                    outlineOffset: "2px",
+                    transition: "outline-color 0.15s ease, box-shadow 0.15s ease",
+                  }}
+                />
               </motion.button>
 
               {/* Active route indicator */}
