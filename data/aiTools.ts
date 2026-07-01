@@ -12,4 +12,5 @@ export const AI_TOOLS: AITool[] = [
   { name: 'Gemini',      file: 'gemini_google', url: 'https://gemini.google.com' },
   { name: 'ChatGPT',     file: 'chatgpt',       url: 'https://chatgpt.com' },
   { name: 'Antigravity', file: 'anitigravity',  url: 'https://antigravity.google' },
+  { name: 'Codex',       file: 'codex',         url: 'https://openai.com/codex' },
 ]

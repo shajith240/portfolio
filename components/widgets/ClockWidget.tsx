@@ -61,11 +61,15 @@ export default function ClockWidget() {
         width: `${WIDGET_WIDTH}px`,
         padding: "16px 14px 14px",
         borderRadius: "20px",
-        background: "var(--glass-regular-bg)",
-        border: "1px solid var(--glass-border)",
+        // Cool blue glass tint, matching the reference exactly instead
+        // of this site's default neutral gray glass — a deliberate
+        // per-widget override of --glass-regular-bg, not the usual
+        // token.
+        background: "linear-gradient(165deg, rgba(74, 129, 201, 0.55) 0%, rgba(42, 82, 148, 0.62) 100%)",
+        border: "1px solid rgba(255, 255, 255, 0.18)",
         backdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
         WebkitBackdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
-        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.12)",
         overflow: "hidden",
         textAlign: "center",
       }}
@@ -78,40 +82,47 @@ export default function ClockWidget() {
         style={{
           position: "absolute",
           inset: 0,
-          background: "radial-gradient(120% 70% at 50% -10%, rgba(255, 255, 255, 0.10), transparent 60%)",
+          background: "radial-gradient(120% 70% at 50% -10%, rgba(255, 255, 255, 0.16), transparent 60%)",
           pointerEvents: "none",
         }}
       />
 
-      {/* 1 — the time. Heavy, huge, glass. */}
+      {/* 1 — the time. Heavy, huge, glass. Nunito is the standard free
+          substitute for SF Pro Rounded (the real Lock Screen numeral
+          face — a licensed Apple system font that can't legally be
+          self-hosted for a public site): same rounded, friendly,
+          heavy-weight geometric character. */}
       <p
         className="glass-clock-time"
         style={{
           position: "relative",
           margin: 0,
-          fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Rounded', system-ui, sans-serif",
-          fontWeight: 800,
-          fontSize: "78px",
+          fontFamily: "var(--font-nunito), -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
+          fontWeight: 900,
+          fontSize: "76px",
           lineHeight: 0.95,
-          letterSpacing: "-0.02em",
+          letterSpacing: "-0.01em",
           fontVariantNumeric: "tabular-nums",
         }}
       >
         {timeLabel}
       </p>
 
-      {/* 2 — the day, handwritten, scrawled across the numerals' bottom
-          edge (negative margin = the overlap in the reference, not a
-          polite stack). zIndex keeps the script above the glass
-          digits. */}
+      {/* 2 — the day, handwritten, scrawled diagonally across the
+          numerals' lower half (not just touching the bottom edge —
+          the reference overlap cuts well into the digits themselves).
+          A slight rotation matches the organic, hand-scrawled tilt
+          real Lock Screen script customization has. zIndex keeps the
+          script above the glass digits. */}
       <p
         style={{
           position: "relative",
           zIndex: 1,
-          margin: "-22px 0 0 0",
+          margin: "-38px 0 0 0",
+          transform: "rotate(-3deg)",
           fontFamily: "var(--font-caveat), cursive",
           fontWeight: 600,
-          fontSize: "34px",
+          fontSize: "36px",
           lineHeight: 1,
           color: "rgba(255, 255, 255, 0.95)",
           textShadow: "0 1px 6px rgba(0, 0, 0, 0.35)",
