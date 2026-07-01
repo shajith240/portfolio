@@ -116,7 +116,12 @@ export default function NowPlayingWidget() {
         border: "1px solid var(--glass-border)",
         backdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
         WebkitBackdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
-        boxShadow: "0 16px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
+        // Tight, close-to-surface shadow, not a wide diffuse glow —
+        // real macOS widgets rest near the surface rather than
+        // levitating, and a wider blur here would bleed past
+        // DesktopWidgetStack's 14px inter-widget gap into whatever's
+        // stacked next to it.
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
         overflow: "hidden",
       }}
     >

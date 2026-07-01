@@ -59,9 +59,11 @@ export default function MotivationWidget() {
         height: `${FRAME_HEIGHT}px`,
         borderRadius: "20px",
         overflow: "hidden",
+        // Tight, close-to-surface shadow — see PhotoWidget.tsx for why
+        // (a wide blur bleeds past the 14px inter-widget gap).
         boxShadow: hovered
-          ? "0 20px 44px rgba(0, 0, 0, 0.45)"
-          : "0 16px 36px rgba(0, 0, 0, 0.38)",
+          ? "0 6px 18px rgba(0, 0, 0, 0.34)"
+          : "0 4px 12px rgba(0, 0, 0, 0.28)",
         transition: "box-shadow 0.22s ease",
       }}
     >
