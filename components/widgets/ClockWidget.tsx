@@ -3,22 +3,23 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
-/* macOS-style desktop Clock widget, built as a genuine Liquid Glass
-   "hero surface" (see docs/design-system/materials-glass.md's
-   enhanced-tier note — this is exactly the kind of standalone,
-   high-visibility element that tier is meant for, not a card used
-   everywhere).
+/* macOS/iOS Lock Screen-style Clock widget, matching the reference
+   layout exactly, top to bottom:
 
-   Three deliberate layers, matching what real Lock Screen clock
-   customization actually does: an uppercase, letter-spaced day label
-   (system font, small); a date line below it (system font, slightly
-   larger); and the time itself in a genuinely different, distinctive
-   display face (VG5000 — already loaded via next/font/local in
-   layout.tsx as --font-vg5000/--font-body, but unused anywhere until
-   now) at a much larger size, rendered as real frosted glass — the
-   letterforms themselves show a blurred, brightened view of whatever
-   is behind the widget, via .glass-clock-time in globals.css, not
-   just a flat color sitting on a glass card. */
+     1. The time — huge, extra-heavy numerals rendered as translucent
+        glass (the wallpaper glows through the letterforms; see
+        .glass-clock-time in globals.css, and its note on why
+        backdrop-filter can never be part of that recipe).
+     2. The day name — handwritten script (Caveat, loaded in
+        layout.tsx), white, deliberately overlapping the bottom edge
+        of the numerals rather than stacked politely below them.
+     3. The date — small, letter-spaced caps.
+
+   An earlier version had these layers in the wrong order (day/date
+   header above a boxed time) which is exactly why it didn't look
+   like the reference at all — the drama of this widget is the time
+   dominating the full card width with the script day scrawled across
+   it. */
 
 const WIDGET_WIDTH = 260;
 const ENTRANCE_SPRING = { type: "spring", stiffness: 520, damping: 44, mass: 0.85, restDelta: 0.01 } as const;
@@ -39,18 +40,16 @@ function useLiveClock() {
 export default function ClockWidget() {
   const now = useLiveClock();
 
-  // Locale/options pinned explicitly (same reasoning as
-  // CurrentlyBuildingWidget's date formatting did) — an unpinned
-  // locale can render differently between server and client renders,
-  // which is a hydration mismatch, not just a cosmetic risk. Doesn't
-  // actually matter here since `now` starts null and only resolves
-  // client-side, but pinning costs nothing and keeps the convention
-  // consistent everywhere dates are formatted on this site.
+  // Locale/options pinned explicitly — same convention as everywhere
+  // else dates are formatted on this site (see CurrentlyBuildingWidget
+  // history). `now` starts null and only resolves client-side, so
+  // there's no hydration risk either way; pinning just keeps the
+  // convention uniform.
   const timeLabel = now
     ? now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })
     : "--:--";
-  const dayLabel = now ? now.toLocaleDateString("en-US", { weekday: "long" }) : "";
-  const dateLabel = now ? now.toLocaleDateString("en-US", { month: "long", day: "numeric" }) : "";
+  const dayLabel = now ? now.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase() : "";
+  const dateLabel = now ? now.toLocaleDateString("en-US", { month: "long", day: "numeric" }).toUpperCase() : "";
 
   return (
     <motion.div
@@ -60,7 +59,7 @@ export default function ClockWidget() {
       style={{
         position: "relative",
         width: `${WIDGET_WIDTH}px`,
-        padding: "22px 18px",
+        padding: "16px 14px 14px",
         borderRadius: "20px",
         background: "var(--glass-regular-bg)",
         border: "1px solid var(--glass-border)",
@@ -71,9 +70,9 @@ export default function ClockWidget() {
         textAlign: "center",
       }}
     >
-      {/* Inner glow — the "layers" a real glass surface has beyond
-          just the outer card material, a soft light source bloom
-          near the top rather than one flat tint. */}
+      {/* Soft top-light bloom behind everything — the layer between the
+          card material and the type that keeps the glass numerals from
+          sitting on a flat tint. */}
       <div
         aria-hidden
         style={{
@@ -84,43 +83,55 @@ export default function ClockWidget() {
         }}
       />
 
-      <p
-        style={{
-          position: "relative",
-          margin: "0 0 2px 0",
-          fontSize: "11px",
-          fontWeight: 600,
-          letterSpacing: "0.14em",
-          textTransform: "uppercase",
-          color: "var(--text-muted)",
-        }}
-      >
-        {dayLabel}
-      </p>
-      <p
-        style={{
-          position: "relative",
-          margin: "0 0 8px 0",
-          fontSize: "12.5px",
-          fontWeight: 500,
-          color: "var(--text-ghost)",
-        }}
-      >
-        {dateLabel}
-      </p>
-
+      {/* 1 — the time. Heavy, huge, glass. */}
       <p
         className="glass-clock-time"
         style={{
           position: "relative",
           margin: 0,
-          fontFamily: "var(--font-body), system-ui, sans-serif",
-          fontSize: "54px",
-          lineHeight: 1,
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Rounded', system-ui, sans-serif",
+          fontWeight: 800,
+          fontSize: "78px",
+          lineHeight: 0.95,
+          letterSpacing: "-0.02em",
           fontVariantNumeric: "tabular-nums",
         }}
       >
         {timeLabel}
+      </p>
+
+      {/* 2 — the day, handwritten, scrawled across the numerals' bottom
+          edge (negative margin = the overlap in the reference, not a
+          polite stack). zIndex keeps the script above the glass
+          digits. */}
+      <p
+        style={{
+          position: "relative",
+          zIndex: 1,
+          margin: "-22px 0 0 0",
+          fontFamily: "var(--font-caveat), cursive",
+          fontWeight: 600,
+          fontSize: "34px",
+          lineHeight: 1,
+          color: "rgba(255, 255, 255, 0.95)",
+          textShadow: "0 1px 6px rgba(0, 0, 0, 0.35)",
+        }}
+      >
+        {dayLabel}
+      </p>
+
+      {/* 3 — the date, small caps. */}
+      <p
+        style={{
+          position: "relative",
+          margin: "4px 0 0 0",
+          fontSize: "11px",
+          fontWeight: 600,
+          letterSpacing: "0.16em",
+          color: "rgba(255, 255, 255, 0.72)",
+        }}
+      >
+        {dateLabel}
       </p>
     </motion.div>
   );

@@ -52,29 +52,41 @@ body {
   scrollbar-width: none;
 }
 
-/* Liquid Glass "frosted glass text" — the numerals themselves are made
-   of glass (the blurred content behind the widget shows through the
-   letterforms), not just sitting on a glass card background. Two-tier
-   fallback, same pattern as docs/design-system/materials-glass.md's
-   enhanced-tier recipe: baseline is solid, legible bright text with a
-   soft glow; the @supports block only fires where backdrop-filter +
-   background-clip: text actually compose correctly (Chromium/Safari —
-   Firefox's support has historically been inconsistent), clipping a
-   blurred/brightened backdrop to the text shape for a real refractive
-   look instead of a flat color. */
+/* Liquid Glass "frosted glass text" — the numerals read as translucent
+   glass cut into the widget: the wallpaper's color glows through the
+   letterforms (low-alpha white fill lets the glass card's own blurred
+   backdrop show through), with a bright top-edge highlight and a soft
+   dark under-edge giving the embossed, light-catching look of real
+   glass.
+
+   Deliberately NO backdrop-filter here: an earlier version put
+   backdrop-filter on this text and it painted a visible rectangular
+   slab behind the numerals — backdrop-filter applies to the element's
+   whole box and is NOT clipped by background-clip: text, so it can
+   never produce per-letterform refraction. Everything below IS
+   clipped to the glyph shapes (fill, gradient, stroke, shadow), which
+   is what makes it read as glass text instead of text-on-a-box. */
 .glass-clock-time {
-  color: var(--text-primary);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 26px rgba(255, 255, 255, 0.14);
+  color: transparent;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.30) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.22);
+  filter:
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.28))
+    drop-shadow(0 -1px 1px rgba(0, 0, 0, 0.22))
+    drop-shadow(0 4px 10px rgba(0, 0, 0, 0.18));
 }
 
-@supports (background-clip: text) and (backdrop-filter: blur(1px)) {
+/* Solid legible fallback where background-clip: text isn't supported —
+   transparent color with an unclipped background would otherwise
+   render as an opaque bar. */
+@supports not (background-clip: text) {
   .glass-clock-time {
-    color: transparent;
-    background-clip: text;
-    -webkit-background-clip: text;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.08));
-    backdrop-filter: blur(7px) brightness(1.6) saturate(1.5);
-    -webkit-backdrop-filter: blur(7px) brightness(1.6) saturate(1.5);
-    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35), 0 -1px 3px rgba(0, 0, 0, 0.25);
+    color: rgba(255, 255, 255, 0.85);
+    background: none;
+    -webkit-text-stroke: 0;
+    filter: none;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   }
 }
