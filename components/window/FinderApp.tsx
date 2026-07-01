@@ -51,24 +51,11 @@ const ROOT: FinderNode = {
   ],
 };
 
+// Real macOS folder icon (extracted from public/icons/folder_commond.icns'
+// ic10 1024x1024 PNG chunk), replacing the earlier hand-drawn SVG
+// approximation.
 const FolderIcon = () => (
-  <svg width="100%" height="100%" viewBox="0 0 100 80" fill="none">
-    <path
-      d="M5 16C5 13 7 11 10 11H36L44 19H90C93 19 95 21 95 24V69C95 72 93 74 90 74H10C7 74 5 72 5 69V16Z"
-      fill="url(#finderFolderGrad)"
-    />
-    <path d="M5 24H95V69C95 72 93 74 90 74H10C7 74 5 72 5 69V24Z" fill="url(#finderFolderGradFront)" />
-    <defs>
-      <linearGradient id="finderFolderGrad" x1="50" y1="11" x2="50" y2="74" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#7FCBFB" />
-        <stop offset="1" stopColor="#4CA8ED" />
-      </linearGradient>
-      <linearGradient id="finderFolderGradFront" x1="50" y1="24" x2="50" y2="74" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#6EC3F7" />
-        <stop offset="1" stopColor="#3E9DE8" />
-      </linearGradient>
-    </defs>
-  </svg>
+  <img src="/icons/folder_commond.png" alt="" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
 );
 
 const DocumentIcon = () => (
