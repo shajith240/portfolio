@@ -9,5 +9,5 @@ export const NOW_PLAYING: NowPlayingTrack = {
   title: 'Someone You Loved',
   artist: 'Lewis Capaldi',
   src: '/songs/someone-you-loved.m4a',
-  artwork: null,
+  artwork: '/songs/someone-you-loved-cover.webp',
 }
