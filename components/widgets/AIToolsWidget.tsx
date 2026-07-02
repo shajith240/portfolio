@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { AI_TOOLS } from "@/data/aiTools";
+import { WIDGET_UNIT, WIDGET_PADDING, WIDGET_RADIUS, COMPACT_CARD_HEIGHT } from "@/lib/widgetGrid";
 
 /* macOS "App Shortcuts" / Quick Access-style widget — a compact grid
    of app icons (real macOS widget gallery convention: icon-only, no
@@ -33,7 +34,6 @@ import { AI_TOOLS } from "@/data/aiTools";
    grid absorbs that growth without needing a redesign each time an
    entry is added. */
 
-const WIDGET_WIDTH = 260;
 const ICON_SIZE = 64;
 const ENTRANCE_SPRING = { type: "spring", stiffness: 520, damping: 44, mass: 0.85, restDelta: 0.01 } as const;
 
@@ -45,17 +45,20 @@ export default function AIToolsWidget() {
       animate={{ y: 0, opacity: 1 }}
       transition={ENTRANCE_SPRING}
       style={{
-        width: `${WIDGET_WIDTH}px`,
-        padding: "18px",
-        borderRadius: "20px",
+        width: `${WIDGET_UNIT}px`,
+        height: `${COMPACT_CARD_HEIGHT}px`,
+        padding: `${WIDGET_PADDING}px`,
+        borderRadius: `${WIDGET_RADIUS}px`,
         background: "var(--glass-regular-bg)",
         border: "1px solid var(--glass-border)",
+        display: "flex",
+        alignItems: "center",
         // Tight, close-to-surface shadow — see PhotoWidget.tsx for why
         // (a wide blur bleeds past the stack's 14px inter-widget gap).
         boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
       }}
     >
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", justifyContent: "center" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", justifyContent: "center", width: "100%" }}>
         {AI_TOOLS.map((tool) => (
           <motion.button
             key={tool.name}

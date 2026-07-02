@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { WIDGET_UNIT, WIDGET_RADIUS } from "@/lib/widgetGrid";
 
 /* macOS "Photos" widget — a single photo, edge to edge, no text.
    Liquid Glass isn't appropriate here (a photo widget is opaque, not
@@ -15,8 +16,6 @@ import { motion } from "framer-motion";
    into the next widget, reading as one merged blob instead of two
    distinct floating cards. */
 
-const WIDGET_WIDTH = 260;
-
 export default function PhotoWidget() {
   const [hovered, setHovered] = useState(false);
 
@@ -29,9 +28,9 @@ export default function PhotoWidget() {
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       style={{
-        width: `${WIDGET_WIDTH}px`,
-        height: `${WIDGET_WIDTH}px`,
-        borderRadius: "20px",
+        width: `${WIDGET_UNIT}px`,
+        height: `${WIDGET_UNIT}px`,
+        borderRadius: `${WIDGET_RADIUS}px`,
         overflow: "hidden",
         boxShadow: hovered
           ? "0 6px 18px rgba(0, 0, 0, 0.34)"

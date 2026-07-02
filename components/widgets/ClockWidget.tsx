@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { WIDGET_UNIT, WIDGET_RADIUS, COMPACT_CARD_HEIGHT } from "@/lib/widgetGrid";
 
 /* macOS/iOS Lock Screen-style Clock widget, matching the reference
    layout exactly, top to bottom:
@@ -19,9 +20,18 @@ import { motion } from "framer-motion";
    header above a boxed time) which is exactly why it didn't look
    like the reference at all — the drama of this widget is the time
    dominating the full card width with the script day scrawled across
-   it. */
+   it.
 
-const WIDGET_WIDTH = 260;
+   Card height is pinned to COMPACT_CARD_HEIGHT (widgetGrid.ts) —
+   the same fixed height as AIToolsWidget directly below it in
+   RightWidgetStack. This content's natural height is only ~97px,
+   well under that; rather than pad it out asymmetrically or leave it
+   sitting shorter than its neighbor (a real, measured ~43px mismatch
+   that made the two-widget column look unpaired), the content is
+   centered vertically in the fixed frame — matching how real Apple
+   widgets center shorter content in a fixed size class instead of
+   top-packing it. */
+
 const ENTRANCE_SPRING = { type: "spring", stiffness: 520, damping: 44, mass: 0.85, restDelta: 0.01 } as const;
 
 function useLiveClock() {
@@ -58,9 +68,13 @@ export default function ClockWidget() {
       transition={ENTRANCE_SPRING}
       style={{
         position: "relative",
-        width: `${WIDGET_WIDTH}px`,
-        padding: "22px 18px 18px",
-        borderRadius: "20px",
+        width: `${WIDGET_UNIT}px`,
+        height: `${COMPACT_CARD_HEIGHT}px`,
+        padding: "0 18px",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        borderRadius: `${WIDGET_RADIUS}px`,
         // Blue glass tint anchored to Apple's actual systemBlue —
         // #0A84FF (dark mode), the widely-used community-measured
         // value; Apple doesn't publish official hex codes since its
