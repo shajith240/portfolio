@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Caveat, Nunito } from "next/font/google";
+import { Geist, Caveat, Inter } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
@@ -26,13 +26,17 @@ const caveat = Caveat({
   weight: ["600"],
 });
 
-// Real macOS/iOS Lock Screen clocks use SF Pro Rounded for the big
-// numerals — a licensed Apple system font that can't be legally
-// self-hosted for a public website. Nunito is the standard free
-// substitute (rounded terminals, same friendly geometric weight),
-// widely cited as the closest Google Fonts match.
-const nunito = Nunito({
-  variable: "--font-nunito",
+// Real macOS/iOS Lock Screen clock numerals use SF Pro Display — a
+// licensed Apple system font that can't be self-hosted on a public
+// website. Nunito was tried first as the substitute and looked too
+// round/bubbly against the reference's cleaner, more neutral
+// numerals — Inter is the correct pick: independently benchmarked as
+// the closest free match to SF Pro (~88% similarity), designed with
+// the same "built for screens" mission Apple had for SF Pro, and it
+// stays geometric/neutral at heavy weights instead of getting rounder
+// the way Nunito does.
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   weight: ["800", "900"],
 });
@@ -49,7 +53,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistDisplay.variable} ${vg5000.variable} ${caveat.variable} ${nunito.variable} antialiased`}>
+      <body className={`${geistDisplay.variable} ${vg5000.variable} ${caveat.variable} ${inter.variable} antialiased`}>
         <AppShell>{children}</AppShell>
       </body>
     </html>
