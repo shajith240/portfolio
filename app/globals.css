@@ -89,3 +89,23 @@ body {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   }
 }
+
+/* Enhanced-tier Liquid Glass — real edge refraction (see
+   docs/design-system/materials-glass.md and LiquidGlassFilters.tsx),
+   layered on top of the baseline blur/saturate tier every glass
+   surface already uses. Reserved for a handful of hero surfaces, not
+   applied broadly — each instance is a real GPU cost.
+
+   backdrop-filter has to live here rather than as an inline style:
+   inline styles always win the cascade over a stylesheet rule of the
+   same property (short of !important), so the @supports upgrade
+   below would never be able to override an inline baseline value. */
+.glass-hero-refraction {
+  backdrop-filter: blur(var(--glass-blur-regular)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-regular)) saturate(var(--glass-saturate));
+}
+@supports (backdrop-filter: url(#liquid-glass-refraction)) {
+  .glass-hero-refraction {
+    backdrop-filter: url(#liquid-glass-refraction) blur(var(--glass-blur-regular)) saturate(var(--glass-saturate));
+  }
+}

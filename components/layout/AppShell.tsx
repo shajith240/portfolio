@@ -22,6 +22,7 @@ import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
 import MobileTabBar from "@/components/ui/MobileTabBar";
 import Dock from "@/components/ui/Dock";
 import WindowLayer from "@/components/window/WindowLayer";
+import LiquidGlassFilters from "@/components/ui/LiquidGlassFilters";
 
 function Shell({ children }: { children: ReactNode }) {
   const { isMobileLayout, isTabletLayout } = useLayout();
@@ -62,6 +63,7 @@ function Shell({ children }: { children: ReactNode }) {
       style={{ color: "var(--text-primary)", background: "var(--bg-page)" }}
     >
       <Wallpaper />
+      <LiquidGlassFilters />
       <BootSequence />
 
       {/* Phone layout: no menu bar/widgets — tab bar handles navigation.
