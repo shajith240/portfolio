@@ -97,21 +97,23 @@ export default function ClockWidget() {
         }}
       />
 
-      {/* 1 — the time. Heavy, huge, glass. Nunito is the standard free
-          substitute for SF Pro Rounded (the real Lock Screen numeral
-          face — a licensed Apple system font that can't legally be
-          self-hosted for a public site): same rounded, friendly,
-          heavy-weight geometric character. */}
+      {/* 1 — the time. Heavy, huge, glass. Inter — not Nunito, which
+          was tried first and looked too round/bubbly against the
+          reference's cleaner numerals. Inter is independently
+          benchmarked as the closest free match to SF Pro Display (the
+          real, licensed-only Lock Screen numeral face) and stays
+          geometric/neutral at heavy weights instead of getting rounder
+          the way Nunito does. */}
       <p
         className="glass-clock-time"
         style={{
           position: "relative",
           margin: 0,
-          fontFamily: "var(--font-nunito), -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
+          fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
           fontWeight: 900,
           fontSize: "76px",
           lineHeight: 0.95,
-          letterSpacing: "-0.01em",
+          letterSpacing: "-0.02em",
           fontVariantNumeric: "tabular-nums",
         }}
       >
@@ -132,8 +134,12 @@ export default function ClockWidget() {
           fontWeight: 600,
           fontSize: "36px",
           lineHeight: 1,
-          color: "rgba(255, 255, 255, 0.95)",
-          textShadow: "0 1px 6px rgba(0, 0, 0, 0.35)",
+          // Same systemBlue family as the card itself, deepened for
+          // contrast against the lighter glass — a monochrome-blue
+          // read, not white-on-blue (which is what an earlier version
+          // had, before checking against the reference).
+          color: "rgba(30, 75, 190, 0.95)",
+          textShadow: "0 1px 3px rgba(255, 255, 255, 0.25)",
         }}
       >
         {dayLabel}
