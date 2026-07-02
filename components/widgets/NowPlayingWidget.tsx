@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { NOW_PLAYING } from "@/data/nowPlaying";
 import LyricsPanel from "@/components/widgets/LyricsPanel";
+import { WIDGET_UNIT, WIDGET_PADDING, WIDGET_RADIUS } from "@/lib/widgetGrid";
 
 /* macOS "Now Playing" widget — real <audio> playback (no Spotify
    OAuth/infra). Matches the real macOS Control Center Now Playing
@@ -21,7 +22,6 @@ import LyricsPanel from "@/components/widgets/LyricsPanel";
    An album-art color-extraction tinted backdrop was tried and then
    explicitly reverted — kept to the plain glass card instead. */
 
-const WIDGET_WIDTH = 260;
 const ENTRANCE_SPRING = { type: "spring", stiffness: 520, damping: 44, mass: 0.85, restDelta: 0.01 } as const;
 
 function MusicNoteGlyph() {
@@ -170,9 +170,9 @@ export default function NowPlayingWidget() {
       animate={{ y: 0, opacity: 1 }}
       transition={ENTRANCE_SPRING}
       style={{
-        width: `${WIDGET_WIDTH}px`,
-        padding: "14px",
-        borderRadius: "20px",
+        width: `${WIDGET_UNIT}px`,
+        padding: `${WIDGET_PADDING}px`,
+        borderRadius: `${WIDGET_RADIUS}px`,
         background: "var(--glass-regular-bg)",
         border: "1px solid var(--glass-border)",
         backdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
