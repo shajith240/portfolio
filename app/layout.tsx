@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Caveat, Inter } from "next/font/google";
+import { Inter_Tight, Caveat } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
 
-const geistDisplay = Geist({
-  variable: "--font-geist-display",
+// Clock widget numerals — chosen directly (Nunito, then Inter, then
+// Geist were all tried and replaced first) for its tighter, taller,
+// slimmer digit proportions at Medium weight.
+const interTight = Inter_Tight({
+  variable: "--font-inter-tight",
   subsets: ["latin"],
-  weight: ["700", "900"],
+  weight: ["500"],
 });
 
 const vg5000 = localFont({
@@ -26,21 +29,6 @@ const caveat = Caveat({
   weight: ["600"],
 });
 
-// Real macOS/iOS Lock Screen clock numerals use SF Pro Display — a
-// licensed Apple system font that can't be self-hosted on a public
-// website. Nunito was tried first as the substitute and looked too
-// round/bubbly against the reference's cleaner, more neutral
-// numerals — Inter is the correct pick: independently benchmarked as
-// the closest free match to SF Pro (~88% similarity), designed with
-// the same "built for screens" mission Apple had for SF Pro, and it
-// stays geometric/neutral at heavy weights instead of getting rounder
-// the way Nunito does.
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["800", "900"],
-});
-
 export const metadata: Metadata = {
   title: "Portfolio",
   description: "Personal developer portfolio",
@@ -53,7 +41,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistDisplay.variable} ${vg5000.variable} ${caveat.variable} ${inter.variable} antialiased`}>
+      <body className={`${interTight.variable} ${vg5000.variable} ${caveat.variable} antialiased`}>
         <AppShell>{children}</AppShell>
       </body>
     </html>

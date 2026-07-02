@@ -59,7 +59,7 @@ export default function ClockWidget() {
       style={{
         position: "relative",
         width: `${WIDGET_WIDTH}px`,
-        padding: "16px 16px 14px",
+        padding: "22px 18px 18px",
         borderRadius: "20px",
         // Blue glass tint anchored to Apple's actual systemBlue —
         // #0A84FF (dark mode), the widely-used community-measured
@@ -69,11 +69,24 @@ export default function ClockWidget() {
         // palette uses. Lightened for the top-left specular highlight,
         // deepened for the bottom-right glass falloff — one hue
         // family, not an unrelated second color guessed at.
-        background: "linear-gradient(165deg, rgba(90, 170, 255, 0.55) 0%, rgba(10, 90, 200, 0.65) 100%)",
-        border: "1px solid rgba(255, 255, 255, 0.18)",
+        //
+        // Opacity landed at 0.68/0.78 after two wrong turns: 0.55/0.65
+        // let a busy wallpaper muddy the blue into gray; 0.85/0.92
+        // (this codebase's "thick glass" tier — reserved for
+        // large TRANSIENT surfaces like modals) went too far the other
+        // way and killed the translucency, reading as solid painted
+        // metal instead of glass. This widget is a persistent desktop
+        // widget, not a transient overlay, so it belongs at "Regular
+        // Glass" tier — the same ~0.78 opacity already validated on
+        // every other widget on this desktop (PhotoWidget,
+        // NowPlayingWidget, AIToolsWidget all use --glass-regular-bg).
+        // Enough fill to keep the hue readably blue, low enough that
+        // backdrop-filter's blur is still visibly doing something.
+        background: "linear-gradient(165deg, rgba(100, 176, 255, 0.68) 0%, rgba(10, 82, 190, 0.78) 100%)",
+        border: "1px solid rgba(255, 255, 255, 0.2)",
         backdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
         WebkitBackdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
-        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.12)",
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.14)",
         overflow: "hidden",
         // Left-aligned, not centered — the time, day, and date all
         // start from the same left edge. An earlier version centered
@@ -97,23 +110,27 @@ export default function ClockWidget() {
         }}
       />
 
-      {/* 1 — the time. Heavy, huge, glass. Inter — not Nunito, which
-          was tried first and looked too round/bubbly against the
-          reference's cleaner numerals. Inter is independently
-          benchmarked as the closest free match to SF Pro Display (the
-          real, licensed-only Lock Screen numeral face) and stays
-          geometric/neutral at heavy weights instead of getting rounder
-          the way Nunito does. */}
+      {/* 1 — the time. Heavy, huge, glass. Inter Tight at Medium (500)
+          — picked directly for its tighter, taller, slimmer digit
+          proportions after Nunito (too round/bubbly), Inter (right
+          overall SF Pro match but numerals too wide/short), and Geist
+          (closer, still not quite it) were each tried and replaced.
+
+          tabular-nums is confirmed correct — Apple's own Clock app
+          uses monospaced/tabular figures specifically so the display
+          doesn't shift width as digits change. letterSpacing stays at
+          0 (not tightened) — large display numerals need room to
+          breathe, not compression. */}
       <p
         className="glass-clock-time"
         style={{
           position: "relative",
           margin: 0,
-          fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
-          fontWeight: 900,
+          fontFamily: "var(--font-inter-tight), -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
+          fontWeight: 500,
           fontSize: "76px",
           lineHeight: 0.95,
-          letterSpacing: "-0.02em",
+          letterSpacing: "0",
           fontVariantNumeric: "tabular-nums",
         }}
       >
@@ -129,7 +146,7 @@ export default function ClockWidget() {
         style={{
           position: "relative",
           zIndex: 1,
-          margin: "-38px 0 0 0",
+          margin: "-30px 0 0 0",
           fontFamily: "var(--font-caveat), cursive",
           fontWeight: 600,
           fontSize: "36px",
@@ -145,15 +162,23 @@ export default function ClockWidget() {
         {dayLabel}
       </p>
 
-      {/* 3 — the date, small caps. */}
+      {/* 3 — the date, small caps. Same systemBlue family as the day
+          script above it — one coherent tint for all the widget's own
+          content (matching WidgetKit's "accented" rendering mode:
+          content tinted a single deliberate color against the themed
+          glass), not white text sitting on a blue card. Same font as
+          the time display too (Inter Tight) — small/letter-spaced/bold
+          instead of huge, so the two read as one considered type
+          system instead of unrelated fonts bolted together. */}
       <p
         style={{
           position: "relative",
-          margin: "4px 0 0 0",
+          margin: "6px 0 0 0",
+          fontFamily: "var(--font-inter-tight), -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
           fontSize: "11px",
-          fontWeight: 600,
+          fontWeight: 700,
           letterSpacing: "0.16em",
-          color: "rgba(255, 255, 255, 0.72)",
+          color: "rgba(40, 90, 200, 0.9)",
         }}
       >
         {dateLabel}
