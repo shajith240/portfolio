@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { NOW_PLAYING } from "@/data/nowPlaying";
 import LyricsPanel from "@/components/widgets/LyricsPanel";
 import { WIDGET_UNIT, WIDGET_PADDING, WIDGET_RADIUS } from "@/lib/widgetGrid";
+import { getSizeDimensions } from "@/lib/widgetSizeTiers";
+import type { WidgetSize } from "@/lib/widgetLayoutSchema";
 
 /* macOS "Now Playing" widget — real <audio> playback (no Spotify
    OAuth/infra). Matches the real macOS Control Center Now Playing
@@ -87,7 +89,7 @@ function SpeakerGlyph({ muted }: { muted: boolean }) {
   );
 }
 
-export default function NowPlayingWidget() {
+export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(1);
@@ -163,6 +165,80 @@ export default function NowPlayingWidget() {
     const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
     audio.currentTime = ratio * audio.duration;
   };
+
+  if (size === "small") {
+    const dims = getSizeDimensions("nowPlaying", "small");
+    return (
+      <motion.div
+        initial={{ y: 16, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={ENTRANCE_SPRING}
+        style={{
+          position: "relative",
+          width: `${dims.width}px`,
+          height: `${dims.height}px`,
+          borderRadius: `${WIDGET_RADIUS}px`,
+          overflow: "hidden",
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28)",
+        }}
+      >
+        <audio
+          ref={audioRef}
+          src={NOW_PLAYING.src}
+          preload="none"
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          onEnded={(e) => {
+            setPlaying(false);
+            e.currentTarget.currentTime = 0;
+          }}
+        />
+        {NOW_PLAYING.artwork ? (
+          <img
+            src={NOW_PLAYING.artwork}
+            alt={NOW_PLAYING.title}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          />
+        ) : (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "linear-gradient(160deg, #FF7A45 0%, #7A1F00 100%)",
+            }}
+          >
+            <MusicNoteGlyph />
+          </div>
+        )}
+        {/* Single tap target, matching real Apple Music's own Small
+            widget — no scrubber, no lyrics, no volume at this tier. */}
+        <button
+          onClick={togglePlay}
+          aria-label={playing ? "Pause" : "Play"}
+          style={{
+            position: "absolute",
+            right: "8px",
+            bottom: "8px",
+            width: "32px",
+            height: "32px",
+            borderRadius: "50%",
+            background: "rgba(0, 0, 0, 0.5)",
+            backdropFilter: "blur(8px)",
+            border: "none",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {playing ? <PauseGlyph /> : <PlayGlyph />}
+        </button>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -392,7 +468,7 @@ export default function NowPlayingWidget() {
         </div>
       </div>
 
-      <LyricsPanel audioRef={audioRef} playing={playing} />
+      {size === "large" && <LyricsPanel audioRef={audioRef} playing={playing} />}
     </motion.div>
   );
 }
