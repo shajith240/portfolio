@@ -1,4 +1,4 @@
-import { MOTIVATION_IMAGE } from "@/data/motivation";
+import { MOTIVATION_IMAGE } from "../data/motivation.ts";
 
 export type WidgetSize = "small" | "medium" | "large";
 export type WidgetId = "photo" | "nowPlaying" | "aiTools" | "clock" | "motivation";
