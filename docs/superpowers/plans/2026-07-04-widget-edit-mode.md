@@ -93,7 +93,15 @@ Expected: FAIL — `Cannot find module './widgetSizeTiers.ts'` (file doesn't exi
 
 ```ts
 // lib/widgetSizeTiers.ts
-import { MOTIVATION_IMAGE } from "@/data/motivation";
+//
+// Relative import, not the "@/" alias — this module's own test
+// (Step 1 above) runs via plain `node lib/widgetSizeTiers.test.ts`,
+// and Node's ESM resolver has no knowledge of the "@/*" -> "./*"
+// tsconfig path alias (that's a TypeScript-compiler/bundler-only
+// convention). A relative import resolves identically under plain
+// Node, tsc, and Next's own bundler, so it's the only form that works
+// everywhere this file is loaded.
+import { MOTIVATION_IMAGE } from "../data/motivation";
 
 export type WidgetSize = "small" | "medium" | "large";
 export type WidgetId = "photo" | "nowPlaying" | "aiTools" | "clock" | "motivation";
@@ -238,7 +246,7 @@ assert.equal(farResult.x, 500);
 assert.equal(farResult.guides.length, 0);
 
 // computeAlignmentSnap — center-to-center alignment
-const centerDragged = { x: 230 + GUIDE_THRESHOLD - 1, y: 400, width: 260, height: 176 };
+const centerDragged = { x: 100 + GUIDE_THRESHOLD - 1, y: 400, width: 260, height: 176 };
 const centerOthers = [{ x: 100, y: 0, width: 260, height: 260 }]; // center x = 230
 const centerResult = computeAlignmentSnap(centerDragged, centerOthers);
 assert.equal(centerResult.x + 260 / 2, 230); // dragged's own center now equals other's center
