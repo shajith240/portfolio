@@ -102,14 +102,8 @@ export default function WidgetFrame({ id, otherRects, onGuidesChange, children }
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
       onPointerDown={longPress.onPointerDown}
-      onPointerMove={(e) => {
-        longPress.onPointerMove(e);
-        handleResizeMove(e);
-      }}
-      onPointerUp={(e) => {
-        longPress.onPointerUp();
-        handleResizeEnd();
-      }}
+      onPointerMove={longPress.onPointerMove}
+      onPointerUp={() => longPress.onPointerUp()}
       onPointerLeave={longPress.onPointerLeave}
       onClickCapture={longPress.onClickCapture}
       // Position is driven entirely by x/y here (transform-based),
@@ -123,8 +117,8 @@ export default function WidgetFrame({ id, otherRects, onGuidesChange, children }
         rotate: isEditing && !prefersReducedMotion ? [-1.5, 1.5, -1.5] : 0,
       }}
       transition={{
-        x: WIDGET_SNAP_SPRING,
-        y: WIDGET_SNAP_SPRING,
+        x: prefersReducedMotion ? { duration: 0 } : WIDGET_SNAP_SPRING,
+        y: prefersReducedMotion ? { duration: 0 } : WIDGET_SNAP_SPRING,
         rotate:
           isEditing && !prefersReducedMotion
             ? { duration: jiggleDuration, repeat: Infinity, ease: "easeInOut" }
@@ -148,7 +142,13 @@ export default function WidgetFrame({ id, otherRects, onGuidesChange, children }
           aria-label={`Resize ${id} widget`}
           onPointerDown={(e) => {
             e.stopPropagation();
+            e.currentTarget.setPointerCapture(e.pointerId);
             resizingRef.current = true;
+          }}
+          onPointerMove={handleResizeMove}
+          onPointerUp={(e) => {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+            handleResizeEnd();
           }}
           style={{
             position: "absolute",
