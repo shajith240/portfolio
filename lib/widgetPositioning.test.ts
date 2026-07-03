@@ -28,9 +28,20 @@ assert.equal(farResult.x, 500);
 assert.equal(farResult.guides.length, 0);
 
 // computeAlignmentSnap — center-to-center alignment
-const centerDragged = { x: 100 + GUIDE_THRESHOLD - 1, y: 400, width: 260, height: 176 };
+// Deliberately a DIFFERENT width (100, not 260) from centerOthers — when
+// both rects share a width, left-edge and center-edge distances are
+// numerically identical (shifting by a constant offset preserves every
+// edge relationship equally), so a same-width test can't actually tell
+// "center aligned" apart from "left edge happened to align" — the
+// assertion passes either way, silently testing nothing. Differing
+// widths make the two cases produce different snapped x values.
+const centerDragged = { x: 185, y: 400, width: 100, height: 176 };
 const centerOthers = [{ x: 100, y: 0, width: 260, height: 260 }]; // center x = 230
 const centerResult = computeAlignmentSnap(centerDragged, centerOthers);
-assert.equal(centerResult.x + 260 / 2, 230); // dragged's own center now equals other's center
+assert.equal(centerResult.x + 100 / 2, 230); // dragged's own center now equals other's center
+assert.equal(centerResult.guides.length, 1);
+assert.equal(centerResult.guides[0].axis, "x");
+assert.equal(centerResult.guides[0].position, 230);
+assert.notEqual(centerResult.x, centerOthers[0].x); // confirms this isn't a left-edge-snap coincidence
 
 console.log("widgetPositioning: all assertions passed");
