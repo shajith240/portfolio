@@ -43,7 +43,9 @@ const CASCADE_WRAP = 6; // after this many cascades, restart near the top-left
 // titlebar (horizontally) must stay on screen; TOP/BOTTOM keep it
 // below the MenuBar and above the Dock.
 const MIN_VISIBLE_X = 120;
-const TOP_BOUND = 30;
+// Exported alongside BOTTOM_RESERVE — WidgetLayoutContext reuses both
+// rather than picking its own MenuBar/Dock clearance values.
+export const TOP_BOUND = 30;
 // Exported — this is the single source of truth for "how much space to
 // leave clear above the Dock" on this desktop. Any fixed-position
 // element that needs to stay clear of the Dock (desktop widgets, not
