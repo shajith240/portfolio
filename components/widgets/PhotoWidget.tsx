@@ -2,22 +2,27 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { WIDGET_UNIT, WIDGET_RADIUS } from "@/lib/widgetGrid";
+import { WIDGET_RADIUS } from "@/lib/widgetGrid";
+import { getSizeDimensions } from "@/lib/widgetSizeTiers";
+import type { WidgetSize } from "@/lib/widgetLayoutSchema";
 
 /* macOS "Photos" widget — a single photo, edge to edge, no text.
    Liquid Glass isn't appropriate here (a photo widget is opaque, not
    translucent, in real macOS) — just a squircle-clipped image with a
    soft shadow. See docs/design-system/materials-glass.md.
 
+   All 3 size tiers are the same forced-square shape (155/260/338),
+   just more of the photo visible at larger sizes — matches Apple's
+   real Photos widget, which crops the same source image tighter or
+   looser per size rather than changing layout.
+
    Shadow is deliberately tight (small blur/offset), not a big diffuse
    glow: real macOS desktop widgets rest close to the surface rather
-   than levitating dramatically. A wide blur radius here would also
-   exceed DesktopWidgetStack's 14px inter-widget gap and visibly bleed
-   into the next widget, reading as one merged blob instead of two
-   distinct floating cards. */
+   than levitating dramatically. */
 
-export default function PhotoWidget() {
+export default function PhotoWidget({ size }: { size: WidgetSize }) {
   const [hovered, setHovered] = useState(false);
+  const dims = getSizeDimensions("photo", size);
 
   return (
     <motion.div
@@ -28,8 +33,8 @@ export default function PhotoWidget() {
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
       style={{
-        width: `${WIDGET_UNIT}px`,
-        height: `${WIDGET_UNIT}px`,
+        width: `${dims.width}px`,
+        height: `${dims.height}px`,
         borderRadius: `${WIDGET_RADIUS}px`,
         overflow: "hidden",
         boxShadow: hovered
