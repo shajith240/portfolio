@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { WIDGET_UNIT, WIDGET_RADIUS, COMPACT_CARD_HEIGHT } from "@/lib/widgetGrid";
+import { WIDGET_RADIUS } from "@/lib/widgetGrid";
+import { getSizeDimensions } from "@/lib/widgetSizeTiers";
+import type { WidgetSize } from "@/lib/widgetLayoutSchema";
 
 /* macOS/iOS Lock Screen-style Clock widget, matching the reference
    layout exactly, top to bottom:
@@ -47,8 +49,9 @@ function useLiveClock() {
   return now;
 }
 
-export default function ClockWidget() {
+export default function ClockWidget({ size }: { size: WidgetSize }) {
   const now = useLiveClock();
+  const dims = getSizeDimensions("clock", size);
 
   // Locale/options pinned explicitly — same convention as everywhere
   // else dates are formatted on this site (see CurrentlyBuildingWidget
@@ -61,6 +64,13 @@ export default function ClockWidget() {
   const dayLabel = now ? now.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase() : "";
   const dateLabel = now ? now.toLocaleDateString("en-US", { month: "long", day: "numeric" }).toUpperCase() : "";
 
+  // Small: time only, no day/date — matches real Apple Clock
+  // widget's own small size (single glanceable fact, per HIG's
+  // small=single-focus rule). Font scaled down proportionally from
+  // medium's 76px by the width ratio (155/260) — same Inter Tight
+  // Medium already chosen for this widget, not a new font.
+  const timeFontSize = size === "small" ? 44 : size === "large" ? 88 : 76;
+
   return (
     <motion.div
       initial={{ y: 16, opacity: 0 }}
@@ -68,9 +78,9 @@ export default function ClockWidget() {
       transition={ENTRANCE_SPRING}
       style={{
         position: "relative",
-        width: `${WIDGET_UNIT}px`,
-        height: `${COMPACT_CARD_HEIGHT}px`,
-        padding: "0 18px",
+        width: `${dims.width}px`,
+        height: dims.height ? `${dims.height}px` : undefined,
+        padding: size === "small" ? "16px" : "0 18px",
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
@@ -142,7 +152,7 @@ export default function ClockWidget() {
           margin: 0,
           fontFamily: "var(--font-inter-tight), -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
           fontWeight: 500,
-          fontSize: "76px",
+          fontSize: `${timeFontSize}px`,
           lineHeight: 0.95,
           letterSpacing: "0",
           fontVariantNumeric: "tabular-nums",
@@ -151,52 +161,56 @@ export default function ClockWidget() {
         {timeLabel}
       </p>
 
-      {/* 2 — the day, handwritten script, overlapping the numerals'
-          lower half (not just touching the bottom edge — the
-          reference overlap cuts well into the digits). No rotation:
-          flush left, same starting edge as the time above it. zIndex
-          keeps the script above the glass digits. */}
-      <p
-        style={{
-          position: "relative",
-          zIndex: 1,
-          margin: "-30px 0 0 0",
-          fontFamily: "var(--font-caveat), cursive",
-          fontWeight: 600,
-          fontSize: "36px",
-          lineHeight: 1,
-          // Same systemBlue family as the card itself, deepened for
-          // contrast against the lighter glass — a monochrome-blue
-          // read, not white-on-blue (which is what an earlier version
-          // had, before checking against the reference).
-          color: "rgba(30, 75, 190, 0.95)",
-          textShadow: "0 1px 3px rgba(255, 255, 255, 0.25)",
-        }}
-      >
-        {dayLabel}
-      </p>
+      {size !== "small" && (
+        <>
+          {/* 2 — the day, handwritten script, overlapping the numerals'
+              lower half (not just touching the bottom edge — the
+              reference overlap cuts well into the digits). No rotation:
+              flush left, same starting edge as the time above it. zIndex
+              keeps the script above the glass digits. */}
+          <p
+            style={{
+              position: "relative",
+              zIndex: 1,
+              margin: "-30px 0 0 0",
+              fontFamily: "var(--font-caveat), cursive",
+              fontWeight: 600,
+              fontSize: "36px",
+              lineHeight: 1,
+              // Same systemBlue family as the card itself, deepened for
+              // contrast against the lighter glass — a monochrome-blue
+              // read, not white-on-blue (which is what an earlier version
+              // had, before checking against the reference).
+              color: "rgba(30, 75, 190, 0.95)",
+              textShadow: "0 1px 3px rgba(255, 255, 255, 0.25)",
+            }}
+          >
+            {dayLabel}
+          </p>
 
-      {/* 3 — the date, small caps. Same systemBlue family as the day
-          script above it — one coherent tint for all the widget's own
-          content (matching WidgetKit's "accented" rendering mode:
-          content tinted a single deliberate color against the themed
-          glass), not white text sitting on a blue card. Same font as
-          the time display too (Inter Tight) — small/letter-spaced/bold
-          instead of huge, so the two read as one considered type
-          system instead of unrelated fonts bolted together. */}
-      <p
-        style={{
-          position: "relative",
-          margin: "6px 0 0 0",
-          fontFamily: "var(--font-inter-tight), -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
-          fontSize: "11px",
-          fontWeight: 700,
-          letterSpacing: "0.16em",
-          color: "rgba(40, 90, 200, 0.9)",
-        }}
-      >
-        {dateLabel}
-      </p>
+          {/* 3 — the date, small caps. Same systemBlue family as the day
+              script above it — one coherent tint for all the widget's own
+              content (matching WidgetKit's "accented" rendering mode:
+              content tinted a single deliberate color against the themed
+              glass), not white text sitting on a blue card. Same font as
+              the time display too (Inter Tight) — small/letter-spaced/bold
+              instead of huge, so the two read as one considered type
+              system instead of unrelated fonts bolted together. */}
+          <p
+            style={{
+              position: "relative",
+              margin: "6px 0 0 0",
+              fontFamily: "var(--font-inter-tight), -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
+              fontSize: "11px",
+              fontWeight: 700,
+              letterSpacing: "0.16em",
+              color: "rgba(40, 90, 200, 0.9)",
+            }}
+          >
+            {dateLabel}
+          </p>
+        </>
+      )}
     </motion.div>
   );
 }
