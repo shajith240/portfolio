@@ -30,15 +30,20 @@ export default function WidgetCanvas() {
 
   return (
     <div
-      // Tapping empty canvas space (not a widget — widgets stop this
-      // click via WidgetFrame's own onClick handling) exits edit mode.
+      // Tapping empty canvas space (not a widget) exits edit mode. The
+      // per-widget wrapper below stops propagation on its own onClick
+      // so this handler only ever fires for clicks that land on bare
+      // canvas — without that stop, an ordinary click on a widget
+      // (not a drag, which never emits a trailing click) would bubble
+      // up here and exit edit mode immediately, making it impossible
+      // to interact with a jiggling widget at all.
       onClick={() => isEditing && exitEditMode()}
       style={{ position: "fixed", inset: 0, zIndex: 20, pointerEvents: isEditing ? "auto" : "none" }}
     >
       {WIDGET_IDS.map((id) => {
         const otherRects = WIDGET_IDS.filter((other) => other !== id).map(rectFor);
         return (
-          <div key={id} style={{ pointerEvents: "auto" }}>
+          <div key={id} onClick={(e) => e.stopPropagation()} style={{ pointerEvents: "auto" }}>
             <WidgetFrame id={id} otherRects={otherRects} onGuidesChange={setGuides}>
               {(size) => {
                 if (id === "photo") return <PhotoWidget size={size} />;
