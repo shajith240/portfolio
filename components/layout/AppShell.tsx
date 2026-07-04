@@ -10,13 +10,8 @@ import { NAV_ITEMS } from "@/data/nav";
 import Wallpaper from "@/components/layout/Wallpaper";
 import BootSequence from "@/components/boot/BootSequence";
 import MenuBar from "@/components/layout/MenuBar";
-import DesktopWidgetStack from "@/components/widgets/DesktopWidgetStack";
-import RightWidgetStack from "@/components/widgets/RightWidgetStack";
-import PhotoWidget from "@/components/widgets/PhotoWidget";
-import NowPlayingWidget from "@/components/widgets/NowPlayingWidget";
-import AIToolsWidget from "@/components/widgets/AIToolsWidget";
-import ClockWidget from "@/components/widgets/ClockWidget";
-import MotivationWidget from "@/components/widgets/MotivationWidget";
+import { WidgetLayoutProvider } from "@/contexts/WidgetLayoutContext";
+import WidgetCanvas from "@/components/widgets/WidgetCanvas";
 import CommandPalette from "@/components/ui/CommandPalette";
 import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
 import MobileTabBar from "@/components/ui/MobileTabBar";
@@ -80,17 +75,9 @@ function Shell({ children }: { children: ReactNode }) {
         <>
           <MenuBar />
           {isHome && (
-            <>
-              <DesktopWidgetStack>
-                <PhotoWidget />
-                <NowPlayingWidget />
-              </DesktopWidgetStack>
-              <RightWidgetStack>
-                <AIToolsWidget />
-                <ClockWidget />
-              </RightWidgetStack>
-              <MotivationWidget />
-            </>
+            <WidgetLayoutProvider>
+              <WidgetCanvas />
+            </WidgetLayoutProvider>
           )}
           <PageBreadcrumb />
           {/* Suppress the raw page while the redirect above is in
