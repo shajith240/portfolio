@@ -5,7 +5,8 @@ import { useState, useCallback } from "react";
 import { useWidgetLayout } from "@/contexts/WidgetLayoutContext";
 import { TOP_BOUND, BOTTOM_RESERVE } from "@/contexts/WindowManagerContext";
 import { getSizeDimensions } from "@/lib/widgetSizeTiers";
-import type { AlignmentGuide, Rect } from "@/lib/widgetPositioning";
+import { WIDGET_RADIUS } from "@/lib/widgetGrid";
+import type { Rect } from "@/lib/widgetPositioning";
 import type { WidgetId } from "@/lib/widgetLayoutSchema";
 import WidgetFrame from "@/components/widgets/WidgetFrame";
 import PhotoWidget from "@/components/widgets/PhotoWidget";
@@ -36,7 +37,12 @@ function viewportEdgeRects(viewportWidth: number, viewportHeight: number): Rect[
 
 export default function WidgetCanvas() {
   const { layout, isEditing, exitEditMode, resetLayout } = useWidgetLayout();
-  const [guides, setGuides] = useState<AlignmentGuide[]>([]);
+  // Real macOS drag feedback: a white widget-shaped outline at the
+  // suggested landing position ("a white widget-shaped outline
+  // appears where macOS suggests you place it" — Sonoma's actual
+  // documented behavior), not guide lines. null = dragging far from
+  // any alignment, no outline.
+  const [snapPreview, setSnapPreview] = useState<Rect | null>(null);
 
   const rectFor = useCallback(
     (id: WidgetId): Rect => {
@@ -69,7 +75,7 @@ export default function WidgetCanvas() {
         const otherRects = [...WIDGET_IDS.filter((other) => other !== id).map(rectFor), ...edgeRects];
         return (
           <div key={id} onClick={(e) => e.stopPropagation()} style={{ pointerEvents: "auto" }}>
-            <WidgetFrame id={id} otherRects={otherRects} onGuidesChange={setGuides}>
+            <WidgetFrame id={id} otherRects={otherRects} onSnapPreview={setSnapPreview}>
               {(size) => {
                 if (id === "photo") return <PhotoWidget size={size} />;
                 if (id === "nowPlaying") return <NowPlayingWidget size={size} />;
@@ -82,28 +88,26 @@ export default function WidgetCanvas() {
         );
       })}
 
-      {guides.map((guide, i) => (
+      {snapPreview && (
         <div
-          key={i}
           aria-hidden
           style={{
             position: "fixed",
-            // Apple's systemBlue (#0A84FF), not this site's own
-            // orange brand accent (--color-accent) — a system-level
-            // alignment guide should never be tinted with the app's
-            // own personal branding. This is the same reference blue
-            // Xcode/Interface Builder use for their own alignment
-            // guides, and the same value already used for ClockWidget
-            // elsewhere in this codebase.
-            background: "#0A84FF",
+            left: snapPreview.x,
+            top: snapPreview.y,
+            width: snapPreview.width,
+            height: snapPreview.height,
+            borderRadius: `${WIDGET_RADIUS}px`,
+            border: "2px solid rgba(255, 255, 255, 0.85)",
+            background: "rgba(255, 255, 255, 0.06)",
             pointerEvents: "none",
-            zIndex: 40,
-            ...(guide.axis === "x"
-              ? { left: guide.position, top: 0, width: "1px", height: "100vh" }
-              : { top: guide.position, left: 0, height: "1px", width: "100vw" }),
+            // Below the dragged widget (zIndex 40 while dragging) so
+            // the outline reads as the destination underneath it, but
+            // above the other resting widgets (30).
+            zIndex: 35,
           }}
         />
-      ))}
+      )}
 
       {isEditing && (
         <button

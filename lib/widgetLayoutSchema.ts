@@ -13,9 +13,13 @@ export type WidgetLayout = Record<WidgetId, WidgetLayoutEntry>;
 
 export const WIDGET_IDS: WidgetId[] = ["photo", "nowPlaying", "aiTools", "clock", "motivation"];
 
-// Versioned — a future schema change bumps this suffix and simply
-// falls back to defaults for old keys, no migration needed.
-export const STORAGE_KEY = "portfolio-widget-layout-v1";
+// Versioned — a schema change bumps this suffix and simply falls
+// back to defaults for old keys, no migration needed. v1 → v2: the
+// v1-era build had a page-freezing resize bug plus changed tier
+// heights (nowPlaying medium/large), so layouts saved under v1 can
+// hold positions/sizes produced by broken interactions — abandoning
+// the key resets every visitor to the correct defaults once.
+export const STORAGE_KEY = "portfolio-widget-layout-v2";
 
 export interface ShellMetricsInput {
   viewportWidth: number;
