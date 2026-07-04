@@ -29,6 +29,16 @@ export default function WidgetFrame({ id, otherRects, onGuidesChange, children }
   const frameRef = useRef<HTMLDivElement>(null);
   const [liveSize, setLiveSize] = useState<{ width: number; height: number } | null>(null);
   const resizingRef = useRef(false);
+  // Separate from resizingRef (a synchronous guard read inside the
+  // pointermove handler, doesn't need to trigger a render): this is
+  // what actually turns Framer Motion's own `drag` gesture off the
+  // instant the resize handle is pressed. Without it, the parent
+  // motion.div's drag gesture stays live the whole time edit mode is
+  // on, including while the resize handle is being dragged — two
+  // independent gesture systems (Framer's native drag tracking and
+  // this file's manual pointer-capture resize tracking) fighting over
+  // the same pointer on every move is what froze the page.
+  const [isResizing, setIsResizing] = useState(false);
 
   const entry = layout[id];
   const dims = getSizeDimensions(id, entry.size);
@@ -97,7 +107,7 @@ export default function WidgetFrame({ id, otherRects, onGuidesChange, children }
   return (
     <motion.div
       ref={frameRef}
-      drag={isEditing}
+      drag={isEditing && !isResizing}
       dragMomentum={false}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
@@ -144,10 +154,12 @@ export default function WidgetFrame({ id, otherRects, onGuidesChange, children }
             e.stopPropagation();
             e.currentTarget.setPointerCapture(e.pointerId);
             resizingRef.current = true;
+            setIsResizing(true);
           }}
           onPointerMove={handleResizeMove}
           onPointerUp={(e) => {
             e.currentTarget.releasePointerCapture(e.pointerId);
+            setIsResizing(false);
             handleResizeEnd();
           }}
           style={{

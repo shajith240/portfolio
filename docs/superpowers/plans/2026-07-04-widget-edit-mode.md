@@ -130,8 +130,21 @@ export const WIDGET_SIZE_TIERS: Record<WidgetId, Partial<Record<WidgetSize, Size
   },
   nowPlaying: {
     small: { width: 155, height: 155 },
-    medium: { width: 260 },
-    large: { width: 260 },
+    // medium/large both have height computed (159/361, derived below)
+    // rather than left content-driven — the whole-branch review caught
+    // that leaving both undefined made them indistinguishable to
+    // nearestSizeTier's width-only comparison (both 260-wide), so the
+    // strict-< tie-break always kept whichever tier iterates first
+    // (medium), making "large" permanently unreachable via the resize
+    // handle. Heights: medium = 16*2 padding + 56 art + 12 gap + 3
+    // scrubber + 10 gap + 19 controls + 12 gap + 15 volume row = 159.
+    // large = medium (159) + LyricsPanel's own 12px marginTop + its
+    // fixed 190px PANEL_HEIGHT = 361. These are reference values for
+    // frame sizing/resize-matching only — NowPlayingWidget's own card
+    // still renders at its natural content height regardless (its
+    // outer frame has no overflow:hidden clipping it).
+    medium: { width: 260, height: 159 },
+    large: { width: 260, height: 361 },
   },
   aiTools: {
     small: { width: 155, height: 155 },
@@ -246,10 +259,21 @@ assert.equal(farResult.x, 500);
 assert.equal(farResult.guides.length, 0);
 
 // computeAlignmentSnap — center-to-center alignment
-const centerDragged = { x: 100 + GUIDE_THRESHOLD - 1, y: 400, width: 260, height: 176 };
+// Deliberately a DIFFERENT width (100, not 260) from centerOthers — when
+// both rects share a width, left-edge and center-edge distances are
+// numerically identical (shifting by a constant offset preserves every
+// edge relationship equally), so a same-width test can't actually tell
+// "center aligned" apart from "left edge happened to align" — the
+// assertion passes either way, silently testing nothing. Differing
+// widths make the two cases produce different snapped x values.
+const centerDragged = { x: 185, y: 400, width: 100, height: 176 };
 const centerOthers = [{ x: 100, y: 0, width: 260, height: 260 }]; // center x = 230
 const centerResult = computeAlignmentSnap(centerDragged, centerOthers);
-assert.equal(centerResult.x + 260 / 2, 230); // dragged's own center now equals other's center
+assert.equal(centerResult.x + 100 / 2, 230); // dragged's own center now equals other's center
+assert.equal(centerResult.guides.length, 1);
+assert.equal(centerResult.guides[0].axis, "x");
+assert.equal(centerResult.guides[0].position, 230);
+assert.notEqual(centerResult.x, centerOthers[0].x); // confirms this isn't a left-edge-snap coincidence
 
 console.log("widgetPositioning: all assertions passed");
 ```
@@ -445,6 +469,7 @@ Expected: FAIL — module not found.
 ```ts
 // lib/widgetLayoutSchema.ts
 import { getSizeDimensions, type WidgetId, type WidgetSize } from "./widgetSizeTiers";
+import { WIDGET_GAP } from "./widgetGrid";
 
 export type { WidgetId, WidgetSize };
 
@@ -472,8 +497,12 @@ export interface ShellMetricsInput {
 // WindowManagerContext.BOTTOM_RESERVE, duplicated here (not imported)
 // because contexts/ isn't reachable from lib/ without a client-only
 // import; kept in sync by the same design-system doc both cite.
+// WIDGET_GAP has no such excuse — widgetGrid.ts is already a plain
+// lib module reachable from here, so it's imported above instead of
+// redeclared (the whole-branch review caught this: the shared module
+// exists specifically so widgets reference one value instead of
+// copies that can drift, and this file was quietly bypassing it).
 const BOTTOM_RESERVE = 110;
-const WIDGET_GAP = 14;
 
 // Mirrors the exact math DesktopWidgetStack/RightWidgetStack/
 // MotivationWidget used before this feature existed, so a first-time
@@ -603,7 +632,7 @@ Expected: no errors (widening `const` to `export const` never breaks existing us
 // contexts/WidgetLayoutContext.tsx
 "use client";
 
-import { createContext, useContext, useCallback, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useShellMetrics } from "@/lib/useShellMetrics";
 import { clampToBounds, type Bounds } from "@/lib/widgetPositioning";
 import { TOP_BOUND, BOTTOM_RESERVE } from "@/contexts/WindowManagerContext";
@@ -767,12 +796,21 @@ export function WidgetLayoutProvider({ children }: { children: ReactNode }) {
     setLayout(defaults);
   }, [metrics.inset]);
 
+  // Memoized — Task 12 mounts 5 WidgetFrame consumers off this one
+  // provider, and a drag/resize updates layout frequently; without
+  // this, every update recreates the value object and re-renders all
+  // 5 frames regardless of which single widget actually changed
+  // (caught in the whole-branch review once the multi-consumer case
+  // this comment originally only anticipated became real).
+  const value = useMemo(
+    () => ({ layout, isEditing, enterEditMode, exitEditMode, updatePosition, updateSize, resetLayout }),
+    [layout, isEditing, enterEditMode, exitEditMode, updatePosition, updateSize, resetLayout]
+  );
+
   if (!layout) return null;
 
   return (
-    <WidgetLayoutContext.Provider
-      value={{ layout, isEditing, enterEditMode, exitEditMode, updatePosition, updateSize, resetLayout }}
-    >
+    <WidgetLayoutContext.Provider value={value}>
       {children}
     </WidgetLayoutContext.Provider>
   );
@@ -1009,14 +1047,8 @@ export default function WidgetFrame({ id, otherRects, onGuidesChange, children }
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
       onPointerDown={longPress.onPointerDown}
-      onPointerMove={(e) => {
-        longPress.onPointerMove(e);
-        handleResizeMove(e);
-      }}
-      onPointerUp={(e) => {
-        longPress.onPointerUp();
-        handleResizeEnd();
-      }}
+      onPointerMove={longPress.onPointerMove}
+      onPointerUp={() => longPress.onPointerUp()}
       onPointerLeave={longPress.onPointerLeave}
       onClickCapture={longPress.onClickCapture}
       // Position is driven entirely by x/y here (transform-based),
@@ -1029,9 +1061,13 @@ export default function WidgetFrame({ id, otherRects, onGuidesChange, children }
         y: entry.y,
         rotate: isEditing && !prefersReducedMotion ? [-1.5, 1.5, -1.5] : 0,
       }}
+      // Reduced motion must kill BOTH the jiggle AND the drop-settle
+      // spring — an instant { duration: 0 } on x/y, not just on
+      // rotate, or a reduced-motion visitor still gets the full
+      // bounce on every drag/resize commit.
       transition={{
-        x: WIDGET_SNAP_SPRING,
-        y: WIDGET_SNAP_SPRING,
+        x: prefersReducedMotion ? { duration: 0 } : WIDGET_SNAP_SPRING,
+        y: prefersReducedMotion ? { duration: 0 } : WIDGET_SNAP_SPRING,
         rotate:
           isEditing && !prefersReducedMotion
             ? { duration: jiggleDuration, repeat: Infinity, ease: "easeInOut" }
@@ -1053,9 +1089,25 @@ export default function WidgetFrame({ id, otherRects, onGuidesChange, children }
         <div
           role="button"
           aria-label={`Resize ${id} widget`}
+          // Pointer capture (not the parent's pointermove/pointerup)
+          // is what keeps resize tracking correct: without it, once
+          // the pointer is dragged outward past this handle's own
+          // small hit area — which happens on every grow-resize —
+          // the browser's normal hit-testing would hand move/up
+          // events to whatever element the cursor is physically over
+          // instead of this one, silently dropping the drag. Setting
+          // capture on this element keeps all subsequent events
+          // routed here regardless of where the pointer physically
+          // travels.
           onPointerDown={(e) => {
             e.stopPropagation();
+            e.currentTarget.setPointerCapture(e.pointerId);
             resizingRef.current = true;
+          }}
+          onPointerMove={handleResizeMove}
+          onPointerUp={(e) => {
+            e.currentTarget.releasePointerCapture(e.pointerId);
+            handleResizeEnd();
           }}
           style={{
             position: "absolute",
@@ -1675,6 +1727,7 @@ import { useWidgetLayout } from "@/contexts/WidgetLayoutContext";
 import { getSizeDimensions } from "@/lib/widgetSizeTiers";
 import type { AlignmentGuide, Rect } from "@/lib/widgetPositioning";
 import type { WidgetId } from "@/lib/widgetLayoutSchema";
+import { TOP_BOUND, BOTTOM_RESERVE } from "@/contexts/WindowManagerContext";
 import WidgetFrame from "@/components/widgets/WidgetFrame";
 import PhotoWidget from "@/components/widgets/PhotoWidget";
 import NowPlayingWidget from "@/components/widgets/NowPlayingWidget";
@@ -1683,6 +1736,28 @@ import ClockWidget from "@/components/widgets/ClockWidget";
 import MotivationWidget from "@/components/widgets/MotivationWidget";
 
 const WIDGET_IDS: WidgetId[] = ["photo", "nowPlaying", "aiTools", "clock", "motivation"];
+
+// Zero-width/zero-height sentinel rects representing the four
+// viewport edges a widget can also snap against — the design spec
+// requires guides against "every other widget's edges/center AND the
+// viewport edges," which the original implementation only did for
+// the widget-to-widget half (caught in the whole-branch review).
+// computeAlignmentSnap already compares a rect's left/center/right
+// (or top/center/bottom) against another rect's same three lines; a
+// zero-size rect collapses those three lines to one coordinate, which
+// is exactly "this one edge is a snap target." Left/right use the
+// left/right viewport edges directly; top/bottom use TOP_BOUND/
+// BOTTOM_RESERVE (the MenuBar/Dock clearance lines) rather than the
+// raw 0/viewportHeight, since those are the actual usable-desktop
+// edges widgets are constrained to.
+function viewportEdgeRects(viewportWidth: number, viewportHeight: number): Rect[] {
+  return [
+    { x: 0, y: 0, width: 0, height: viewportHeight }, // left edge
+    { x: viewportWidth, y: 0, width: 0, height: viewportHeight }, // right edge
+    { x: 0, y: TOP_BOUND, width: viewportWidth, height: 0 }, // top edge (below MenuBar)
+    { x: 0, y: viewportHeight - BOTTOM_RESERVE, width: viewportWidth, height: 0 }, // bottom edge (above Dock)
+  ];
+}
 
 export default function WidgetCanvas() {
   const { layout, isEditing, exitEditMode, resetLayout } = useWidgetLayout();
@@ -1697,17 +1772,28 @@ export default function WidgetCanvas() {
     [layout]
   );
 
+  // Computed once per render (not once per widget inside the map
+  // below) — window dimensions don't change mid-render, and this
+  // component only ever renders after WidgetLayoutProvider's mount
+  // effect has populated layout, so window is always available here.
+  const edgeRects = viewportEdgeRects(window.innerWidth, window.innerHeight);
+
   return (
     <div
-      // Tapping empty canvas space (not a widget — widgets stop this
-      // click via WidgetFrame's own onClick handling) exits edit mode.
+      // Tapping empty canvas space (not a widget) exits edit mode. The
+      // per-widget wrapper below stops propagation on its own onClick
+      // so this handler only ever fires for clicks that land on bare
+      // canvas — without that stop, an ordinary click on a widget
+      // (not a drag, which never emits a trailing click) would bubble
+      // up here and exit edit mode immediately, making it impossible
+      // to interact with a jiggling widget at all.
       onClick={() => isEditing && exitEditMode()}
       style={{ position: "fixed", inset: 0, zIndex: 20, pointerEvents: isEditing ? "auto" : "none" }}
     >
       {WIDGET_IDS.map((id) => {
-        const otherRects = WIDGET_IDS.filter((other) => other !== id).map(rectFor);
+        const otherRects = [...WIDGET_IDS.filter((other) => other !== id).map(rectFor), ...edgeRects];
         return (
-          <div key={id} style={{ pointerEvents: "auto" }}>
+          <div key={id} onClick={(e) => e.stopPropagation()} style={{ pointerEvents: "auto" }}>
             <WidgetFrame id={id} otherRects={otherRects} onGuidesChange={setGuides}>
               {(size) => {
                 if (id === "photo") return <PhotoWidget size={size} />;
@@ -1856,3 +1942,13 @@ git commit -m "feat: wire WidgetCanvas + WidgetLayoutContext into AppShell, remo
 - **Spec coverage:** architecture (Tasks 4, 12), interaction model incl. long-press-suppresses-click (Tasks 5, 6), positioning system incl. grid-snap/guides/exclusion zones (Tasks 2, 4, 6), all 5 widgets' size tiers (Tasks 1, 7-11), motion spec incl. jiggle desync/no-momentum-drag/widgetSnap/reduced-motion (Task 6), error handling incl. storage failures/corrupted entries/viewport clamping (Tasks 3, 4), Reset Layout (Task 12) — every spec section maps to a task.
 - **Type consistency:** `WidgetId`/`WidgetSize` are defined once (`widgetSizeTiers.ts`) and re-exported from `widgetLayoutSchema.ts` rather than redeclared — every later task imports from one of these two places, never both independently.
 - **No placeholders:** every step has runnable code; the only "TBD"-shaped item (exact ClockWidget small-tier font size) is a concrete chosen number (44px) with its derivation shown, in the same spirit as this session's own established practice of choosing a reasoned value and refining visually if needed — not an unresolved gap.
+
+## Post-ship fix (found by actually using it, not caught by any review)
+
+No task in this plan — nor the final whole-branch review, which was diff-only with no live browser — ever actually clicked the resize handle in a real browser. Doing so froze the page. Root cause: `WidgetFrame`'s parent `motion.div` had `drag={isEditing}` unconditionally active for the entire time edit mode was on, including while the resize handle (a child element, tracked via manual pointer capture) was being dragged. `stopPropagation()` on the handle's `onPointerDown` doesn't guarantee Framer Motion's own native drag-gesture recognizer backs off, so Framer's internal drag tracking and the manual resize tracking could both be live on the same pointer at once, fighting over the same x/y motion values on every move.
+
+Fix: added real state (`isResizing`, not just the existing `resizingRef`) that gates the parent's `drag` prop directly — `drag={isEditing && !isResizing}` — set true on the resize handle's `onPointerDown` and false on its `onPointerUp`, guaranteeing Framer's drag gesture is completely off, not just hopefully-suppressed, for the entire duration of a resize. This is the deterministic fix: mutual exclusion between the two gesture systems, not reliance on event-propagation semantics that turned out not to hold.
+
+Also fixed in the same pass: the drag/resize alignment-guide line color was `var(--color-accent)` — this site's own personal-brand orange (#FF4500) — used by mistake for a system-level guide line. Real macOS/Xcode/Interface Builder alignment guides are blue, never tinted with the app's own branding. Changed to `#0A84FF` (systemBlue, the same reference already used for ClockWidget elsewhere in this codebase).
+
+This is the direct, concrete lesson from this plan's own repeated caveat ("no runtime test is possible for this task, no browser/preview tool available") — a diff-only review, no matter how many rounds, cannot catch a bug that only exists in the actual gesture-timing behavior of two competing pointer-event systems in a real browser. It needed a human to actually press the handle.
