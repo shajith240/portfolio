@@ -88,7 +88,14 @@ export default function WidgetCanvas() {
           aria-hidden
           style={{
             position: "fixed",
-            background: "var(--color-accent)",
+            // Apple's systemBlue (#0A84FF), not this site's own
+            // orange brand accent (--color-accent) — a system-level
+            // alignment guide should never be tinted with the app's
+            // own personal branding. This is the same reference blue
+            // Xcode/Interface Builder use for their own alignment
+            // guides, and the same value already used for ClockWidget
+            // elsewhere in this codebase.
+            background: "#0A84FF",
             pointerEvents: "none",
             zIndex: 40,
             ...(guide.axis === "x"
