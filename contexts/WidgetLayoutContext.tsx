@@ -1,7 +1,7 @@
 // contexts/WidgetLayoutContext.tsx
 "use client";
 
-import { createContext, useContext, useCallback, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useShellMetrics } from "@/lib/useShellMetrics";
 import { clampToBounds, type Bounds } from "@/lib/widgetPositioning";
 import { TOP_BOUND, BOTTOM_RESERVE } from "@/contexts/WindowManagerContext";
@@ -165,12 +165,25 @@ export function WidgetLayoutProvider({ children }: { children: ReactNode }) {
     setLayout(defaults);
   }, [metrics.inset]);
 
+  // Memoized — 5 WidgetFrame consumers mount off this one provider,
+  // and a drag/resize updates layout frequently; without this, every
+  // update recreates the value object and re-renders all 5 frames
+  // regardless of which single widget actually changed.
+  // Must be called before the `!layout` early return below (rules of
+  // hooks); `layout` is still `WidgetLayout | null` here from
+  // TypeScript's perspective, so the value's type is asserted back to
+  // WidgetLayoutContextValue — safe because this value is only ever
+  // rendered into the Provider after the early return has already
+  // confirmed layout is non-null.
+  const value = useMemo(
+    () => ({ layout, isEditing, enterEditMode, exitEditMode, updatePosition, updateSize, resetLayout }),
+    [layout, isEditing, enterEditMode, exitEditMode, updatePosition, updateSize, resetLayout]
+  ) as WidgetLayoutContextValue;
+
   if (!layout) return null;
 
   return (
-    <WidgetLayoutContext.Provider
-      value={{ layout, isEditing, enterEditMode, exitEditMode, updatePosition, updateSize, resetLayout }}
-    >
+    <WidgetLayoutContext.Provider value={value}>
       {children}
     </WidgetLayoutContext.Provider>
   );

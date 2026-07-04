@@ -3,6 +3,7 @@
 
 import { useState, useCallback } from "react";
 import { useWidgetLayout } from "@/contexts/WidgetLayoutContext";
+import { TOP_BOUND, BOTTOM_RESERVE } from "@/contexts/WindowManagerContext";
 import { getSizeDimensions } from "@/lib/widgetSizeTiers";
 import type { AlignmentGuide, Rect } from "@/lib/widgetPositioning";
 import type { WidgetId } from "@/lib/widgetLayoutSchema";
@@ -14,6 +15,24 @@ import ClockWidget from "@/components/widgets/ClockWidget";
 import MotivationWidget from "@/components/widgets/MotivationWidget";
 
 const WIDGET_IDS: WidgetId[] = ["photo", "nowPlaying", "aiTools", "clock", "motivation"];
+
+// Zero-width/zero-height sentinel rects representing the four
+// viewport edges a widget can also snap against. computeAlignmentSnap
+// already compares a rect's left/center/right (or top/center/bottom)
+// against another rect's same three lines; a zero-size rect collapses
+// those three lines to one coordinate, which is exactly "this one
+// edge is a snap target." Top/bottom use TOP_BOUND/BOTTOM_RESERVE
+// (the MenuBar/Dock clearance lines) rather than raw 0/viewportHeight,
+// since those are the actual usable-desktop edges widgets are
+// constrained to.
+function viewportEdgeRects(viewportWidth: number, viewportHeight: number): Rect[] {
+  return [
+    { x: 0, y: 0, width: 0, height: viewportHeight }, // left edge
+    { x: viewportWidth, y: 0, width: 0, height: viewportHeight }, // right edge
+    { x: 0, y: TOP_BOUND, width: viewportWidth, height: 0 }, // top edge (below MenuBar)
+    { x: 0, y: viewportHeight - BOTTOM_RESERVE, width: viewportWidth, height: 0 }, // bottom edge (above Dock)
+  ];
+}
 
 export default function WidgetCanvas() {
   const { layout, isEditing, exitEditMode, resetLayout } = useWidgetLayout();
@@ -28,6 +47,12 @@ export default function WidgetCanvas() {
     [layout]
   );
 
+  // Computed once per render (not once per widget inside the map
+  // below) — window dimensions don't change mid-render, and this
+  // component only ever renders after WidgetLayoutProvider's mount
+  // effect has populated layout, so window is always available here.
+  const edgeRects = viewportEdgeRects(window.innerWidth, window.innerHeight);
+
   return (
     <div
       // Tapping empty canvas space (not a widget) exits edit mode. The
@@ -41,7 +66,7 @@ export default function WidgetCanvas() {
       style={{ position: "fixed", inset: 0, zIndex: 20, pointerEvents: isEditing ? "auto" : "none" }}
     >
       {WIDGET_IDS.map((id) => {
-        const otherRects = WIDGET_IDS.filter((other) => other !== id).map(rectFor);
+        const otherRects = [...WIDGET_IDS.filter((other) => other !== id).map(rectFor), ...edgeRects];
         return (
           <div key={id} onClick={(e) => e.stopPropagation()} style={{ pointerEvents: "auto" }}>
             <WidgetFrame id={id} otherRects={otherRects} onGuidesChange={setGuides}>
