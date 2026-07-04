@@ -27,8 +27,20 @@ export const WIDGET_SIZE_TIERS: Record<WidgetId, Partial<Record<WidgetSize, Size
   },
   nowPlaying: {
     small: { width: 155, height: 155 },
-    medium: { width: 260 },
-    large: { width: 260 },
+    // medium/large both have height computed (159/361) rather than
+    // left content-driven — leaving both undefined made them
+    // indistinguishable to nearestSizeTier's width-only comparison
+    // (both 260-wide), so the strict-< tie-break always kept medium,
+    // making large permanently unreachable via the resize handle.
+    // Heights: medium = 16*2 padding + 56 art + 12 gap + 3 scrubber +
+    // 10 gap + 19 controls + 12 gap + 15 volume row = 159. large =
+    // medium (159) + LyricsPanel's own 12px marginTop + its fixed
+    // 190px PANEL_HEIGHT = 361. These are reference values for frame
+    // sizing/resize-matching only — NowPlayingWidget's own card still
+    // renders at its natural content height regardless (its outer
+    // frame has no overflow:hidden clipping it).
+    medium: { width: 260, height: 159 },
+    large: { width: 260, height: 361 },
   },
   aiTools: {
     small: { width: 155, height: 155 },

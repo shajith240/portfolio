@@ -1,4 +1,5 @@
 import { getSizeDimensions, type WidgetId, type WidgetSize } from "./widgetSizeTiers.ts";
+import { WIDGET_GAP } from "./widgetGrid.ts";
 
 export type { WidgetId, WidgetSize };
 
@@ -27,7 +28,6 @@ export interface ShellMetricsInput {
 // because contexts/ isn't reachable from lib/ without a client-only
 // import; kept in sync by the same design-system doc both cite.
 const BOTTOM_RESERVE = 110;
-const WIDGET_GAP = 14;
 
 // Mirrors the exact math DesktopWidgetStack/RightWidgetStack/
 // MotivationWidget used before this feature existed, so a first-time
