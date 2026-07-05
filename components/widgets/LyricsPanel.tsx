@@ -99,29 +99,49 @@ function Word({ word, currentTime }: { word: TimedWord; currentTime: MotionValue
   const y = useTransform(liftSpring, (v) => `${v}em`);
 
   const glowTarget = useTransform(progress, [0, 0.5, 1], [0, 1, 0]);
-  const glow = useSpring(glowTarget, GLOW_SPRING);
-  // drop-shadow, not text-shadow: text-shadow paints over
-  // background-clipped text, drop-shadow follows the glyph alpha.
-  const filter = useTransform(glow, (g) => `drop-shadow(0 0 ${(10 * g).toFixed(1)}px rgba(255, 255, 255, ${(0.5 * g).toFixed(3)}))`);
+  const glowOpacity = useSpring(glowTarget, GLOW_SPRING);
 
   return (
-    <motion.span
-      style={{
-        display: "inline-block",
-        marginRight: "0.3em",
-        backgroundImage,
-        WebkitBackgroundClip: "text",
-        backgroundClip: "text",
-        color: "transparent",
-        scale,
-        y,
-        filter,
-        willChange: "transform, filter",
-        backfaceVisibility: "hidden",
-      }}
-    >
-      {word.text}
-    </motion.span>
+    // The glow is a duplicate glyph layer with a FIXED text-shadow
+    // whose only animated property is opacity — opacity composites on
+    // the GPU, so the halo breathes at 60fps. The first version
+    // animated a drop-shadow() filter string per frame, which forces
+    // a repaint of the word every frame and was the visible jank.
+    // (text-shadow on the transparent-color twin still renders — the
+    // shadow isn't multiplied by the fill alpha.)
+    <span style={{ position: "relative", display: "inline-block", marginRight: "0.3em" }}>
+      <motion.span
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          color: "transparent",
+          textShadow: "0 0 12px rgba(255, 255, 255, 0.55)",
+          opacity: glowOpacity,
+          scale,
+          y,
+          pointerEvents: "none",
+          willChange: "opacity, transform",
+        }}
+      >
+        {word.text}
+      </motion.span>
+      <motion.span
+        style={{
+          display: "inline-block",
+          backgroundImage,
+          WebkitBackgroundClip: "text",
+          backgroundClip: "text",
+          color: "transparent",
+          scale,
+          y,
+          willChange: "transform",
+          backfaceVisibility: "hidden",
+        }}
+      >
+        {word.text}
+      </motion.span>
+    </span>
   );
 }
 
@@ -192,22 +212,35 @@ function LineRow({
   currentTime: MotionValue<number>;
 }) {
   return (
-    <div
+    // Fixed font-size + transform scale, never a font-size
+    // transition: animating font-size relayouts the ENTIRE list every
+    // frame for the whole transition (and fights the scroll spring,
+    // which is re-measuring row offsets) — that was the biggest
+    // source of the "not buttery" feel. Scale is compositor-only.
+    <motion.div
+      animate={{
+        scale: isActive ? 1 : 0.8,
+        opacity: isActive ? 1 : isPast ? 0.28 : 0.4,
+        filter: isActive ? "blur(0px)" : "blur(2.5px)",
+      }}
+      transition={{
+        scale: { type: "spring", stiffness: 320, damping: 30 },
+        opacity: { duration: 0.3, ease: "easeOut" },
+        filter: { duration: 0.3, ease: "easeOut" },
+      }}
       style={{
         textAlign: "center",
-        padding: "6px 10px",
-        fontSize: isActive ? "16px" : "12.5px",
-        fontWeight: isActive ? 700 : 500,
+        padding: "5px 10px",
+        fontSize: "16px",
+        fontWeight: 700,
         lineHeight: 1.4,
         color: isActive ? "var(--text-primary)" : "var(--text-muted)",
-        opacity: isActive ? 1 : isPast ? 0.28 : 0.4,
-        filter: isActive ? "none" : "blur(2.5px)",
-        transform: isActive ? "scale(1)" : "scale(0.88)",
-        transition: "font-size 0.35s ease, color 0.35s ease, opacity 0.35s ease, filter 0.35s ease, transform 0.35s ease",
+        transformOrigin: "center",
+        willChange: "transform",
       }}
     >
       {isActive ? line.words.map((w, i) => <Word key={i} word={w} currentTime={currentTime} />) : line.text}
-    </div>
+    </motion.div>
   );
 }
 
@@ -300,9 +333,9 @@ export default function LyricsPanel({
     const containerCenter = containerRef.current.clientHeight / 2;
     const controls = animate(scrollY, containerCenter - rowCenter, {
       type: "spring",
-      stiffness: 300,
-      damping: 40,
-      mass: 0.9,
+      stiffness: 280,
+      damping: 34,
+      mass: 0.8,
     });
     return () => controls.stop();
   }, [activeIndex, scrollY, items]);

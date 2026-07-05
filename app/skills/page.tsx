@@ -20,34 +20,6 @@ function AppIcon({
   isPhone: boolean
 }) {
   const iconSize = isPhone ? 60 : 64
-  const borderRadius = Math.round(iconSize * 0.22)
-
-  // Brand colors — match real app icon aesthetics
-  const brandColors: Record<string, string> = {
-    javascript: '#F7DF1E',
-    typescript: '#3178C6',
-    python: '#306998',
-    c: '#03599C',
-    java: '#ED8B00',
-    html: '#E34F26',
-    css: '#1572B6',
-    react: '#23272f',
-    nodejs: '#333',
-    git: '#F05032',
-    github: '#24292e',
-    vscode: '#007ACC',
-    docker: '#1D63ED',
-    linux: '#FCC624',
-    N8N: '#FF6B35',
-    mongo_db: '#13AA52',
-    postgres: '#336791',
-    chatgpt: '#00A67E',
-    claude: '#001F3F',
-    gemini_google: '#8B5CF6',
-    anitigravity: '#7C3AED',
-  }
-
-  const bgColor = brandColors[file] || '#666'
 
   return (
     <motion.div
@@ -82,10 +54,8 @@ function AppIcon({
         style={{
           width: iconSize,
           height: iconSize,
-          borderRadius: borderRadius,
           display: 'block',
-          backgroundColor: bgColor,
-          objectFit: 'cover',
+          objectFit: 'contain',
         }}
       />
       <span
