@@ -6,28 +6,28 @@
 
 :root,
 [data-theme="dark"] {
-  /* ── Core backgrounds ──────────────────────────────── */
-  --bg-page:     #000000;   /* true canvas background */
-  --bg-void:     #1a1a1a;   /* panel / sidebar fill */
-  --bg-card:     #242424;   /* card surface */
-  --bg-elevated: #2c2c2c;   /* hover / elevated state */
+  /* ── Core backgrounds (macOS Tahoe dark mode) ──────── */
+  --bg-page:     #1c1c1c;   /* macOS window background color */
+  --bg-void:     #1c1c1c;   /* panel / sidebar fill */
+  --bg-card:     #2a2a2a;   /* elevated control surfaces */
+  --bg-elevated: #2a2a2a;   /* hover / elevated state */
   --bg-hover:    rgba(255, 255, 255, 0.04);
 
   /* ── Borders ───────────────────────────────────────── */
-  --border:        #333333;
+  --border:        rgba(255, 255, 255, 0.10);
   --border-subtle: rgba(255, 255, 255, 0.07);
   --border-strong: rgba(255, 255, 255, 0.12);
 
-  /* ── Accent ────────────────────────────────────────── */
-  --accent: #FF4500;
+  /* ── Accent (System Blue) ──────────────────────────── */
+  --accent: #0a84ff;
 
-  /* ── Text hierarchy ────────────────────────────────── */
-  --text-primary:   #FFFFFF;
-  --text-secondary: #CCCCCC;
-  --text-muted:     #888888;
-  --text-dim:       #555555;
-  --text-ghost:     rgba(255, 255, 255, 0.28);
-  --text-phantom:   rgba(255, 255, 255, 0.18);
+  /* ── Text hierarchy (macOS label opacities) ────────── */
+  --text-primary:   rgba(255, 255, 255, 0.87);
+  --text-secondary: rgba(255, 255, 255, 0.54);
+  --text-muted:     rgba(255, 255, 255, 0.54);
+  --text-dim:       rgba(255, 255, 255, 0.27);
+  --text-ghost:     rgba(255, 255, 255, 0.27);
+  --text-phantom:   rgba(255, 255, 255, 0.11);
 
   /* ── Motion ────────────────────────────────────────── */
   --transition: 150ms ease;
@@ -114,9 +114,9 @@
   --palette-row-hover:    rgba(255, 255, 255, 0.038);
   --palette-row-active:   rgba(255, 255, 255, 0.07);
   --palette-footer-bg:    rgba(0, 0, 0, 0.30);
-  --palette-input-color:  rgba(255, 255, 255, 0.85);
-  --palette-caret:        rgba(255, 69, 0, 0.8);
-  --palette-magnifier:    rgba(255, 255, 255, 0.22);
+  --palette-input-color:  rgba(255, 255, 255, 0.87);
+  --palette-caret:        #0a84ff;
+  --palette-magnifier:    rgba(255, 255, 255, 0.54);
   --palette-hint-label:   rgba(255, 255, 255, 0.18);
   --palette-text-active:  #FFFFFF;
   --palette-text-hover:   rgba(255, 255, 255, 0.92);
@@ -169,9 +169,9 @@
 
   /* ── glass-system.css variables ────────────────────── */
   --glass-page-bg:
-    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(255, 69, 0, 0.04) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(255, 69, 0, 0.03) 0%, transparent 50%),
-    linear-gradient(160deg, #1a1a1a 0%, #161616 40%, #141414 100%);
+    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(10, 132, 255, 0.02) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(10, 132, 255, 0.01) 0%, transparent 50%),
+    linear-gradient(160deg, #1c1c1c 0%, #1c1c1c 40%, #1c1c1c 100%);
   --glass-card-bg:      rgba(255, 255, 255, 0.04);
   --glass-card-border:  rgba(255, 255, 255, 0.08);
   --glass-card-shadow:
@@ -186,11 +186,11 @@
     inset 0 -1px 0 rgba(0, 0, 0, 0.25),
     0 16px 48px rgba(0, 0, 0, 0.50),
     0  4px 12px rgba(0, 0, 0, 0.35);
-  --glass-accent-bg:     rgba(255, 69, 0, 0.08);
-  --glass-accent-border: rgba(255, 69, 0, 0.15);
+  --glass-accent-bg:     rgba(10, 132, 255, 0.12);
+  --glass-accent-border: rgba(10, 132, 255, 0.20);
   --glass-accent-shadow:
-    inset 0 1px 0 rgba(255, 69, 0, 0.12),
-    0  8px 32px rgba(255, 69, 0, 0.08),
+    inset 0 1px 0 rgba(10, 132, 255, 0.15),
+    0  8px 32px rgba(10, 132, 255, 0.08),
     0  2px  8px rgba(0, 0, 0, 0.30);
   --glass-divider-gradient:
     linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 20%, rgba(255, 255, 255, 0.08) 80%, transparent 100%);
@@ -209,8 +209,8 @@
    Warm off-white base (not clinical white) — like high-quality
    paper. Cards float as pure white on warm gray background.
    Shadow system replaces the dark theme's flat/inset aesthetic.
-   Orange accent (#FF4500) is unchanged — reads beautifully on
-   warm white with excellent contrast.
+   Accent is macOS systemBlue (#0a84ff dark / #007AFF-family light)
+   — the orange accent era is fully retired.
    ═══════════════════════════════════════════════════════════════ */
 
 [data-theme="light"] {
@@ -226,8 +226,8 @@
   --border-subtle: rgba(0, 0, 0, 0.06);
   --border-strong: rgba(0, 0, 0, 0.13);
 
-  /* ── Accent ────────────────────────────────────────── */
-  --accent: #FF4500;  /* unchanged — great on warm white */
+  /* ── Accent (System Blue) ──────────────────────────── */
+  --accent: #0a84ff;  /* macOS system blue, consistent across light & dark */
 
   /* ── Text hierarchy ────────────────────────────────── */
   --text-primary:   #0F0F0D;              /* near-black, slightly warm */
@@ -293,8 +293,8 @@
   --palette-row-active:   rgba(0, 0, 0, 0.07);
   --palette-footer-bg:    rgba(0, 0, 0, 0.02);
   --palette-input-color:  #0F0F0D;
-  --palette-caret:        rgba(255, 69, 0, 0.9);
-  --palette-magnifier:    rgba(0, 0, 0, 0.28);
+  --palette-caret:        #0a84ff;
+  --palette-magnifier:    rgba(0, 0, 0, 0.55);
   --palette-hint-label:   rgba(0, 0, 0, 0.18);
   --palette-text-active:  #0F0F0D;
   --palette-text-hover:   rgba(15, 15, 13, 0.88);
@@ -347,8 +347,8 @@
 
   /* ── glass-system.css variables ────────────────────── */
   --glass-page-bg:
-    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(255, 69, 0, 0.03) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(255, 69, 0, 0.02) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 50% at 20% 20%, rgba(10, 132, 255, 0.02) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(10, 132, 255, 0.01) 0%, transparent 50%),
     linear-gradient(160deg, #EEECE8 0%, #E9E6E1 40%, #E5E2DC 100%);
   --glass-card-bg:      rgba(255, 255, 255, 0.78);
   --glass-card-border:  rgba(0, 0, 0, 0.07);
@@ -360,12 +360,12 @@
   --glass-elevated-shadow:
     0  8px 32px rgba(0, 0, 0, 0.10),
     0 0 0 0.5px rgba(0, 0, 0, 0.07);
-  --glass-accent-bg:     rgba(255, 69, 0, 0.06);
-  --glass-accent-border: rgba(255, 69, 0, 0.14);
+  --glass-accent-bg:     rgba(10, 132, 255, 0.08);
+  --glass-accent-border: rgba(10, 132, 255, 0.15);
   --glass-accent-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.60),
-    0 4px 16px rgba(255, 69, 0, 0.08),
-    0 0 0 0.5px rgba(255, 69, 0, 0.14);
+    0 4px 16px rgba(10, 132, 255, 0.08),
+    0 0 0 0.5px rgba(10, 132, 255, 0.15);
   --glass-divider-gradient:
     linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.07) 20%, rgba(0, 0, 0, 0.07) 80%, transparent 100%);
   --glass-tabs-bg:        rgba(0, 0, 0, 0.04);

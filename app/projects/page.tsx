@@ -7,34 +7,36 @@ import { useShellMetrics } from '@/lib/useShellMetrics'
 import { PROJECTS, type Project } from '@/data/projects'
 
 /* ─────────────────────────────────────────────────────────────────
-   Animation config — matches MASTER.md exactly
+   Apple Editorial Motion — fade + rise, butter easing
    ───────────────────────────────────────────────────────────────── */
+
+const EASE_APPLE = [0.32, 0.72, 0, 1] as const
 
 const stagger = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.15 } },
+  show: { transition: { staggerChildren: 0.07 } },
 }
 
 const cardVariant = {
-  hidden: { scale: 0.95, opacity: 0 },
+  hidden: { y: 12, opacity: 0 },
   show: {
-    scale: 1,
+    y: 0,
     opacity: 1,
-    transition: { duration: 0.5, ease: [0, 0, 0.58, 1] as const },
+    transition: { duration: 0.5, ease: EASE_APPLE },
   },
 }
 
 const headerVariant = {
-  hidden: { y: 16, opacity: 0 },
+  hidden: { y: 12, opacity: 0 },
   show: {
     y: 0,
     opacity: 1,
-    transition: { duration: 0.5, ease: [0, 0, 0.58, 1] as const },
+    transition: { duration: 0.5, ease: EASE_APPLE },
   },
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   TechChip — monospace, uppercase, muted, no fill
+   TechChip — Apple pill style, sentence case, frosted background
    ───────────────────────────────────────────────────────────────── */
 
 function TechChip({ label }: { label: string }) {
@@ -42,17 +44,15 @@ function TechChip({ label }: { label: string }) {
     <span
       style={{
         display: 'inline-block',
-        fontSize: '9px',
-        fontWeight: 700,
-        letterSpacing: '0.09em',
-        textTransform: 'uppercase',
-        color: 'var(--text-dim)',
-        background: 'var(--bg-page)',
-        border: '1px solid var(--border)',
-        borderRadius: '4px',
-        padding: '3px 7px',
-        fontFamily: 'ui-monospace, "SF Mono", monospace',
-        transition: 'color 0.22s ease, background 0.22s ease, border-color 0.22s ease',
+        fontSize: '11px',
+        fontWeight: 500,
+        color: 'rgba(255, 255, 255, 0.65)',
+        background: 'rgba(255, 255, 255, 0.08)',
+        border: 'none',
+        borderRadius: '20px',
+        padding: '4px 12px',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        transition: 'background 0.22s ease, color 0.22s ease',
         whiteSpace: 'nowrap',
       }}
     >
@@ -63,7 +63,7 @@ function TechChip({ label }: { label: string }) {
 
 /* ─────────────────────────────────────────────────────────────────
    FeaturedCard — 50/50 editorial split, content left / image right
-   No card-level scale on hover — image zoom carries the interaction
+   Border only on hover, no card scale
    ───────────────────────────────────────────────────────────────── */
 
 function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boolean }) {
@@ -77,81 +77,53 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
       style={{
         display: 'grid',
         gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border)',
-        borderRadius: '10px',
+        background: '#2a2a2a',
+        border: `1px solid ${hovered ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.08)'}`,
+        borderRadius: '18px',
         overflow: 'hidden',
         minHeight: 'clamp(280px, 40vw, 380px)',
-        boxShadow: 'var(--shadow-card)',
-        transition: 'background 0.22s ease, border-color 0.22s ease',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+        transition: 'border-color 0.15s ease-out',
       }}
     >
       {/* Left — content */}
       <div
         style={{
-          padding: isMobile ? '24px' : '36px',
+          padding: isMobile ? '28px' : '32px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          borderRight: isMobile ? 'none' : '1px solid var(--border)',
-          borderBottom: isMobile ? '1px solid var(--border)' : 'none',
+          borderRight: isMobile ? 'none' : `1px solid rgba(255, 255, 255, 0.08)`,
+          borderBottom: isMobile ? `1px solid rgba(255, 255, 255, 0.08)` : 'none',
           transition: 'border-color 0.22s ease',
         }}
       >
         {/* Top */}
         <div>
-          {/* Index / category row */}
+          {/* Category line (clean, no index/decorator) */}
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              marginBottom: '22px',
+              fontSize: '13px',
+              color: 'rgba(255, 255, 255, 0.54)',
+              marginBottom: '12px',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              fontWeight: 400,
+              letterSpacing: 0,
+              transition: 'color 0.22s ease',
             }}
           >
-            <span
-              style={{
-                fontSize: '11px',
-                color: 'var(--text-dim)',
-                fontFamily: 'ui-monospace, "SF Mono", monospace',
-                letterSpacing: '0.02em',
-                transition: 'color 0.22s ease',
-              }}
-            >
-              {String(project.id).padStart(2, '0')}
-            </span>
-            <span
-              style={{
-                width: '20px',
-                height: '1px',
-                background: 'var(--border)',
-                flexShrink: 0,
-                transition: 'background 0.22s ease',
-              }}
-            />
-            <span
-              style={{
-                fontSize: '10px',
-                fontWeight: 700,
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
-                color: '#FF4500',
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-              }}
-            >
-              {project.sub}
-            </span>
+            {project.sub}
           </div>
 
           {/* Title */}
           <h2
             style={{
               margin: '0 0 16px 0',
-              fontSize: '36px',
+              fontSize: '28px',
               fontWeight: 700,
-              color: 'var(--text-primary)',
-              letterSpacing: '-0.025em',
-              lineHeight: 1.05,
+              color: 'white',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.1,
               fontFamily: 'system-ui, -apple-system, sans-serif',
               transition: 'color 0.22s ease',
             }}
@@ -163,11 +135,11 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
           <p
             style={{
               margin: 0,
-              fontSize: isMobile ? '15px' : '13px',
-              color: 'var(--text-muted)',
-              lineHeight: 1.7,
+              fontSize: '15px',
+              color: 'rgba(255, 255, 255, 0.54)',
+              lineHeight: 1.5,
               fontFamily: 'system-ui, -apple-system, sans-serif',
-              maxWidth: isMobile ? 'none' : '300px',
+              maxWidth: '65ch',
               transition: 'color 0.22s ease',
             }}
           >
@@ -181,8 +153,8 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
             style={{
               display: 'flex',
               flexWrap: 'wrap',
-              gap: '6px',
-              marginBottom: '22px',
+              gap: '8px',
+              marginBottom: '20px',
             }}
           >
             {project.tech.map(t => (
@@ -190,24 +162,22 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
             ))}
           </div>
 
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
             {project.github && (
               <a
                 href={project.github}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: hovered ? 'var(--text-primary)' : 'var(--text-muted)',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: '#0a84ff',
                   textDecoration: 'none',
                   fontFamily: 'system-ui, -apple-system, sans-serif',
-                  transition: 'color 0.15s ease',
+                  transition: 'opacity 0.15s ease',
                 }}
               >
-                GitHub →
+                GitHub ›
               </a>
             )}
             {project.live && (
@@ -216,17 +186,15 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: hovered ? 'var(--text-primary)' : 'var(--text-muted)',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: '#0a84ff',
                   textDecoration: 'none',
                   fontFamily: 'system-ui, -apple-system, sans-serif',
-                  transition: 'color 0.15s ease',
+                  transition: 'opacity 0.15s ease',
                 }}
               >
-                Live →
+                Live ↗
               </a>
             )}
           </div>
@@ -237,7 +205,7 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
       <div
         style={{
           overflow: 'hidden',
-          background: 'var(--bg-void)',
+          background: '#1c1c1c',
           position: 'relative',
           minHeight: isMobile ? '200px' : 'clamp(280px, 40vw, 380px)',
         }}
@@ -248,27 +216,15 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
           loading="lazy"
           decoding="async"
           style={{
-            width: '100%',
-            height: '100%',
+            width: 'calc(100% - 24px)',
+            height: 'calc(100% - 24px)',
             objectFit: 'cover',
             display: 'block',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '10px',
             transform: hovered ? 'scale(1.05)' : 'scale(1)',
             transition: 'transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-          }}
-        />
-
-        {/* Subtle inner-left edge shadow to blend content/image boundary */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '40px',
-            height: '100%',
-            background: 'linear-gradient(to right, var(--bg-card), transparent)',
-            pointerEvents: 'none',
-            opacity: hovered ? 0 : 1,
-            transition: 'opacity 0.4s ease',
+            margin: '12px',
           }}
         />
       </div>
@@ -277,7 +233,7 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   GridCard — image top, content bottom, spring scale on hover
+   GridCard — image top, content bottom, border brightens on hover
    ───────────────────────────────────────────────────────────────── */
 
 function GridCard({ project }: { project: Project }) {
@@ -288,27 +244,28 @@ function GridCard({ project }: { project: Project }) {
       variants={cardVariant}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      whileHover={{ scale: 1.02 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       style={{
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border)',
-        borderRadius: '10px',
+        background: '#2a2a2a',
+        border: `1px solid ${hovered ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.08)'}`,
+        borderRadius: '18px',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: 'var(--shadow-card)',
-        transition: 'background 0.22s ease, border-color 0.22s ease',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
+        transition: 'border-color 0.15s ease-out',
       }}
     >
       {/* Image */}
       <div
         style={{
-          width: '100%',
+          width: 'calc(100% - 20px)',
           aspectRatio: '16 / 10',
           overflow: 'hidden',
-          background: 'var(--bg-void)',
+          background: '#1c1c1c',
           flexShrink: 0,
+          margin: '10px',
+          borderRadius: '10px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
         <img
@@ -330,64 +287,34 @@ function GridCard({ project }: { project: Project }) {
       {/* Content */}
       <div
         style={{
-          padding: '16px 18px 20px',
+          padding: '20px',
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
         }}
       >
-        {/* Index + category */}
+        {/* Category line */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '10px',
+            fontSize: '13px',
+            color: 'rgba(255, 255, 255, 0.54)',
+            marginBottom: '8px',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontWeight: 400,
+            letterSpacing: 0,
+            transition: 'color 0.22s ease',
           }}
         >
-          <span
-            style={{
-              fontSize: '10px',
-              color: 'var(--text-dim)',
-              fontFamily: 'ui-monospace, "SF Mono", monospace',
-              letterSpacing: '0.02em',
-              transition: 'color 0.22s ease',
-            }}
-          >
-            {String(project.id).padStart(2, '0')}
-          </span>
-          <span
-            style={{
-              fontSize: '9px',
-              fontWeight: 700,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: hovered ? '#FF4500' : 'var(--text-dim)',
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-              transition: 'color 0.15s ease',
-            }}
-          >
-            {project.sub}
-          </span>
+          {project.sub}
         </div>
-
-        {/* Divider */}
-        <div
-          style={{
-            height: '1px',
-            background: 'var(--border)',
-            marginBottom: '12px',
-            transition: 'background 0.22s ease',
-          }}
-        />
 
         {/* Title */}
         <h3
           style={{
             margin: '0 0 8px 0',
-            fontSize: '17px',
+            fontSize: '18px',
             fontWeight: 700,
-            color: 'var(--text-primary)',
+            color: 'white',
             letterSpacing: '-0.02em',
             lineHeight: 1.2,
             fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -401,9 +328,9 @@ function GridCard({ project }: { project: Project }) {
         <p
           style={{
             margin: '0 0 16px 0',
-            fontSize: '12px',
-            color: 'var(--text-muted)',
-            lineHeight: 1.6,
+            fontSize: '14px',
+            color: 'rgba(255, 255, 255, 0.54)',
+            lineHeight: 1.5,
             fontFamily: 'system-ui, -apple-system, sans-serif',
             flex: 1,
             transition: 'color 0.22s ease',
@@ -417,7 +344,7 @@ function GridCard({ project }: { project: Project }) {
           style={{
             display: 'flex',
             flexWrap: 'wrap',
-            gap: '5px',
+            gap: '6px',
             marginBottom: '14px',
             alignItems: 'center',
           }}
@@ -428,10 +355,9 @@ function GridCard({ project }: { project: Project }) {
           {project.tech.length > 3 && (
             <span
               style={{
-                fontSize: '9px',
-                color: 'var(--text-dim)',
-                fontFamily: 'ui-monospace, "SF Mono", monospace',
-                letterSpacing: '0.04em',
+                fontSize: '11px',
+                color: 'rgba(255, 255, 255, 0.54)',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
                 transition: 'color 0.22s ease',
               }}
             >
@@ -441,24 +367,22 @@ function GridCard({ project }: { project: Project }) {
         </div>
 
         {/* CTAs */}
-        <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
           {project.github && (
             <a
               href={project.github}
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: hovered ? 'var(--text-primary)' : 'var(--text-muted)',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: '#0a84ff',
                 textDecoration: 'none',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
-                transition: 'color 0.15s ease',
+                transition: 'opacity 0.15s ease',
               }}
             >
-              GitHub →
+              GitHub ›
             </a>
           )}
           {project.live && (
@@ -467,17 +391,15 @@ function GridCard({ project }: { project: Project }) {
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: hovered ? 'var(--text-primary)' : 'var(--text-muted)',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: '#0a84ff',
                 textDecoration: 'none',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
-                transition: 'color 0.15s ease',
+                transition: 'opacity 0.15s ease',
               }}
             >
-              Live →
+              Live ↗
             </a>
           )}
         </div>
@@ -529,55 +451,23 @@ export default function ProjectsPage() {
             variants={headerVariant}
             initial="hidden"
             animate="show"
-            style={{ marginBottom: '36px' }}
+            style={{ marginBottom: '32px' }}
           >
-            {/* Title row */}
-            <div
+            {/* Title */}
+            <h1
               style={{
-                display: 'flex',
-                alignItems: 'baseline',
-                justifyContent: 'space-between',
-                marginBottom: '14px',
+                margin: '0 0 8px 0',
+                fontSize: '40px',
+                fontWeight: 700,
+                color: 'white',
+                letterSpacing: '-0.02em',
+                lineHeight: 1.0,
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+                transition: 'color 0.22s ease',
               }}
             >
-              <h1
-                style={{
-                  margin: 0,
-                  fontSize: '38px',
-                  fontWeight: 700,
-                  color: 'var(--text-primary)',
-                  letterSpacing: '-0.025em',
-                  lineHeight: 1.0,
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                  transition: 'color 0.22s ease',
-                }}
-              >
-                Projects
-              </h1>
-              <span
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  color: 'var(--text-dim)',
-                  fontFamily: 'ui-monospace, "SF Mono", monospace',
-                  transition: 'color 0.22s ease',
-                }}
-              >
-                {String(PROJECTS.length).padStart(2, '0')} selected
-              </span>
-            </div>
-
-            {/* Hairline divider */}
-            <div
-              style={{
-                height: '1px',
-                background: 'var(--border)',
-                marginBottom: '14px',
-                transition: 'background 0.22s ease',
-              }}
-            />
+              Projects
+            </h1>
 
             {/* Subtitle + GitHub link */}
             <div
@@ -585,13 +475,14 @@ export default function ProjectsPage() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                gap: '20px',
               }}
             >
               <p
                 style={{
                   margin: 0,
-                  fontSize: '13px',
-                  color: 'var(--text-dim)',
+                  fontSize: '15px',
+                  color: 'rgba(255, 255, 255, 0.54)',
                   fontFamily: 'system-ui, -apple-system, sans-serif',
                   lineHeight: 1.5,
                   transition: 'color 0.22s ease',
@@ -604,17 +495,16 @@ export default function ProjectsPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: 'var(--text-muted)',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: '#0a84ff',
                   textDecoration: 'none',
                   fontFamily: 'system-ui, -apple-system, sans-serif',
-                  transition: 'color 0.15s ease',
+                  transition: 'opacity 0.15s ease',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                All repos →
+                All repos ›
               </a>
             </div>
           </motion.div>
@@ -624,7 +514,7 @@ export default function ProjectsPage() {
             variants={stagger}
             initial="hidden"
             animate="show"
-            style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
           >
             {/* Featured — full width, editorial split (stacks on mobile) */}
             {featured && <FeaturedCard project={featured} isMobile={isPhone} />}
@@ -639,7 +529,7 @@ export default function ProjectsPage() {
                     : isTabletLayout
                     ? 'repeat(2, 1fr)'
                     : 'repeat(3, 1fr)',
-                  gap: '16px',
+                  gap: '24px',
                 }}
               >
                 {grid.map(p => (
@@ -657,7 +547,7 @@ export default function ProjectsPage() {
             style={{
               marginTop: '48px',
               paddingTop: '24px',
-              borderTop: '1px solid var(--border)',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -668,17 +558,15 @@ export default function ProjectsPage() {
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '0.10em',
-                textTransform: 'uppercase',
-                color: 'var(--text-dim)',
+                fontSize: '13px',
+                fontWeight: 500,
+                color: '#0a84ff',
                 textDecoration: 'none',
                 fontFamily: 'system-ui, -apple-system, sans-serif',
-                transition: 'color 0.15s ease',
+                transition: 'opacity 0.15s ease',
               }}
             >
-              View all 19 repos on GitHub →
+              View all repos on GitHub ›
             </a>
           </motion.div>
 

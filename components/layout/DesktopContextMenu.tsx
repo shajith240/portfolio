@@ -40,7 +40,7 @@ function MenuItem({
         cursor: disabled ? "default" : "pointer",
       }}
       onMouseEnter={(e) => {
-        if (!disabled) e.currentTarget.style.background = "rgba(255, 69, 0, 0.18)";
+        if (!disabled) e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.background = "transparent";

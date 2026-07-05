@@ -185,7 +185,7 @@ function NavOverlay({ onClose }: { onClose: () => void }) {
                     style={{
                       fontSize: 22,
                       fontWeight: 600,
-                      color: isActive ? "#FF4500" : "var(--text-primary)",
+                      color: isActive ? "#0a84ff" : "var(--text-primary)",
                       letterSpacing: "-0.01em",
                       fontFamily: "system-ui, -apple-system, sans-serif",
                       transition: "color 0.22s ease",
@@ -197,7 +197,7 @@ function NavOverlay({ onClose }: { onClose: () => void }) {
                     <span
                       style={{
                         fontSize: 12,
-                        color: isActive ? "#FF4500" : "var(--text-dim)",
+                        color: isActive ? "#0a84ff" : "var(--text-dim)",
                         fontFamily: "ui-monospace, 'SF Mono', monospace",
                         transition: "color 0.22s ease",
                       }}
@@ -209,7 +209,7 @@ function NavOverlay({ onClose }: { onClose: () => void }) {
                         width: 6,
                         height: 6,
                         borderRadius: "50%",
-                        background: "#FF4500",
+                        background: "#0a84ff",
                         flexShrink: 0,
                       }} />
                     )}
@@ -317,8 +317,8 @@ export default function MobileTabBar() {
                         inset: 3,
                         borderRadius: 13,
                         background: isDarkTheme
-                          ? "rgba(255, 69, 0, 0.12)"
-                          : "rgba(255, 69, 0, 0.08)",
+                          ? "rgba(10, 132, 255, 0.12)"
+                          : "rgba(10, 132, 255, 0.08)",
                         zIndex: -1,
                         transition: "background 0.22s ease",
                       }}
@@ -333,7 +333,7 @@ export default function MobileTabBar() {
                     }
                     transition={SPRINGS.iconActivate}
                     style={{
-                      color: isActive ? "#FF4500" : "var(--text-dim)",
+                      color: isActive ? "#0a84ff" : "var(--text-dim)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -348,7 +348,7 @@ export default function MobileTabBar() {
                     style={{
                       fontSize: 10,
                       fontWeight: isActive ? 600 : 500,
-                      color: isActive ? "#FF4500" : "var(--text-dim)",
+                      color: isActive ? "#0a84ff" : "var(--text-dim)",
                       letterSpacing: "0.01em",
                       lineHeight: 1,
                       transition: "color 0.15s ease",

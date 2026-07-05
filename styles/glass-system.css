@@ -71,7 +71,7 @@
 }
 
 .glass-tab-active {
-  background: #FF4500;
+  background: #0a84ff; /* macOS systemBlue (dark) — accent, no orange anywhere */
   color: white;
   border-radius: 999px;
   padding: 7px 20px;
@@ -80,7 +80,7 @@
   border: none;
   outline: none;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(255, 69, 0, 0.4);
+  box-shadow: 0 2px 8px rgba(10, 132, 255, 0.4);
   font-family: system-ui, -apple-system, 'Helvetica Neue', sans-serif;
   display: flex;
   align-items: center;

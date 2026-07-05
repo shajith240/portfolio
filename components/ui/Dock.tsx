@@ -300,7 +300,7 @@ export default function Dock() {
                     width: "4px",
                     height: "4px",
                     borderRadius: "50%",
-                    background: "#FF4500",
+                    background: "#0a84ff",
                   }}
                 />
               )}

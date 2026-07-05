@@ -93,7 +93,11 @@ const TrafficLight = ({
           transition: "background 0.1s ease",
         }}
       >
-        <span style={{ opacity: hovered && showColor ? 1 : 0, display: "flex" }}>
+        {/* Real macOS shows ALL THREE glyphs the moment the cursor
+            hovers anywhere over the button cluster — not just the
+            glyph under the cursor. That's why this reads
+            groupHovered, not this button's own hover state. */}
+        <span style={{ opacity: groupHovered && showColor ? 1 : 0, display: "flex", transition: "opacity 0.1s ease" }}>
           {hoverGlyph}
         </span>
       </span>
@@ -101,14 +105,22 @@ const TrafficLight = ({
   );
 };
 
+/* Glyphs are dark TINTS of each button's own color (never a shared
+   black) — close ≈ deep red, minimize ≈ deep amber, zoom ≈ deep
+   green — and the zoom glyph is two opposing expand triangles, not
+   an arrow or a plus. [Confirmed across Big Sur–Sequoia.] */
 const CloseGlyph = () => (
-  <svg width="7" height="7" viewBox="0 0 8 8"><path d="M1 1L7 7M7 1L1 7" stroke="rgba(0,0,0,0.55)" strokeWidth="1.2" strokeLinecap="round" /></svg>
+  <svg width="8" height="8" viewBox="0 0 8 8"><path d="M1.5 1.5L6.5 6.5M6.5 1.5L1.5 6.5" stroke="#4D0000" strokeWidth="1.1" strokeLinecap="round" /></svg>
 );
 const MinimizeGlyph = () => (
-  <svg width="7" height="7" viewBox="0 0 8 8"><path d="M1 4H7" stroke="rgba(0,0,0,0.55)" strokeWidth="1.2" strokeLinecap="round" /></svg>
+  <svg width="8" height="8" viewBox="0 0 8 8"><path d="M1.2 4H6.8" stroke="#995700" strokeWidth="1.4" strokeLinecap="round" /></svg>
 );
 const ZoomGlyph = () => (
-  <svg width="6" height="6" viewBox="0 0 8 8"><path d="M1 5L5 1M5 1H2M5 1V4" stroke="rgba(0,0,0,0.55)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  <svg width="8" height="8" viewBox="0 0 8 8">
+    {/* two right triangles pointing into opposite corners */}
+    <path d="M1.2 3.6 V6.8 H4.4 Z" fill="#006400" />
+    <path d="M6.8 4.4 V1.2 H3.6 Z" fill="#006400" />
+  </svg>
 );
 
 export default function Window({ win, active }: { win: WindowState; active: boolean }) {

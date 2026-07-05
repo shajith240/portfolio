@@ -80,7 +80,7 @@ export default function AboutPage() {
                 style={{
                   margin: "4px 0 0 0",
                   fontSize: isPhone ? "14px" : "13px",
-                  color: "#FF4500",
+                  color: "rgba(255, 255, 255, 0.54)",
                   lineHeight: 1.2,
                 }}
               >
