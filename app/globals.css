@@ -22,9 +22,13 @@ html, body {
 body {
   background: var(--bg-page);
   color: var(--text-primary);
-  font-family: system-ui, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
   margin: 0;
   transition: background 0.22s ease, color 0.22s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.011em;
 }
 
 /* Performance: skip rendering off-screen sections */
@@ -40,6 +44,42 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* macOS-style overlay scrollbars — thin, floating, transparent track */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 7px;
+  border: 4px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+  background-clip: padding-box;
+  border: 4px solid transparent;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
 }
 
 /* Hide scrollbar on main canvas */
@@ -108,4 +148,20 @@ body {
   .glass-hero-refraction {
     backdrop-filter: url(#liquid-glass-refraction) blur(var(--glass-blur-regular)) saturate(var(--glass-saturate));
   }
+}
+
+/* Selection and focus styling — macOS-inspired */
+::selection {
+  background: rgba(10, 132, 255, 0.35);
+  color: inherit;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(10, 132, 255, 0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
 }

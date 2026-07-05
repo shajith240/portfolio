@@ -4,6 +4,10 @@
    Light/dark switching happens automatically via data-theme on <html>.
    ═══════════════════════════════════════════════════════════════ */
 
+:root {
+  --wallpaper-tint-rgb: 120, 120, 130;
+}
+
 /* ── PAGE BACKGROUND ── */
 .glass-page {
   min-height: 100%;
@@ -21,7 +25,7 @@
 /* ── GLASS CARD ── */
 /* Apple material — adapts: dark glass / light frosted card */
 .glass-card {
-  background: var(--glass-card-bg);
+  background: linear-gradient(rgba(var(--wallpaper-tint-rgb), 0.07), rgba(var(--wallpaper-tint-rgb), 0.07)), var(--glass-card-bg);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-radius: 18px;
@@ -31,7 +35,7 @@
 
 /* ── GLASS CARD — ELEVATED (hero/featured cards) ── */
 .glass-card-elevated {
-  background: var(--glass-elevated-bg);
+  background: linear-gradient(rgba(var(--wallpaper-tint-rgb), 0.07), rgba(var(--wallpaper-tint-rgb), 0.07)), var(--glass-elevated-bg);
   backdrop-filter: blur(20px) saturate(150%);
   -webkit-backdrop-filter: blur(20px) saturate(150%);
   border-radius: 20px;
@@ -41,7 +45,7 @@
 
 /* ── GLASS CARD — ACCENT (orange-tinted) ── */
 .glass-card-accent {
-  background: var(--glass-accent-bg);
+  background: linear-gradient(rgba(var(--wallpaper-tint-rgb), 0.07), rgba(var(--wallpaper-tint-rgb), 0.07)), var(--glass-accent-bg);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border-radius: 18px;
@@ -59,7 +63,7 @@
 
 /* ── TAB BAR ── */
 .glass-tabs {
-  background: var(--glass-tabs-bg);
+  background: linear-gradient(rgba(var(--wallpaper-tint-rgb), 0.07), rgba(var(--wallpaper-tint-rgb), 0.07)), var(--glass-tabs-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-tabs-border);

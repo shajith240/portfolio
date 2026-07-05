@@ -190,6 +190,9 @@ export default function Window({ win, active }: { win: WindowState; active: bool
   // Play the "genie" open animation once, from the triggering Dock icon —
   // starts fully collapsed (genieProgress 1) and unfurls to a full
   // rectangle (0), reversing the same funnel the minimize animation uses.
+  // If no Dock icon is available, use the standard macOS window open animation:
+  // scale 0.92 → 1 with opacity 0 → 1, transformOrigin "center 60%", with a
+  // decelerating ease (not springy).
   useEffect(() => {
     const iconRect = getDockIconRect(win.route);
     if (iconRect) {
@@ -214,6 +217,13 @@ export default function Window({ win, active }: { win: WindowState; active: bool
         onComplete: () => setClipActive(false),
       });
     } else {
+      // Standard macOS window open: scale 0.92 → 1 with opacity 0 → 1,
+      // using a decelerating ease curve (Tahoe style, not springy).
+      const OPEN_TWEEN = { duration: 0.32, ease: [0.32, 0.72, 0, 1] } as const;
+      scale.set(0.92);
+      opacity.set(0);
+      animate(scale, 1, OPEN_TWEEN);
+      animate(opacity, 1, OPEN_TWEEN);
       setClipActive(false);
     }
     // Only on mount — this is the window's one-time launch animation.
@@ -258,6 +268,13 @@ export default function Window({ win, active }: { win: WindowState; active: bool
     });
   };
 
+  const handleClose = () => {
+    // Trigger window close: the exit animation is handled by Framer Motion's
+    // exit prop and AnimatePresence in the parent. closeWindow removes the
+    // window from state, which unmounts this component and plays the exit.
+    closeWindow(win.id);
+  };
+
   return (
     <motion.div
       ref={rootRef}
@@ -269,6 +286,11 @@ export default function Window({ win, active }: { win: WindowState; active: bool
       dragConstraints={{ left: dragBounds.minX, right: dragBounds.maxX, top: dragBounds.minY, bottom: dragBounds.maxY }}
       onDragEnd={() => updateBounds(win.id, { x: x.get(), y: y.get() })}
       onPointerDown={() => bringToFront(win.id)}
+      exit={{ scale: 0.96, opacity: 0 }}
+      transition={{
+        scale: { duration: 0.16, ease: [0.6, 0.1, 0.84, 0.1] },
+        opacity: { duration: 0.16, ease: [0.6, 0.1, 0.84, 0.1] },
+      }}
       style={{
         position: "fixed",
         top: 0,
@@ -346,7 +368,7 @@ export default function Window({ win, active }: { win: WindowState; active: bool
             color="#FF5F57"
             grayColor="rgba(255, 255, 255, 0.10)"
             hoverGlyph={<CloseGlyph />}
-            onClick={() => closeWindow(win.id)}
+            onClick={handleClose}
             title="Close"
             active={active}
             groupHovered={lightsHovered}

@@ -45,7 +45,7 @@ const CASCADE_WRAP = 6; // after this many cascades, restart near the top-left
 const MIN_VISIBLE_X = 120;
 // Exported alongside BOTTOM_RESERVE — WidgetLayoutContext reuses both
 // rather than picking its own MenuBar/Dock clearance values.
-export const TOP_BOUND = 30;
+export const TOP_BOUND = 26;
 // Exported — this is the single source of truth for "how much space to
 // leave clear above the Dock" on this desktop. Any fixed-position
 // element that needs to stay clear of the Dock (desktop widgets, not
