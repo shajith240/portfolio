@@ -9,7 +9,8 @@ import type { WidgetId } from "@/lib/widgetLayoutSchema";
 import WidgetFrame from "@/components/widgets/WidgetFrame";
 import PhotoWidget from "@/components/widgets/PhotoWidget";
 import NowPlayingWidget from "@/components/widgets/NowPlayingWidget";
-import AIToolsWidget from "@/components/widgets/AIToolsWidget";
+import GitHubHeatmapWidget from "@/components/widgets/GitHubHeatmapWidget";
+// Keep widget id as "aiTools" to maintain stored layouts; render the new widget for it
 import LocationWidget from "@/components/widgets/LocationWidget";
 import MotivationWidget from "@/components/widgets/MotivationWidget";
 
@@ -50,7 +51,7 @@ export default function WidgetCanvas() {
               {(size) => {
                 if (id === "photo") return <PhotoWidget size={size} />;
                 if (id === "nowPlaying") return <NowPlayingWidget size={size} />;
-                if (id === "aiTools") return <AIToolsWidget size={size} />;
+                if (id === "aiTools") return <GitHubHeatmapWidget size={size} />;
                 if (id === "location") return <LocationWidget size={size} />;
                 return <MotivationWidget size={size} />;
               }}
