@@ -23,20 +23,38 @@ export interface TimedLine {
 // doesn't contain.
 const FALLBACK_LAST_LINE_DURATION = 4;
 
+/* The line's time budget (gap to the next timestamp) is NOT how long
+   the line is actually sung — singers finish early and the remainder
+   is breath/instrumental. Spreading words across the whole gap (the
+   previous behavior) made late words light up seconds after they were
+   sung. So the sung window is estimated with a delivery-rate model —
+   chars-per-second plus a per-word constant for inter-word gaps —
+   and capped by the real gap. Pop vocal delivery averages ~10–13
+   chars/sec; 11 splits the difference for ballads vs upbeat. */
+const CHARS_PER_SECOND = 11;
+const PER_WORD_PAUSE = 0.06; // breath/consonant gap between words
+const MAX_GAP_FRACTION = 0.95; // last word must land before the next line
+
 export function computeWordTimings(lines: LyricLine[]): TimedLine[] {
   return lines.map((line, i) => {
     const nextTime = lines[i + 1]?.time ?? line.time + FALLBACK_LAST_LINE_DURATION;
-    const duration = Math.max(0.1, nextTime - line.time);
+    const gap = Math.max(0.1, nextTime - line.time);
 
     const words = line.text.split(/\s+/).filter(Boolean);
     const totalChars = words.reduce((sum, w) => sum + w.length, 0) || 1;
 
+    const estimated = totalChars / CHARS_PER_SECOND + words.length * PER_WORD_PAUSE;
+    const singDuration = Math.min(gap * MAX_GAP_FRACTION, estimated);
+
+    // Weight = chars + 2 so one-letter words ("a", "I") still get an
+    // audible slice instead of a near-zero one.
+    const totalWeight = words.reduce((sum, w) => sum + w.length + 2, 0) || 1;
+
     let cursor = line.time;
     const timedWords: TimedWord[] = words.map((word) => {
-      const share = word.length / totalChars;
-      const wordDuration = duration * share;
+      const share = (word.length + 2) / totalWeight;
       const start = cursor;
-      const end = cursor + wordDuration;
+      const end = cursor + singDuration * share;
       cursor = end;
       return { text: word, start, end };
     });

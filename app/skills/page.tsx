@@ -11,57 +11,54 @@ import { CATEGORIES } from '@/data/skills'
 function AppIcon({
   name,
   file,
-  dimmed,
   index,
   isPhone,
 }: {
   name: string
   file: string
-  dimmed: boolean
   index: number
   isPhone: boolean
 }) {
-  const iconSize = isPhone ? 60 : 80
-  const wrapSize = isPhone ? 72 : 96
+  const iconSize = isPhone ? 60 : 64
+  const borderRadius = Math.round(iconSize * 0.22)
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.65 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{
-        delay: index * 0.025,
-        type: 'spring',
-        stiffness: 360,
-        damping: 28,
+        delay: index * 0.015,
+        duration: 0.35,
+        ease: 'easeOut',
       }}
       style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 7,
-        width: wrapSize,
+        gap: 8,
+        cursor: 'pointer',
+        userSelect: 'none',
+        WebkitTapHighlightColor: 'transparent',
       }}
     >
       <motion.div
-        whileHover={dimmed ? {} : { scale: 1.15, y: -6 }}
-        whileTap={dimmed  ? {} : { scale: 0.88 }}
+        whileTap={{ scale: 0.92 }}
         transition={{
           type: 'spring',
-          stiffness: 580,
-          damping: 38,
-          mass: 0.75,
+          stiffness: 360,
+          damping: 28,
+          mass: 0.8,
         }}
         style={{
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
-          gap: 7,
-          cursor: dimmed ? 'default' : 'pointer',
-          userSelect: 'none',
-          WebkitTapHighlightColor: 'transparent',
-          width: '100%',
-          opacity: dimmed ? 0.18 : 1,
-          transition: 'opacity 0.18s ease',
+          justifyContent: 'center',
+          width: iconSize,
+          height: iconSize,
+          borderRadius: borderRadius,
+          background: 'rgba(255, 255, 255, 0.08)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.35)',
         }}
       >
         <img
@@ -69,30 +66,28 @@ function AppIcon({
           alt={name}
           draggable={false}
           style={{
-            borderRadius: isPhone ? 14 : 18,
-            width: iconSize,
-            height: iconSize,
+            width: Math.round(iconSize * 0.65),
+            height: Math.round(iconSize * 0.65),
             display: 'block',
-            objectFit: 'cover',
+            objectFit: 'contain',
           }}
         />
-        <span
-          style={{
-            fontSize: 11,
-            color: 'var(--text-secondary)',
-            textAlign: 'center',
-            width: '100%',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            textShadow: 'var(--icon-text-shadow)',
-            fontWeight: 400,
-            letterSpacing: '0.01em',
-          }}
-        >
-          {name}
-        </span>
       </motion.div>
+      <span
+        style={{
+          fontSize: 12,
+          color: 'rgba(255, 255, 255, 0.85)',
+          textAlign: 'center',
+          maxWidth: iconSize + 20,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          fontWeight: 500,
+          letterSpacing: 0,
+        }}
+      >
+        {name}
+      </span>
     </motion.div>
   )
 }
@@ -100,33 +95,21 @@ function AppIcon({
 /* ── Page ────────────────────────────────────────────────── */
 
 export default function SkillsPage() {
-  const { isMobileLayout, isTabletLayout, isSearchOpen } = useLayout()
+  const { isMobileLayout, isTabletLayout } = useLayout()
   const metrics = useShellMetrics()
-  const [search, setSearch] = useState('')
-  const searchRef = useRef<HTMLInputElement>(null)
 
   const ml = metrics.contentLeft
   const mr = metrics.contentRight
-  const q = search.toLowerCase().trim()
   const isPhone = isMobileLayout && !isTabletLayout
 
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setSearch(''); return }
-      // Don't steal focus when command palette is open
-      if (isSearchOpen) return
-      if (
-        e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey &&
-        document.activeElement !== searchRef.current
-      ) {
-        searchRef.current?.focus()
-      }
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [isSearchOpen])
-
   let iconIndex = 0
+
+  // Responsive grid columns
+  const getGridCols = () => {
+    if (isPhone) return 'repeat(4, 1fr)'
+    if (isTabletLayout) return 'repeat(5, 1fr)'
+    return 'repeat(6, 1fr)'
+  }
 
   return (
     <>
@@ -203,97 +186,72 @@ export default function SkillsPage() {
         >
           <div
             style={{
-              maxWidth: 860,
+              maxWidth: 980,
               margin: '0 auto',
-              padding: `0 clamp(16px, 4vw, 48px) 80px`,
+              padding: `40px clamp(32px, 4vw, 40px) 80px`,
             }}
           >
-            {/* Search bar — glass style matching macOS App Library */}
+            {/* Page header */}
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.35, ease: 'easeOut' }}
-              style={{ display: 'flex', justifyContent: 'center', marginTop: 32, marginBottom: 48 }}
+              style={{ marginBottom: 48 }}
             >
-              <div style={{ position: 'relative', width: 'min(280px, calc(100vw - 64px))', isolation: 'isolate' }}>
-                <svg
-                  width={14} height={14} viewBox="0 0 14 14"
-                  fill="none"
-                  stroke="var(--search-glass-icon)"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{
-                    position: 'absolute', left: 12, top: '50%',
-                    transform: 'translateY(-50%)', pointerEvents: 'none',
-                    zIndex: 1,
-                  }}
-                >
-                  <circle cx="6" cy="6" r="4.5" />
-                  <line x1="9.5" y1="9.5" x2="13" y2="13" />
-                </svg>
-                <input
-                  ref={searchRef}
-                  autoFocus={!isPhone}
-                  type="text"
-                  placeholder="Search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  style={{
-                    width: '100%',
-                    height: 36,
-                    background: 'var(--search-glass-bg)',
-                    border: '1px solid var(--search-glass-border)',
-                    borderRadius: 10,
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    color: 'var(--text-primary)',
-                    fontSize: 14,
-                    padding: '0 12px 0 36px',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    fontFamily: 'system-ui, -apple-system, Helvetica Neue, sans-serif',
-                    transition: 'background 0.22s ease, border-color 0.22s ease',
-                  }}
-                />
-              </div>
+              <h1
+                style={{
+                  fontSize: 34,
+                  fontWeight: 700,
+                  color: 'rgba(255, 255, 255, 0.87)',
+                  margin: 0,
+                  marginBottom: 12,
+                }}
+              >
+                Skills
+              </h1>
+              <p
+                style={{
+                  fontSize: 15,
+                  color: 'rgba(255, 255, 255, 0.54)',
+                  margin: 0,
+                }}
+              >
+                Technologies and tools I work with
+              </p>
             </motion.div>
 
-            {/* Categories */}
+            {/* Categories with Launchpad grid */}
             {CATEGORIES.map((cat) => (
-              <div key={cat.label} style={{ marginBottom: 44 }}>
-                <div
+              <div key={cat.label} style={{ marginBottom: 52 }}>
+                <h2
                   style={{
-                    fontSize: 11,
-                    color: 'var(--text-muted)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.14em',
-                    fontWeight: 500,
-                    marginBottom: 20,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: 'rgba(255, 255, 255, 0.55)',
+                    margin: 0,
+                    marginBottom: 12,
+                    textTransform: 'none',
+                    letterSpacing: 0,
                   }}
                 >
                   {cat.label}
-                </div>
+                </h2>
 
                 <div
                   style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '24px 4px',
+                    display: 'grid',
+                    gridTemplateColumns: getGridCols(),
+                    rowGap: '28px',
+                    columnGap: '8px',
                   }}
                 >
                   {cat.icons.map((icon) => {
-                    const matches =
-                      !q ||
-                      icon.name.toLowerCase().includes(q) ||
-                      icon.search.includes(q)
                     const idx = iconIndex++
                     return (
                       <AppIcon
                         key={icon.file}
                         name={icon.name}
                         file={icon.file}
-                        dimmed={!!q && !matches}
                         index={idx}
                         isPhone={isPhone}
                       />
@@ -305,10 +263,6 @@ export default function SkillsPage() {
           </div>
         </div>
       </motion.div>
-
-      <style>{`
-        input::placeholder { color: var(--text-dim); }
-      `}</style>
     </>
   )
 }
