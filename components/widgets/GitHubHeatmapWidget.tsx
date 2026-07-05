@@ -15,6 +15,11 @@ interface GitHubResponse {
   contributions: ContributionDay[];
 }
 
+interface MonthLabel {
+  weekIndex: number;
+  label: string;
+}
+
 // Cache contributions client-side to prevent refetch on re-mount
 let cachedContributions: ContributionDay[] | null = null;
 let cachePromise: Promise<ContributionDay[]> | null = null;
@@ -37,10 +42,10 @@ const ENTRANCE_SPRING = {
   restDelta: 0.01,
 } as const;
 
-// Calculate how many weeks fit in the available width
-// Cell: 10px, gap: 3px, stride: 13px = (innerWidth + 3) / 13
-function weeksToShow(width: number): number {
-  return Math.floor((width + 3) / 13);
+// Target weeks per tier: most recent weeks only
+// small: 10 weeks (127px), medium/large: 18 weeks (231px)
+function targetWeeks(size: WidgetSize): number {
+  return size === "small" ? 10 : 18;
 }
 
 // Fetch contributions for shajith240
@@ -67,6 +72,55 @@ async function fetchContributions(): Promise<ContributionDay[]> {
   return cachePromise;
 }
 
+// Compute month labels for the grid using GitHub's collision rules
+// Label appears above the first week-column of a new month
+// Skip if within 2 columns of previous label or if it's the first column and next label would crowd it
+function computeMonthLabels(
+  weekChunks: ContributionDay[][],
+): MonthLabel[] {
+  if (weekChunks.length === 0) return [];
+
+  const labels: MonthLabel[] = [];
+  let lastLabelWeek = -Infinity;
+
+  for (let weekIdx = 0; weekIdx < weekChunks.length; weekIdx++) {
+    const week = weekChunks[weekIdx];
+    if (week.length === 0) continue;
+
+    // Get the first day with a valid date in this week
+    const firstDayWithDate = week.find((day) => day.date);
+    if (!firstDayWithDate) continue;
+
+    const currentMonth = new Date(firstDayWithDate.date).getMonth();
+
+    // Check if this week's month differs from previous week's month
+    const prevWeek = weekIdx > 0 ? weekChunks[weekIdx - 1] : null;
+    let prevMonth = -1;
+    if (prevWeek) {
+      const prevDayWithDate = prevWeek.find((day) => day.date);
+      if (prevDayWithDate) {
+        prevMonth = new Date(prevDayWithDate.date).getMonth();
+      }
+    }
+
+    // Only add label if month changed (or it's the first week with a valid date)
+    if (currentMonth !== prevMonth) {
+      // Apply GitHub's collision rule: skip if within 2 columns of last label
+      // or if this is column 0 and next label would be too close
+      const tooClose = weekIdx - lastLabelWeek <= 2;
+      if (!tooClose) {
+        const monthLabel = new Intl.DateTimeFormat("en-US", {
+          month: "short",
+        }).format(new Date(firstDayWithDate.date));
+        labels.push({ weekIndex: weekIdx, label: monthLabel });
+        lastLabelWeek = weekIdx;
+      }
+    }
+  }
+
+  return labels;
+}
+
 export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
   const [contributions, setContributions] = useState<ContributionDay[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,19 +138,12 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
   const CELL_GAP = 3;
   const CELL_STRIDE = CELL_SIZE + CELL_GAP; // 13
 
-  // Calculate available inner width based on tier
-  // small: 170, medium: 354, large: 354
-  // Subtract padding to get usable area
-  const innerWidth =
-    size === "small" ? 170 - 2 * 14 : size === "medium" ? 354 - 2 * 14 : 354 - 2 * 14;
+  // Target weeks for this size tier (most recent only)
+  const targetWeek = targetWeeks(size);
 
-  const weeks = weeksToShow(innerWidth);
-  const gridWidth = weeks * CELL_STRIDE - CELL_GAP; // Last stride doesn't have trailing gap
-
-  // Get most recent `weeks` number of contributions, sorted chronologically
-  // (API returns recent first, so reverse to get oldest-to-newest within our window)
+  // Get most recent targetWeek * 7 contributions (latest weeks first in API order, then reverse)
   const recentContributions = contributions
-    .slice(0, weeks * 7) // Max cells we could render (7 rows × weeks)
+    .slice(0, targetWeek * 7) // Max cells we need (7 rows × target weeks)
     .reverse(); // Chronological order (oldest first)
 
   // Build a week-by-week grid: each week is a column of 7 days (Sun-Sat)
@@ -106,17 +153,36 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
   }
 
   // Pad weeks with empty days (level 0) if needed to fill the expected grid
-  while (weekChunks.length < weeks) {
+  while (weekChunks.length < targetWeek) {
     weekChunks.push(Array(7).fill(null).map(() => ({ date: "", count: 0, level: 0 as const })));
   }
 
-  // Center grid vertically for large (354×354 with 88px tall grid)
-  const innerHeight = size === "large" ? 354 - 2 * 14 : 170 - 2 * 14;
-  const gridHeight = 7 * CELL_STRIDE - CELL_GAP;
-  const verticalPadding =
-    size === "large" ? Math.max(0, (innerHeight - gridHeight) / 2) : 0;
+  // Compute month labels (GitHub-style collision detection)
+  const monthLabels = computeMonthLabels(weekChunks);
 
-  // Center grid horizontally
+  // Grid dimensions based on exact target weeks
+  const gridWidth = targetWeek * CELL_STRIDE - CELL_GAP; // Last stride doesn't have trailing gap
+  const gridHeight = 7 * CELL_STRIDE - CELL_GAP;
+
+  // Label row dimensions
+  const LABEL_HEIGHT = 13;
+  const LABEL_GAP = 4;
+
+  // Calculate available inner width/height based on tier
+  // small: 170, medium: 354, large: 354
+  // Subtract padding to get usable area
+  const innerWidth =
+    size === "small" ? 170 - 2 * 14 : size === "medium" ? 354 - 2 * 14 : 354 - 2 * 14;
+  const innerHeight = size === "large" ? 354 - 2 * 14 : 170 - 2 * 14;
+
+  // Total height includes labels + gap + grid
+  const totalContentHeight = LABEL_HEIGHT + LABEL_GAP + gridHeight;
+
+  // Center grid + labels unit vertically for large
+  const verticalPadding =
+    size === "large" ? Math.max(0, (innerHeight - totalContentHeight) / 2) : 0;
+
+  // Center horizontally
   const horizontalPadding = Math.max(0, (innerWidth - gridWidth) / 2);
 
   return (
@@ -138,42 +204,77 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
         boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
       }}
     >
-      <svg
-        viewBox={`0 0 ${gridWidth} ${gridHeight}`}
-        width={gridWidth}
-        height={gridHeight}
+      <div
         style={{
-          display: "block",
+          position: "relative",
+          width: gridWidth,
           marginLeft: `${horizontalPadding}px`,
           marginTop: `${verticalPadding}px`,
           marginBottom: `${verticalPadding}px`,
         }}
       >
-        {weekChunks.map((week, weekIdx) =>
-          week.map((day, dayIdx) => {
-            const x = weekIdx * CELL_STRIDE;
-            const y = dayIdx * CELL_STRIDE;
-            const level = day.level;
-            const color = LEVEL_COLORS[level];
+        {/* Month labels row (absolutely positioned above grid) */}
+        <div
+          style={{
+            position: "relative",
+            height: LABEL_HEIGHT,
+            marginBottom: `${LABEL_GAP}px`,
+          }}
+        >
+          {monthLabels.map(({ weekIndex, label }) => (
+            <span
+              key={`label-${weekIndex}`}
+              style={{
+                position: "absolute",
+                left: `${weekIndex * CELL_STRIDE}px`,
+                top: 0,
+                fontSize: "9px",
+                fontWeight: 400,
+                color: "#7d8590",
+                lineHeight: `${LABEL_HEIGHT}px`,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {label}
+            </span>
+          ))}
+        </div>
 
-            return (
-              <rect
-                key={`${weekIdx}-${dayIdx}`}
-                x={x}
-                y={y}
-                width={CELL_SIZE}
-                height={CELL_SIZE}
-                fill={color}
-                rx={2}
-                style={{
-                  outline: "1px solid rgba(255, 255, 255, 0.04)",
-                  outlineOffset: "-1px",
-                }}
-              />
-            );
-          })
-        )}
-      </svg>
+        {/* Contribution grid */}
+        <svg
+          viewBox={`0 0 ${gridWidth} ${gridHeight}`}
+          width={gridWidth}
+          height={gridHeight}
+          style={{
+            display: "block",
+          }}
+        >
+          {weekChunks.map((week, weekIdx) =>
+            week.map((day, dayIdx) => {
+              const x = weekIdx * CELL_STRIDE;
+              const y = dayIdx * CELL_STRIDE;
+              const level = day.level;
+              const color = LEVEL_COLORS[level];
+
+              return (
+                <rect
+                  key={`${weekIdx}-${dayIdx}`}
+                  x={x}
+                  y={y}
+                  width={CELL_SIZE}
+                  height={CELL_SIZE}
+                  fill={color}
+                  rx={2}
+                  style={{
+                    outline: "1px solid rgba(255, 255, 255, 0.04)",
+                    outlineOffset: "-1px",
+                  }}
+                />
+              );
+            })
+          )}
+        </svg>
+      </div>
     </motion.div>
   );
 }
