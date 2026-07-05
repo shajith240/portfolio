@@ -128,6 +128,13 @@ export default function Window({ win, active }: { win: WindowState; active: bool
   const dragControls = useDragControls();
   const rootRef = useRef<HTMLDivElement>(null);
   const [lightsHovered, setLightsHovered] = useState(false);
+  // While the window is being dragged, the content iframe must stop
+  // receiving pointer events AND stop being interactive — a live
+  // iframe under a moving cursor both swallows the pointer stream
+  // (drag freezes when the cursor crosses it) and forces content
+  // repaints mid-drag. This is the standard fix, same as every
+  // window-manager-in-the-browser does it.
+  const [dragging, setDragging] = useState(false);
   // clip-path takes precedence over border-radius for clipping a
   // element's own children (border-radius still governs the border/
   // box-shadow, which is why this bug only ever showed up as a faint
@@ -284,7 +291,11 @@ export default function Window({ win, active }: { win: WindowState; active: bool
       dragMomentum={false}
       dragElastic={0}
       dragConstraints={{ left: dragBounds.minX, right: dragBounds.maxX, top: dragBounds.minY, bottom: dragBounds.maxY }}
-      onDragEnd={() => updateBounds(win.id, { x: x.get(), y: y.get() })}
+      onDragStart={() => setDragging(true)}
+      onDragEnd={() => {
+        setDragging(false);
+        updateBounds(win.id, { x: x.get(), y: y.get() });
+      }}
       onPointerDown={() => bringToFront(win.id)}
       exit={{ scale: 0.96, opacity: 0 }}
       transition={{
@@ -415,7 +426,7 @@ export default function Window({ win, active }: { win: WindowState; active: bool
         <iframe
           src={`${win.route}${win.route.includes("?") ? "&" : "?"}__window=1`}
           title={win.title}
-          style={{ flex: 1, border: "none", background: "var(--bg-page)" }}
+          style={{ flex: 1, border: "none", background: "var(--bg-page)", pointerEvents: dragging ? "none" : "auto" }}
         />
       )}
       </div>

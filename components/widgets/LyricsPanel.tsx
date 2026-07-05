@@ -32,8 +32,6 @@ import { computeWordTimings, type TimedLine, type TimedWord } from "@/lib/lyrics
    delivery-rate model (plain LRC has line stamps only — see that
    file for why the sung window is estimated, not gap-filled). */
 
-const PANEL_HEIGHT = 190;
-
 /* Small sync lead: LRC stamps mark vocal onset and the wipe follows
    currentTime directly now, so only render latency needs absorbing —
    not animation ramp time like the previous opacity design. */
@@ -345,11 +343,15 @@ export default function LyricsPanel({
   if (!items) return null;
 
   return (
+    // Fills whatever the host gives it (the widget's flex:1 region)
+    // instead of a hardcoded height — the centering math reads
+    // clientHeight, so the active line sits in the true middle of
+    // the available area at every widget size. A fixed 190px here
+    // left the panel top-anchored inside taller hosts.
     <div
       ref={containerRef}
       style={{
-        marginTop: "12px",
-        height: `${PANEL_HEIGHT}px`,
+        height: "100%",
         overflow: "hidden",
         position: "relative",
         WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 24%, black 76%, transparent 100%)",

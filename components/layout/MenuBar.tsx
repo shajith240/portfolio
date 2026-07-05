@@ -1,195 +1,249 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
 
-/* macOS menu bar — Tahoe dark mode. Passive UI, no dropdowns.
-   26px fixed bar at top, below widgets/windows but above Spotlight overlay.
-   Left: ⌘ icon (about), "Shajith", menu items (File/Edit/View/Go/Window/Help)
-   Right: Wi-Fi, Battery, Clock (date + time, 30s update interval)
-   Hides on mobile (<768px). */
+/* macOS menu bar — Tahoe dark mode, and every item WORKS. No fake
+   File/Edit menus, no decorative glyphs: the bar is real navigation
+   for the portfolio, in real macOS anatomy.
+
+   - 24px bar, glass material, hairline bottom border.
+   - Left: "Shajith" (bold app-name slot) with a dropdown (About,
+     GitHub/LinkedIn/LeetCode, source), then "Go" (opens each page as
+     a window — Finder's own Go menu is the model) and "Contact".
+   - Menu behavior is real macOS: click opens, hovering another title
+     while one is open switches to it, Escape/outside click closes,
+     menu rows highlight with the system-blue fill.
+   - Right: Wi-Fi + battery glyphs and the clock in Apple's exact
+     menu-bar format: "Sun Jul 5  12:10 PM" — one line, no comma. */
+
+const BAR_HEIGHT = 24;
+const ACCENT = "#0a84ff";
+
+type MenuEntry = { label: string; action: () => void } | "separator";
+
+function formatMenuClock(d: Date): string {
+  const wd = d.toLocaleDateString("en-US", { weekday: "short" });
+  const mo = d.toLocaleDateString("en-US", { month: "short" });
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  return `${wd} ${mo} ${d.getDate()} ${time}`;
+}
+
+const WifiGlyph = () => (
+  <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+    <path d="M1.6 4.2a9.2 9.2 0 0 1 12.8 0" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" strokeLinecap="round" />
+    <path d="M4 6.8a5.6 5.6 0 0 1 8 0" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" strokeLinecap="round" />
+    <circle cx="8" cy="10" r="1.5" fill="rgba(255,255,255,0.9)" />
+  </svg>
+);
+
+const BatteryGlyph = () => (
+  <svg width="26" height="12" viewBox="0 0 26 12" fill="none">
+    <rect x="0.5" y="0.5" width="21" height="11" rx="3" stroke="rgba(255,255,255,0.45)" />
+    <path d="M23 4v4a2 2 0 0 0 1.3-2A2 2 0 0 0 23 4Z" fill="rgba(255,255,255,0.45)" />
+    <rect x="2" y="2" width="14.5" height="8" rx="1.6" fill="rgba(255,255,255,0.9)" />
+  </svg>
+);
+
+function MenuDropdown({ entries, onClose }: { entries: MenuEntry[]; onClose: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{ duration: 0.12, ease: [0, 0, 0.58, 1] }}
+      style={{
+        position: "absolute",
+        top: "calc(100% + 5px)",
+        left: 0,
+        minWidth: "216px",
+        padding: "5px",
+        borderRadius: "10px",
+        background: "rgba(30, 30, 32, 0.72)",
+        backdropFilter: "blur(50px) saturate(180%)",
+        WebkitBackdropFilter: "blur(50px) saturate(180%)",
+        border: "1px solid rgba(255, 255, 255, 0.10)",
+        boxShadow: "0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06)",
+        transformOrigin: "top left",
+        zIndex: 10,
+      }}
+    >
+      {entries.map((entry, i) =>
+        entry === "separator" ? (
+          <div key={i} style={{ height: "1px", background: "rgba(255, 255, 255, 0.12)", margin: "5px 10px" }} />
+        ) : (
+          <MenuRow key={i} entry={entry} onClose={onClose} />
+        ),
+      )}
+    </motion.div>
+  );
+}
+
+function MenuRow({ entry, onClose }: { entry: Exclude<MenuEntry, "separator">; onClose: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={() => {
+        onClose();
+        entry.action();
+      }}
+      style={{
+        display: "block",
+        width: "100%",
+        textAlign: "left",
+        padding: "4px 10px",
+        borderRadius: "6px",
+        border: "none",
+        fontSize: "13px",
+        fontWeight: 400,
+        lineHeight: "18px",
+        color: "rgba(255, 255, 255, 0.92)",
+        // Real macOS menus fill hovered rows with the accent, no fade.
+        background: hovered ? ACCENT : "transparent",
+        cursor: "default",
+      }}
+    >
+      {entry.label}
+    </button>
+  );
+}
 
 export default function MenuBar() {
-  const { isMobileLayout, isTabletLayout } = useLayout();
+  const { isMobileLayout } = useLayout();
   const { openWindow } = useWindowManager();
-  const [time, setTime] = useState<string>("");
-  const [date, setDate] = useState<string>("");
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [clock, setClock] = useState("");
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const barRef = useRef<HTMLDivElement>(null);
 
-  const isPhone = isMobileLayout && !isTabletLayout;
-
-  // Update clock every 30 seconds
   useEffect(() => {
-    if (isPhone) return;
+    const update = () => setClock(formatMenuClock(new Date()));
+    update();
+    const id = setInterval(update, 15_000);
+    return () => clearInterval(id);
+  }, []);
 
-    const updateTime = () => {
-      const now = new Date();
-      const dateFormatter = new Intl.DateTimeFormat("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-      });
-      const timeFormatter = new Intl.DateTimeFormat("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      });
-      setDate(dateFormatter.format(now));
-      setTime(timeFormatter.format(now));
+  // Escape and outside-click both dismiss, like real menus.
+  useEffect(() => {
+    if (!openMenu) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenMenu(null);
     };
+    const onPointer = (e: PointerEvent) => {
+      if (barRef.current && !barRef.current.contains(e.target as Node)) setOpenMenu(null);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onPointer);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onPointer);
+    };
+  }, [openMenu]);
 
-    updateTime(); // Set initial values
-    const interval = setInterval(updateTime, 30000);
-    return () => clearInterval(interval);
-  }, [isPhone]);
+  if (isMobileLayout) return null;
 
-  const handleAboutClick = useCallback(() => {
-    openWindow("/about", "About");
-  }, [openWindow]);
+  const external = (url: string) => () => window.open(url, "_blank", "noopener,noreferrer");
 
-  // Hide on mobile
-  if (isPhone) return null;
-
-  const menuItems = ["File", "Edit", "View", "Go", "Window", "Help"];
+  const menus: { title: string; bold?: boolean; entries: MenuEntry[] }[] = [
+    {
+      title: "Shajith",
+      bold: true,
+      entries: [
+        { label: "About This Portfolio", action: () => openWindow("/about", "About") },
+        "separator",
+        { label: "GitHub", action: external("https://github.com/shajith240") },
+        { label: "LinkedIn", action: external("https://www.linkedin.com/in/shajith240") },
+        { label: "LeetCode", action: external("https://leetcode.com/shajith240") },
+        "separator",
+        { label: "View Source", action: external("https://github.com/shajith240/portfolio") },
+      ],
+    },
+    {
+      title: "Go",
+      entries: [
+        { label: "About", action: () => openWindow("/about", "About") },
+        { label: "Projects", action: () => openWindow("/projects", "Projects") },
+        { label: "Skills", action: () => openWindow("/skills", "Skills") },
+        { label: "DSA", action: () => openWindow("/dsa", "DSA") },
+        { label: "Notes", action: () => openWindow("/notes", "Notes") },
+        { label: "Uses", action: () => openWindow("/uses", "Uses") },
+      ],
+    },
+    {
+      title: "Contact",
+      entries: [
+        { label: "Email Me", action: external("mailto:shajith240@gmail.com") },
+        "separator",
+        { label: "GitHub", action: external("https://github.com/shajith240") },
+        { label: "LinkedIn", action: external("https://www.linkedin.com/in/shajith240") },
+      ],
+    },
+  ];
 
   return (
     <div
+      ref={barRef}
       style={{
         position: "fixed",
         top: 0,
         left: 0,
         right: 0,
-        height: "26px",
-        zIndex: 99, // Below CommandPalette (100/101), above everything else
+        height: `${BAR_HEIGHT}px`,
+        zIndex: 99,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        paddingLeft: "13px",
-        paddingRight: "13px",
-        background: "rgba(22, 22, 24, 0.55)",
-        backdropFilter: "blur(24px) saturate(180%)",
-        WebkitBackdropFilter: "blur(24px) saturate(180%)",
+        padding: "0 16px 0 10px",
+        background: "rgba(18, 18, 20, 0.5)",
+        backdropFilter: "blur(30px) saturate(180%)",
+        WebkitBackdropFilter: "blur(30px) saturate(180%)",
         borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
-        fontFamily: "system-ui, -apple-system, sans-serif",
+        fontSize: "13px",
+        color: "rgba(255, 255, 255, 0.92)",
+        userSelect: "none",
       }}
     >
-      {/* Left side menu items */}
-      <div style={{ display: "flex", alignItems: "center", gap: "0px" }}>
-        {/* App icon / mark — opens About window */}
-        <button
-          onClick={handleAboutClick}
-          style={{
-            border: "none",
-            color: "rgba(255, 255, 255, 0.9)",
-            fontSize: "15px",
-            lineHeight: 1,
-            cursor: "default",
-            padding: "0 8px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: "4px",
-            transition: "background 120ms ease-out",
-            background: hoveredItem === "icon" ? "rgba(255, 255, 255, 0.12)" : "transparent",
-          }}
-          onMouseEnter={() => setHoveredItem("icon")}
-          onMouseLeave={() => setHoveredItem(null)}
-          aria-label="About"
-        >
-          ⌘
-        </button>
-
-        {/* App name */}
-        <div
-          style={{
-            fontSize: "13px",
-            fontWeight: 700,
-            color: "rgba(255, 255, 255, 0.9)",
-            paddingLeft: "0px",
-            paddingRight: "8px",
-          }}
-        >
-          Shajith
-        </div>
-
-        {/* Menu items — no-op buttons (passive bar) */}
-        {menuItems.map((item) => (
-          <button
-            key={item}
-            style={{
-              border: "none",
-              color: "rgba(255, 255, 255, 0.9)",
-              fontSize: "13px",
-              fontWeight: 400,
-              cursor: "default",
-              padding: "0 8px",
-              borderRadius: "4px",
-              transition: "background 120ms ease-out",
-              background: hoveredItem === item ? "rgba(255, 255, 255, 0.12)" : "transparent",
-            }}
-            onMouseEnter={() => setHoveredItem(item)}
-            onMouseLeave={() => setHoveredItem(null)}
-          >
-            {item}
-          </button>
-        ))}
+      <div style={{ display: "flex", alignItems: "center", height: "100%" }}>
+        {menus.map((menu) => {
+          const isOpen = openMenu === menu.title;
+          return (
+            <div key={menu.title} style={{ position: "relative", height: "100%" }}>
+              <button
+                onClick={() => setOpenMenu(isOpen ? null : menu.title)}
+                // Real macOS: once any menu is open, gliding across
+                // the titles switches menus without another click.
+                onMouseEnter={() => {
+                  if (openMenu && !isOpen) setOpenMenu(menu.title);
+                }}
+                style={{
+                  height: "100%",
+                  padding: "0 10px",
+                  border: "none",
+                  borderRadius: "5px",
+                  fontSize: "13px",
+                  fontWeight: menu.bold ? 600 : 400,
+                  color: "rgba(255, 255, 255, 0.92)",
+                  background: isOpen ? "rgba(255, 255, 255, 0.18)" : "transparent",
+                  cursor: "default",
+                }}
+              >
+                {menu.title}
+              </button>
+              <AnimatePresence>
+                {isOpen && <MenuDropdown entries={menu.entries} onClose={() => setOpenMenu(null)} />}
+              </AnimatePresence>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Right side: Wi-Fi, Battery, Clock */}
-      <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-        {/* Wi-Fi icon — 15px inline SVG */}
-        <svg
-          width="15"
-          height="15"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="rgba(255, 255, 255, 0.85)"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          style={{ flexShrink: 0 }}
-        >
-          <path d="M5 12.55a11 11 0 0 1 14.08 0" />
-          <path d="M1.42 9a16 16 0 0 1 21.16 0" />
-          <path d="M9 20h6" />
-          <circle cx="12" cy="16" r="1" />
-        </svg>
-
-        {/* Battery icon — ~22×11, ~80% fill */}
-        <svg
-          width="22"
-          height="11"
-          viewBox="0 0 22 11"
-          fill="none"
-          stroke="rgba(255, 255, 255, 0.85)"
-          strokeWidth="1"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          style={{ flexShrink: 0 }}
-        >
-          {/* Battery outline */}
-          <rect x="0.5" y="0.5" width="19" height="10" rx="2" ry="2" fill="none" />
-          {/* Nipple on right */}
-          <rect x="20" y="3" width="1.5" height="5" rx="0.5" ry="0.5" fill="rgba(255, 255, 255, 0.85)" />
-          {/* Fill ~80% */}
-          <rect x="1.5" y="1.5" width="15.2" height="8" rx="1" ry="1" fill="rgba(255, 255, 255, 0.85)" />
-        </svg>
-
-        {/* Clock: date (Sat Jul 5) and time (11:32 AM) — updates every 30s */}
-        <div
-          style={{
-            fontSize: "13px",
-            fontWeight: 400,
-            color: "rgba(255, 255, 255, 0.9)",
-            minWidth: "90px",
-            textAlign: "right",
-            lineHeight: 1.2,
-          }}
-        >
-          <div>{date}</div>
-          <div>{time}</div>
-        </div>
+      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <WifiGlyph />
+        <BatteryGlyph />
+        <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{clock}</span>
       </div>
     </div>
   );

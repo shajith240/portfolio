@@ -141,20 +141,39 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
   // Target weeks for this size tier (most recent only)
   const targetWeek = targetWeeks(size);
 
-  // Get most recent targetWeek * 7 contributions (latest weeks first in API order, then reverse)
-  const recentContributions = contributions
-    .slice(0, targetWeek * 7) // Max cells we need (7 rows × target weeks)
-    .reverse(); // Chronological order (oldest first)
-
-  // Build a week-by-week grid: each week is a column of 7 days (Sun-Sat)
-  const weekChunks: ContributionDay[][] = [];
-  for (let i = 0; i < recentContributions.length; i += 7) {
-    weekChunks.push(recentContributions.slice(i, i + 7));
+  // The API returns days in CHRONOLOGICAL order (oldest → newest).
+  // Build Sunday-aligned week columns exactly like GitHub does — a
+  // column is Sun..Sat, the last (current) week is padded with empty
+  // trailing cells — then keep the most recent N columns. The first
+  // version assumed newest-first data and sliced from the front,
+  // which showed last year's oldest months in reverse (Nov → Jul).
+  const emptyDay = (): ContributionDay => ({ date: "", count: 0, level: 0 as const });
+  const allWeeks: ContributionDay[][] = [];
+  let currentWeek: ContributionDay[] = [];
+  for (const day of contributions) {
+    // "YYYY-MM-DD" parses as UTC midnight; getUTCDay gives the
+    // calendar weekday without local-timezone drift.
+    const dow = new Date(day.date).getUTCDay();
+    if (dow === 0 && currentWeek.length > 0) {
+      allWeeks.push(currentWeek);
+      currentWeek = [];
+    }
+    if (currentWeek.length === 0 && allWeeks.length === 0 && dow !== 0) {
+      // Very first week may start mid-week — pad its leading days.
+      currentWeek = Array.from({ length: dow }, emptyDay);
+    }
+    currentWeek.push(day);
   }
+  if (currentWeek.length > 0) {
+    while (currentWeek.length < 7) currentWeek.push(emptyDay());
+    allWeeks.push(currentWeek);
+  }
+  let weekChunks = allWeeks.slice(-targetWeek);
 
-  // Pad weeks with empty days (level 0) if needed to fill the expected grid
+  // Pad (prepend) empty weeks if there isn't enough data yet, so the
+  // grid is always full and the newest week stays on the RIGHT.
   while (weekChunks.length < targetWeek) {
-    weekChunks.push(Array(7).fill(null).map(() => ({ date: "", count: 0, level: 0 as const })));
+    weekChunks = [Array.from({ length: 7 }, emptyDay), ...weekChunks];
   }
 
   // Compute month labels (GitHub-style collision detection)
@@ -257,18 +276,19 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
               const color = LEVEL_COLORS[level];
 
               return (
+                // stroke, not CSS outline — outline is not a valid
+                // SVG presentation property; GitHub's own cells use a
+                // hairline stroke for the keyline.
                 <rect
                   key={`${weekIdx}-${dayIdx}`}
-                  x={x}
-                  y={y}
-                  width={CELL_SIZE}
-                  height={CELL_SIZE}
+                  x={x + 0.5}
+                  y={y + 0.5}
+                  width={CELL_SIZE - 1}
+                  height={CELL_SIZE - 1}
                   fill={color}
                   rx={2}
-                  style={{
-                    outline: "1px solid rgba(255, 255, 255, 0.04)",
-                    outlineOffset: "-1px",
-                  }}
+                  stroke="rgba(255, 255, 255, 0.04)"
+                  strokeWidth={1}
                 />
               );
             })
