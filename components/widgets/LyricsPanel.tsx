@@ -31,9 +31,22 @@ import { computeWordTimings, type TimedLine, type TimedWord } from "@/lib/lyrics
 
 const PANEL_HEIGHT = 190;
 
+/* Highlight leads the audio slightly: LRC stamps mark vocal onset,
+   but the visual ramp itself takes time, so without a lead the word
+   only LOOKS lit after the singer has moved on. Apple Music's
+   karaoke highlight runs marginally ahead for the same reason. */
+const SYNC_LEAD = 0.15;
+
 function Word({ word, currentTime }: { word: TimedWord; currentTime: MotionValue<number> }) {
-  const opacity = useTransform(currentTime, [word.start, word.end], [0.3, 1], { clamp: true });
-  const blurPx = useTransform(currentTime, [word.start, word.end], [6, 0], { clamp: true });
+  // A word must be fully bright near its ONSET, not its end — the
+  // ramp starts a hair early and completes within 0.25s (or the
+  // word's own duration if shorter). Previously the ramp spanned
+  // [start, end], so every word finished lighting up only after it
+  // had already been sung.
+  const rampStart = word.start - 0.08;
+  const rampEnd = Math.min(word.end, word.start + 0.25);
+  const opacity = useTransform(currentTime, [rampStart, rampEnd], [0.3, 1], { clamp: true });
+  const blurPx = useTransform(currentTime, [rampStart, rampEnd], [6, 0], { clamp: true });
   const filter = useTransform(blurPx, (b) => `blur(${b}px)`);
 
   return (
@@ -120,10 +133,11 @@ export default function LyricsPanel({
       if (!alive) return;
       const audio = audioRef.current;
       if (audio) {
-        currentTime.set(audio.currentTime);
+        const led = audio.currentTime + SYNC_LEAD;
+        currentTime.set(led);
         let idx = -1;
         for (let i = 0; i < lines.length; i++) {
-          if (lines[i].time <= audio.currentTime) idx = i;
+          if (lines[i].time <= led) idx = i;
           else break;
         }
         setActiveIndex((prev) => (prev !== idx ? idx : prev));

@@ -222,8 +222,6 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
             display: 'block',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: '10px',
-            transform: hovered ? 'scale(1.05)' : 'scale(1)',
-            transition: 'transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
             margin: '12px',
           }}
         />
@@ -278,8 +276,6 @@ function GridCard({ project }: { project: Project }) {
             height: '100%',
             objectFit: 'cover',
             display: 'block',
-            transform: hovered ? 'scale(1.06)' : 'scale(1)',
-            transition: 'transform 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
           }}
         />
       </div>
