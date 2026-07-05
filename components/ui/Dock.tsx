@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useState, useRef, useCallback, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useShellMetrics } from "@/lib/useShellMetrics";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
@@ -119,6 +119,8 @@ export default function Dock() {
   const [scales, setScales] = useState<number[]>(() => DOCK_ITEMS.map(() => MIN_SCALE));
   const [positions, setPositions] = useState<number[]>(() => positionsFromScales(DOCK_ITEMS.map(() => MIN_SCALE)));
   const [bounced, setBounced] = useState<number | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const bounceControlsRef = useRef<Record<number, any>>({});
 
   const dockRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | undefined>(undefined);
@@ -167,13 +169,36 @@ export default function Dock() {
 
   const handleClick = useCallback(
     (href: string, label: string, index: number, isFinder: boolean, external?: string) => {
-      setBounced(index);
-      setTimeout(() => setBounced(null), 200);
-      if (external) window.open(external, "_blank", "noopener,noreferrer");
-      else if (isFinder) openFinder();
-      else openWindow(href, label);
+      // Check if window is already open
+      const isOpen = windows.some((w) => w.route === href);
+
+      if (external) {
+        // External links always open in new tab, no bounce
+        window.open(external, "_blank", "noopener,noreferrer");
+      } else if (isFinder) {
+        // Check if Finder is already open
+        const finderOpen = windows.some((w) => w.route === "finder");
+        if (!finderOpen) {
+          // Trigger bounce animation
+          setBounced(index);
+          setTimeout(() => setBounced(null), 700);
+          openFinder();
+        } else {
+          openFinder();
+        }
+      } else {
+        // Regular app window
+        if (!isOpen) {
+          // Trigger bounce animation
+          setBounced(index);
+          setTimeout(() => setBounced(null), 700);
+          openWindow(href, label);
+        } else {
+          openWindow(href, label);
+        }
+      }
     },
-    [openWindow, openFinder]
+    [openWindow, openFinder, windows]
   );
 
   // Single source of truth for the pill's own width — derived from the
@@ -260,6 +285,8 @@ export default function Dock() {
               <div
               ref={(el) => registerDockIconEl(item.href, el)}
               onClick={() => handleClick(item.href, item.label, i, item.isFinder, item.external)}
+              onMouseEnter={() => setHoveredIndex(i)}
+              onMouseLeave={() => setHoveredIndex(null)}
               title={item.label}
               style={{
                 position: "absolute",
@@ -272,8 +299,12 @@ export default function Dock() {
               }}
             >
               <motion.div
-                animate={bounced === i ? { y: [-0, -8, 0] } : { y: 0 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                animate={bounced === i ? { y: [0, -14, 0, -7, 0] } : { y: 0 }}
+                transition={{
+                  duration: 0.7,
+                  ease: "easeOut",
+                  times: [0, 0.25, 0.5, 0.75, 1],
+                }}
                 style={{
                   width: "100%",
                   height: "100%",
@@ -288,22 +319,68 @@ export default function Dock() {
                 />
               </motion.div>
 
-              {/* Active route indicator — a plain dot, matching real
-                  macOS Dock convention for open/active apps. */}
-              {isActive && (
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: "-8px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: "4px",
-                    height: "4px",
-                    borderRadius: "50%",
-                    background: "#0a84ff",
-                  }}
-                />
-              )}
+              {/* Running-app indicator dot — 4px diameter, white with
+                  opacity, centered under icon, with fade entrance. */}
+              <AnimatePresence>
+                {isActive && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    style={{
+                      position: "absolute",
+                      bottom: "-6px",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: "4px",
+                      height: "4px",
+                      borderRadius: "50%",
+                      background: "rgba(255, 255, 255, 0.85)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                )}
+              </AnimatePresence>
+
+              {/* Hover tooltip — glass pill with app name, positioned
+                  above the icon with fade+rise entrance. */}
+              <AnimatePresence>
+                {hoveredIndex === i && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.12, ease: "easeOut" }}
+                    style={{
+                      position: "absolute",
+                      bottom: "100%",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      marginBottom: "14px",
+                      pointerEvents: "none",
+                      whiteSpace: "nowrap",
+                      zIndex: 1000,
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: "5px 12px",
+                        borderRadius: "8px",
+                        background: "rgba(20, 20, 22, 0.85)",
+                        backdropFilter: "blur(20px)",
+                        WebkitBackdropFilter: "blur(20px)",
+                        color: "rgba(255, 255, 255, 0.95)",
+                        fontSize: "13px",
+                        fontWeight: "500",
+                        lineHeight: "1",
+                      }}
+                    >
+                      {item.label}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               </div>
             </Fragment>
           );

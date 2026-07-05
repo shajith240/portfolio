@@ -1,8 +1,17 @@
 import type { Metadata } from "next";
-import { Inter_Tight, Caveat } from "next/font/google";
+import { Inter, Inter_Tight, Caveat } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
+
+// SF Pro Text stand-in on Windows browsers — Inter is closest in
+// metrics and rendering to Apple's system font; loaded as the base
+// font-family for the entire app.
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 // Clock widget numerals — chosen directly (Nunito, then Inter, then
 // Geist were all tried and replaced first) for its tighter, taller,
@@ -41,7 +50,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${interTight.variable} ${vg5000.variable} ${caveat.variable} antialiased`}>
+      <body className={`${inter.variable} ${interTight.variable} ${vg5000.variable} ${caveat.variable} antialiased`}>
         <AppShell>{children}</AppShell>
       </body>
     </html>
