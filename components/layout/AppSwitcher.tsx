@@ -168,10 +168,13 @@ export default function AppSwitcher() {
                   position: "relative",
                 }}
               >
-                {/* Highlight pill background */}
+                {/* Highlight pill — a PLAIN div, deliberately not a
+                    layoutId motion element: Framer's shared-layout
+                    spring re-rendered the pill across the heavy
+                    backdrop blur on every keypress, which read as
+                    lag. Real macOS snaps the highlight instantly. */}
                 {isHighlighted && (
-                  <motion.div
-                    layoutId="highlight-pill"
+                  <div
                     style={{
                       position: "absolute",
                       top: "-10px",
