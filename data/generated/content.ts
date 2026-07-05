@@ -13,6 +13,13 @@ export interface GeneratedTrack {
 
 export const GENERATED_SONGS: GeneratedTrack[] = [
   {
+    "title": "Samayama Anurag Kulkarni Sithara Krishnakumar",
+    "artist": "",
+    "src": "/songs/Samayama-Anurag Kulkarni Sithara Krishnakumar.m4a",
+    "artwork": "/songs/Samayama-Anurag-Kulkarni-Sithara-Krishnakumar-cover.webp",
+    "lyricsSrc": null
+  },
+  {
     "title": "Someone You Loved",
     "artist": "Lewis Capaldi",
     "src": "/songs/someone-you-loved.m4a",
@@ -27,6 +34,7 @@ export const GENERATED_WALLPAPERS: string[] = [
   "ea-sports-fc-26-key-3840x2160-26590.jpg",
   "maserati-gt2-3840x2160-26562.jpg",
   "microsoft-surface-3840x2160-9246.png",
+  "minions-monsters-3840x2160-26730.jpg",
   "orange-tulips-black-background-spring-flowers-colorful-4096x2160-2339.jpg"
 ];
 

@@ -15,6 +15,11 @@ import FinderApp from "@/components/window/FinderApp";
    See docs/superpowers/specs/2026-07-01-window-manager-design.md. */
 
 const BOUNDS_SPRING = { type: "spring", stiffness: 340, damping: 32, mass: 0.9 } as const;
+const ZOOM_SPRING = { type: "spring", stiffness: 380, damping: 36 } as const;
+const MIN_WIDTH = 480;
+const MIN_HEIGHT = 320;
+const RESIZE_EDGE_WIDTH = 6;
+const RESIZE_CORNER_SIZE = 12;
 
 // Genie open/minimize: every animated property (position, scale,
 // opacity, clip-path funnel) uses this exact same duration/ease, not a
@@ -135,6 +140,7 @@ export default function Window({ win, active }: { win: WindowState; active: bool
   // repaints mid-drag. This is the standard fix, same as every
   // window-manager-in-the-browser does it.
   const [dragging, setDragging] = useState(false);
+  const [resizing, setResizing] = useState(false);
   // clip-path takes precedence over border-radius for clipping a
   // element's own children (border-radius still governs the border/
   // box-shadow, which is why this bug only ever showed up as a faint
@@ -146,6 +152,8 @@ export default function Window({ win, active }: { win: WindowState; active: bool
   // otherwise omit it so plain border-radius + overflow:hidden clips
   // the corners correctly.
   const [clipActive, setClipActive] = useState(true);
+  // Store the pre-zoom bounds so double-click zoom can toggle between them
+  const preZoomBoundsRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
 
   // Keeps the titlebar always reachable by drag alone — the bug this
   // guards against: dragging a window until its titlebar is fully
@@ -282,6 +290,115 @@ export default function Window({ win, active }: { win: WindowState; active: bool
     closeWindow(win.id);
   };
 
+  const handleResizeStart = (
+    e: React.PointerEvent<HTMLDivElement>,
+    edge: "n" | "s" | "e" | "w" | "nw" | "ne" | "sw" | "se"
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setResizing(true);
+    bringToFront(win.id);
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = width.get();
+    const startHeight = height.get();
+    const startWindowX = x.get();
+    const startWindowY = y.get();
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+
+      let newWidth = startWidth;
+      let newHeight = startHeight;
+      let newX = startWindowX;
+      let newY = startWindowY;
+
+      // Horizontal edges/corners: e, w, ne, nw, se, sw
+      if (edge.includes("e")) {
+        newWidth = Math.max(MIN_WIDTH, startWidth + deltaX);
+      } else if (edge.includes("w")) {
+        newWidth = Math.max(MIN_WIDTH, startWidth - deltaX);
+        newX = startWindowX + deltaX;
+      }
+
+      // Vertical edges/corners: n, s, ne, nw, se, sw
+      if (edge.includes("s")) {
+        newHeight = Math.max(MIN_HEIGHT, startHeight + deltaY);
+      } else if (edge.includes("n")) {
+        newHeight = Math.max(MIN_HEIGHT, startHeight - deltaY);
+        newY = startWindowY + deltaY;
+      }
+
+      x.set(newX);
+      y.set(newY);
+      width.set(newWidth);
+      height.set(newHeight);
+    };
+
+    const handlePointerUp = () => {
+      setResizing(false);
+      updateBounds(win.id, {
+        x: x.get(),
+        y: y.get(),
+        width: width.get(),
+        height: height.get(),
+      });
+      document.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerup", handlePointerUp);
+    };
+
+    document.addEventListener("pointermove", handlePointerMove);
+    document.addEventListener("pointerup", handlePointerUp);
+  };
+
+  const handleTitlebarDoubleClick = () => {
+    const currentX = x.get();
+    const currentY = y.get();
+    const currentWidth = width.get();
+    const currentHeight = height.get();
+
+    // If we have pre-zoom bounds stored and they match current, restore to pre-zoom
+    if (
+      preZoomBoundsRef.current &&
+      Math.abs(preZoomBoundsRef.current.x - currentX) < 1 &&
+      Math.abs(preZoomBoundsRef.current.y - currentY) < 1 &&
+      Math.abs(preZoomBoundsRef.current.width - currentWidth) < 1 &&
+      Math.abs(preZoomBoundsRef.current.height - currentHeight) < 1
+    ) {
+      // Already at zoom, restore pre-zoom bounds
+      const prevBounds = preZoomBoundsRef.current;
+      animate(x, prevBounds.x, ZOOM_SPRING);
+      animate(y, prevBounds.y, ZOOM_SPRING);
+      animate(width, prevBounds.width, ZOOM_SPRING);
+      animate(height, prevBounds.height, ZOOM_SPRING);
+      preZoomBoundsRef.current = null;
+      updateBounds(win.id, { x: prevBounds.x, y: prevBounds.y, width: prevBounds.width, height: prevBounds.height });
+    } else {
+      // Not at zoom, store current bounds and zoom
+      preZoomBoundsRef.current = { x: currentX, y: currentY, width: currentWidth, height: currentHeight };
+
+      // Calculate zoom bounds: viewport minus menu bar (24px top), Dock clearance (90px bottom), 12px side margins
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const MENU_BAR_HEIGHT = 24;
+      const DOCK_CLEARANCE = 90;
+      const SIDE_MARGIN = 12;
+
+      const zoomX = SIDE_MARGIN;
+      const zoomY = MENU_BAR_HEIGHT;
+      const zoomWidth = Math.max(MIN_WIDTH, viewportWidth - 2 * SIDE_MARGIN);
+      const zoomHeight = Math.max(MIN_HEIGHT, viewportHeight - MENU_BAR_HEIGHT - DOCK_CLEARANCE);
+
+      animate(x, zoomX, ZOOM_SPRING);
+      animate(y, zoomY, ZOOM_SPRING);
+      animate(width, zoomWidth, ZOOM_SPRING);
+      animate(height, zoomHeight, ZOOM_SPRING);
+      updateBounds(win.id, { x: zoomX, y: zoomY, width: zoomWidth, height: zoomHeight });
+    }
+  };
+
   return (
     <motion.div
       ref={rootRef}
@@ -347,7 +464,7 @@ export default function Window({ win, active }: { win: WindowState; active: bool
       {/* Titlebar — only this initiates drag, so iframe content never fights it */}
       <div
         onPointerDown={(e) => dragControls.start(e)}
-        onDoubleClick={() => toggleMaximize(win.id)}
+        onDoubleClick={handleTitlebarDoubleClick}
         style={{
           height: "28px",
           flexShrink: 0,
@@ -426,10 +543,116 @@ export default function Window({ win, active }: { win: WindowState; active: bool
         <iframe
           src={`${win.route}${win.route.includes("?") ? "&" : "?"}__window=1`}
           title={win.title}
-          style={{ flex: 1, border: "none", background: "var(--bg-page)", pointerEvents: dragging ? "none" : "auto" }}
+          style={{ flex: 1, border: "none", background: "var(--bg-page)", pointerEvents: dragging || resizing ? "none" : "auto" }}
         />
       )}
       </div>
+
+      {/* Resize zones: 6px-wide edges + 12px corners, invisible but with cursors */}
+      {/* Top edge */}
+      <div
+        onPointerDown={(e) => handleResizeStart(e, "n")}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: RESIZE_CORNER_SIZE,
+          right: RESIZE_CORNER_SIZE,
+          height: RESIZE_EDGE_WIDTH,
+          cursor: "n-resize",
+          zIndex: 100,
+        }}
+      />
+      {/* Bottom edge */}
+      <div
+        onPointerDown={(e) => handleResizeStart(e, "s")}
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: RESIZE_CORNER_SIZE,
+          right: RESIZE_CORNER_SIZE,
+          height: RESIZE_EDGE_WIDTH,
+          cursor: "s-resize",
+          zIndex: 100,
+        }}
+      />
+      {/* Left edge */}
+      <div
+        onPointerDown={(e) => handleResizeStart(e, "w")}
+        style={{
+          position: "absolute",
+          left: 0,
+          top: RESIZE_CORNER_SIZE,
+          bottom: RESIZE_CORNER_SIZE,
+          width: RESIZE_EDGE_WIDTH,
+          cursor: "w-resize",
+          zIndex: 100,
+        }}
+      />
+      {/* Right edge */}
+      <div
+        onPointerDown={(e) => handleResizeStart(e, "e")}
+        style={{
+          position: "absolute",
+          right: 0,
+          top: RESIZE_CORNER_SIZE,
+          bottom: RESIZE_CORNER_SIZE,
+          width: RESIZE_EDGE_WIDTH,
+          cursor: "e-resize",
+          zIndex: 100,
+        }}
+      />
+      {/* Top-left corner */}
+      <div
+        onPointerDown={(e) => handleResizeStart(e, "nw")}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: RESIZE_CORNER_SIZE,
+          height: RESIZE_CORNER_SIZE,
+          cursor: "nw-resize",
+          zIndex: 100,
+        }}
+      />
+      {/* Top-right corner */}
+      <div
+        onPointerDown={(e) => handleResizeStart(e, "ne")}
+        style={{
+          position: "absolute",
+          top: 0,
+          right: 0,
+          width: RESIZE_CORNER_SIZE,
+          height: RESIZE_CORNER_SIZE,
+          cursor: "ne-resize",
+          zIndex: 100,
+        }}
+      />
+      {/* Bottom-left corner */}
+      <div
+        onPointerDown={(e) => handleResizeStart(e, "sw")}
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          width: RESIZE_CORNER_SIZE,
+          height: RESIZE_CORNER_SIZE,
+          cursor: "sw-resize",
+          zIndex: 100,
+        }}
+      />
+      {/* Bottom-right corner */}
+      <div
+        onPointerDown={(e) => handleResizeStart(e, "se")}
+        style={{
+          position: "absolute",
+          bottom: 0,
+          right: 0,
+          width: RESIZE_CORNER_SIZE,
+          height: RESIZE_CORNER_SIZE,
+          cursor: "se-resize",
+          zIndex: 100,
+        }}
+      />
     </motion.div>
   );
 }
