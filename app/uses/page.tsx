@@ -150,7 +150,7 @@ export default function UsesPage() {
                   fontWeight: 700,
                   letterSpacing: '0.12em',
                   textTransform: 'uppercase',
-                  color: '#FF4500',
+                  color: 'rgba(255, 255, 255, 0.54)',
                   fontFamily: 'system-ui, -apple-system, sans-serif',
                 }}>
                   {section.category}

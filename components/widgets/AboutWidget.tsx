@@ -78,7 +78,7 @@ export default function AboutWidget() {
         style={{
           fontSize: "12px",
           fontWeight: 500,
-          color: hovered ? "#FF4500" : "var(--text-ghost)",
+          color: hovered ? "#0a84ff" : "var(--text-ghost)",
           background: "transparent",
           border: "none",
           padding: 0,

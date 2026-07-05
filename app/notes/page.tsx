@@ -223,7 +223,7 @@ export default function NotesPage() {
                     color: "var(--text-muted)",
                     fontFamily: "system-ui, -apple-system, sans-serif",
                     width: isPhone ? "100px" : "140px",
-                    caretColor: "#FF4500",
+                    caretColor: "#0a84ff",
                   }}
                 />
               </div>

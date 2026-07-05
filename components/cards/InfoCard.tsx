@@ -129,7 +129,7 @@ export default function InfoCard({ label, cta, href, compact = false, children }
             rel={href?.startsWith("http") ? "noreferrer" : undefined}
             style={{
               fontSize: "11px",
-              color: hovered ? "#FF4500" : "var(--text-ghost)",
+              color: hovered ? "#0a84ff" : "var(--text-ghost)",
               textDecoration: "none",
               fontFamily: "system-ui, sans-serif",
               letterSpacing: "-0.01em",

@@ -36,7 +36,7 @@ export default function BootScreen({ onComplete }: { onComplete: () => void }) {
       <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
         <path
           d="M34 14C34 10 30 8 24 8C17 8 13 11 13 15.5C13 20 17 21.5 24 23C31 24.5 35 26.5 35 32C35 37 30 40 24 40C17 40 13 37 13 33"
-          stroke="#FF4500"
+          stroke="#0a84ff"
           strokeWidth="4"
           strokeLinecap="round"
         />

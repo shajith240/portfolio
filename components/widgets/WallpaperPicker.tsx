@@ -62,7 +62,7 @@ export default function WallpaperPicker({ current, onSelect, onClose }: Wallpape
                   aspectRatio: "16 / 10",
                   borderRadius: "10px",
                   overflow: "hidden",
-                  border: isSelected ? "2px solid #FF4500" : "1px solid var(--glass-border)",
+                  border: isSelected ? "2px solid #0a84ff" : "1px solid var(--glass-border)",
                   padding: 0,
                   cursor: "pointer",
                   background: `url(/wallpapers/${filename}) center / cover no-repeat`,

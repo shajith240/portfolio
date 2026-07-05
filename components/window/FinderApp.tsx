@@ -258,7 +258,7 @@ function QuickLook({ node, onClose, onOpenProjects }: { node: FinderNode; onClos
                   fontWeight: 600,
                   padding: "8px 0",
                   borderRadius: "8px",
-                  background: "#FF4500",
+                  background: "#0a84ff",
                   color: "#fff",
                   border: "none",
                   cursor: "pointer",
@@ -399,7 +399,7 @@ export default function FinderApp() {
                   padding: "6px 8px",
                   borderRadius: "6px",
                   border: "none",
-                  background: isSelected ? "rgba(255, 69, 0, 0.16)" : "transparent",
+                  background: isSelected ? "rgba(10, 132, 255, 0.12)" : "transparent",
                   cursor: "pointer",
                   textAlign: "left",
                 }}
@@ -407,7 +407,7 @@ export default function FinderApp() {
                 <div style={{ width: "16px", height: "16px", flexShrink: 0 }}>
                   <FolderIcon />
                 </div>
-                <span style={{ fontSize: "12.5px", color: isSelected ? "#FF4500" : "var(--text-primary)" }}>{fav.label}</span>
+                <span style={{ fontSize: "12.5px", color: isSelected ? "#0a84ff" : "var(--text-primary)" }}>{fav.label}</span>
               </button>
             );
           })}
