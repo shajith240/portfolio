@@ -2,9 +2,16 @@
 "use client";
 
 import { createContext, useContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { useShellMetrics } from "@/lib/useShellMetrics";
-import { clampToBounds, type Bounds } from "@/lib/widgetPositioning";
 import { TOP_BOUND, BOTTOM_RESERVE } from "@/contexts/WindowManagerContext";
+import {
+  clampCell,
+  computeGridSpec,
+  resolveCellCollision,
+  spanForSize,
+  type Cell,
+  type GridSpec,
+  type Occupancy,
+} from "@/lib/widgetPositioning";
 import {
   WIDGET_IDS,
   STORAGE_KEY,
@@ -15,15 +22,15 @@ import {
   type WidgetSize,
   type WidgetLayout,
 } from "@/lib/widgetLayoutSchema";
-import { getSizeDimensions } from "@/lib/widgetSizeTiers";
 
 interface WidgetLayoutContextValue {
   layout: WidgetLayout;
+  spec: GridSpec;
   isEditing: boolean;
   enterEditMode: () => void;
   exitEditMode: () => void;
-  updatePosition: (id: WidgetId, x: number, y: number) => void;
-  updateSize: (id: WidgetId, size: WidgetSize) => void;
+  moveWidget: (id: WidgetId, cell: Cell) => void;
+  resizeWidget: (id: WidgetId, size: WidgetSize, cell: Cell) => void;
   resetLayout: () => void;
 }
 
@@ -59,68 +66,51 @@ function clearStoredLayoutRaw() {
   }
 }
 
-function boundsFor(id: WidgetId, size: WidgetSize, viewportWidth: number, viewportHeight: number): Bounds {
-  const dims = getSizeDimensions(id, size);
-  const height = dims.height ?? 0; // content-driven tiers clamp Y loosely; width is the hard constraint
-  return {
-    minX: 0,
-    maxX: Math.max(0, viewportWidth - dims.width),
-    minY: TOP_BOUND,
-    maxY: Math.max(TOP_BOUND, viewportHeight - BOTTOM_RESERVE - height),
-  };
+function currentSpec(): GridSpec {
+  return computeGridSpec(window.innerWidth, window.innerHeight, TOP_BOUND, BOTTOM_RESERVE);
+}
+
+// Re-fit an existing layout onto a (possibly different) lattice —
+// used on window resize, where a shrinking column count can push
+// widgets off the lattice or into each other. Order is WIDGET_IDS
+// order, same as parseStoredLayout, so refits are deterministic.
+function refitLayout(layout: WidgetLayout, spec: GridSpec): WidgetLayout {
+  const next = {} as WidgetLayout;
+  const occupied: Occupancy[] = [];
+  let changed = false;
+  for (const id of WIDGET_IDS) {
+    const entry = layout[id];
+    const span = spanForSize(entry.size);
+    const cell = resolveCellCollision(spec, clampCell(spec, entry, span), span, occupied);
+    next[id] = cell.col === entry.col && cell.row === entry.row ? entry : { ...entry, col: cell.col, row: cell.row };
+    if (next[id] !== entry) changed = true;
+    occupied.push({ cell, span });
+  }
+  return changed ? next : layout;
 }
 
 export function WidgetLayoutProvider({ children }: { children: ReactNode }) {
-  const metrics = useShellMetrics();
   const [layout, setLayout] = useState<WidgetLayout | null>(null);
+  const [spec, setSpec] = useState<GridSpec | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Load once on mount — matches the SSR-safe "null until mounted"
-  // convention already used by useLiveClock (ClockWidget.tsx).
+  // Load once on mount — SSR-safe "null until mounted" convention.
   useEffect(() => {
-    const defaults = computeDefaultLayout({
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-      inset: metrics.inset,
-    });
-    const raw = readStoredLayoutRaw();
-    const parsed = parseStoredLayout(raw, defaults);
-    // Clamp every loaded entry into the current viewport — a layout
-    // saved on a wider window (or a different device) never renders
-    // off-screen after a resize.
-    const clamped = {} as WidgetLayout;
-    for (const id of WIDGET_IDS) {
-      const entry = parsed[id];
-      const bounds = boundsFor(id, entry.size, window.innerWidth, window.innerHeight);
-      const { x, y } = clampToBounds(entry.x, entry.y, bounds);
-      clamped[id] = { x, y, size: entry.size };
-    }
-    setLayout(clamped);
-    // Runs once on mount only — metrics.inset at mount time is enough
-    // to seed defaults; a live-resize re-clamp is a acceptable, not a
-    // per-render dependency (re-running this on every metrics change
-    // would fight the visitor's own in-progress drag).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const mountSpec = currentSpec();
+    const defaults = computeDefaultLayout(mountSpec);
+    setSpec(mountSpec);
+    setLayout(parseStoredLayout(readStoredLayoutRaw(), defaults, mountSpec));
   }, []);
 
-  // Safety net on window resize, same pattern as
-  // WindowManagerContext's own resize handler — shrinking the browser
-  // can leave a saved widget position off the new, smaller viewport.
+  // Window resize recomputes the lattice; cell coordinates survive
+  // unchanged unless the new lattice is too small for them, in which
+  // case refitLayout nudges the affected widgets to the nearest legal
+  // cells.
   useEffect(() => {
     const handleResize = () => {
-      setLayout((prev) => {
-        if (!prev) return prev;
-        const next = {} as WidgetLayout;
-        let changed = false;
-        for (const id of WIDGET_IDS) {
-          const entry = prev[id];
-          const bounds = boundsFor(id, entry.size, window.innerWidth, window.innerHeight);
-          const { x, y } = clampToBounds(entry.x, entry.y, bounds);
-          next[id] = x === entry.x && y === entry.y ? entry : { ...entry, x, y };
-          if (next[id] !== entry) changed = true;
-        }
-        return changed ? next : prev;
-      });
+      const nextSpec = currentSpec();
+      setSpec(nextSpec);
+      setLayout((prev) => (prev ? refitLayout(prev, nextSpec) : prev));
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -133,54 +123,75 @@ export function WidgetLayoutProvider({ children }: { children: ReactNode }) {
   const enterEditMode = useCallback(() => setIsEditing(true), []);
   const exitEditMode = useCallback(() => setIsEditing(false), []);
 
-  const updatePosition = useCallback((id: WidgetId, x: number, y: number) => {
-    setLayout((prev) => {
-      if (!prev) return prev;
-      const bounds = boundsFor(id, prev[id].size, window.innerWidth, window.innerHeight);
-      const clamped = clampToBounds(x, y, bounds);
-      const next = { ...prev, [id]: { ...prev[id], ...clamped } };
-      persist(next);
-      return next;
-    });
-  }, [persist]);
+  // moveWidget/resizeWidget receive the DESIRED cell (the caller's
+  // best-effort pick — WidgetFrame computes this from its own
+  // otherRects prop, which is a snapshot taken at render time). That
+  // snapshot can be one render stale — e.g. two drags landing in the
+  // same React batch — so the actual authority for "is this cell
+  // free" lives HERE, inside the setState updater, built fresh from
+  // `prev` (the one value guaranteed current at the instant of
+  // commit). Re-resolving against a snapshot's own decision is
+  // idempotent when the snapshot was already correct, and is the only
+  // thing that closes the race when it wasn't — this is what makes
+  // "widgets never overlap" actually hold under concurrent drags,
+  // not just under a single isolated one.
+  const moveWidget = useCallback(
+    (id: WidgetId, desired: Cell) => {
+      setLayout((prev) => {
+        if (!prev || !spec) return prev;
+        const span = spanForSize(prev[id].size);
+        const occupied: Occupancy[] = WIDGET_IDS.filter((other) => other !== id).map((other) => ({
+          cell: { col: prev[other].col, row: prev[other].row },
+          span: spanForSize(prev[other].size),
+        }));
+        const cell = resolveCellCollision(spec, clampCell(spec, desired, span), span, occupied);
+        const next = { ...prev, [id]: { ...prev[id], col: cell.col, row: cell.row } };
+        persist(next);
+        return next;
+      });
+    },
+    [persist, spec]
+  );
 
-  const updateSize = useCallback((id: WidgetId, size: WidgetSize) => {
-    setLayout((prev) => {
-      if (!prev) return prev;
-      const bounds = boundsFor(id, size, window.innerWidth, window.innerHeight);
-      const clamped = clampToBounds(prev[id].x, prev[id].y, bounds);
-      const next = { ...prev, [id]: { ...clamped, size } };
-      persist(next);
-      return next;
-    });
-  }, [persist]);
+  const resizeWidget = useCallback(
+    (id: WidgetId, size: WidgetSize, desired: Cell) => {
+      setLayout((prev) => {
+        if (!prev || !spec) return prev;
+        const span = spanForSize(size);
+        const occupied: Occupancy[] = WIDGET_IDS.filter((other) => other !== id).map((other) => ({
+          cell: { col: prev[other].col, row: prev[other].row },
+          span: spanForSize(prev[other].size),
+        }));
+        const cell = resolveCellCollision(spec, clampCell(spec, desired, span), span, occupied);
+        const next = { ...prev, [id]: { col: cell.col, row: cell.row, size } };
+        persist(next);
+        return next;
+      });
+    },
+    [persist, spec]
+  );
 
   const resetLayout = useCallback(() => {
     clearStoredLayoutRaw();
-    const defaults = computeDefaultLayout({
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-      inset: metrics.inset,
-    });
-    setLayout(defaults);
-  }, [metrics.inset]);
+    const nextSpec = currentSpec();
+    setSpec(nextSpec);
+    setLayout(computeDefaultLayout(nextSpec));
+  }, []);
 
   // Memoized — 5 WidgetFrame consumers mount off this one provider,
   // and a drag/resize updates layout frequently; without this, every
   // update recreates the value object and re-renders all 5 frames
   // regardless of which single widget actually changed.
-  // Must be called before the `!layout` early return below (rules of
-  // hooks); `layout` is still `WidgetLayout | null` here from
-  // TypeScript's perspective, so the value's type is asserted back to
-  // WidgetLayoutContextValue — safe because this value is only ever
-  // rendered into the Provider after the early return has already
-  // confirmed layout is non-null.
+  // Must be called before the null early return below (rules of
+  // hooks); the type assertion is safe because the value is only
+  // rendered into the Provider after the early return has confirmed
+  // layout and spec are non-null.
   const value = useMemo(
-    () => ({ layout, isEditing, enterEditMode, exitEditMode, updatePosition, updateSize, resetLayout }),
-    [layout, isEditing, enterEditMode, exitEditMode, updatePosition, updateSize, resetLayout]
+    () => ({ layout, spec, isEditing, enterEditMode, exitEditMode, moveWidget, resizeWidget, resetLayout }),
+    [layout, spec, isEditing, enterEditMode, exitEditMode, moveWidget, resizeWidget, resetLayout]
   ) as WidgetLayoutContextValue;
 
-  if (!layout) return null;
+  if (!layout || !spec) return null;
 
   return (
     <WidgetLayoutContext.Provider value={value}>

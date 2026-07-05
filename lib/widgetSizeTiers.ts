@@ -1,89 +1,48 @@
-import { MOTIVATION_IMAGE } from "../data/motivation.ts";
+import { WIDGET_UNIT, WIDGET_MEDIUM_WIDTH } from "./widgetGrid.ts";
 
 export type WidgetSize = "small" | "medium" | "large";
-export type WidgetId = "photo" | "nowPlaying" | "aiTools" | "clock" | "motivation";
+export type WidgetId = "photo" | "nowPlaying" | "aiTools" | "location" | "motivation";
 
 export interface SizeDimensions {
   width: number;
-  // Omitted = content-driven (render height: "auto"); nearestSizeTier
-  // then matches on width alone for that tier.
-  height?: number;
+  height: number;
 }
 
-const motivationMediumHeight = Math.round(210 * (MOTIVATION_IMAGE.height / MOTIVATION_IMAGE.width));
-const motivationLargeHeight = Math.round(260 * (MOTIVATION_IMAGE.height / MOTIVATION_IMAGE.width));
-
-// Real, computed dimensions — see the task's design notes for the
-// exact math behind each fixed-height value. Widgets whose tier omits
-// `height` render at their natural content height for that tier
-// (verified deterministic per-widget in Tasks 7-11: fixed-line text
-// with ellipsis truncation never changes height regardless of content
-// length).
-export const WIDGET_SIZE_TIERS: Record<WidgetId, Partial<Record<WidgetSize, SizeDimensions>>> = {
-  photo: {
-    small: { width: 155, height: 155 },
-    medium: { width: 260, height: 260 },
-    large: { width: 338, height: 338 },
-  },
-  nowPlaying: {
-    small: { width: 155, height: 155 },
-    // medium/large both have height computed (159/361) rather than
-    // left content-driven — leaving both undefined made them
-    // indistinguishable to nearestSizeTier's width-only comparison
-    // (both 260-wide), so the strict-< tie-break always kept medium,
-    // making large permanently unreachable via the resize handle.
-    // Heights: medium = 16*2 padding + 56 art + 12 gap + 3 scrubber +
-    // 10 gap + 19 controls + 12 gap + 15 volume row = 159. large =
-    // medium (159) + LyricsPanel's own 12px marginTop + its fixed
-    // 190px PANEL_HEIGHT = 361. These are reference values for frame
-    // sizing/resize-matching only — NowPlayingWidget's own card still
-    // renders at its natural content height regardless (its outer
-    // frame has no overflow:hidden clipping it).
-    medium: { width: 260, height: 159 },
-    large: { width: 260, height: 361 },
-  },
-  aiTools: {
-    small: { width: 155, height: 155 },
-    medium: { width: 260, height: 176 },
-    large: { width: 260, height: 256 },
-  },
-  clock: {
-    small: { width: 155 },
-    medium: { width: 260, height: 176 },
-    large: { width: 260 },
-  },
-  motivation: {
-    medium: { width: 210, height: motivationMediumHeight },
-    large: { width: 260, height: motivationLargeHeight },
-  },
+// Apple's real widget size family — ONE table for every widget, no
+// per-widget custom dimensions. small is a square, medium is exactly
+// two smalls plus one gutter wide at small's height, large is a
+// square with medium's width. Widgets adapt their content to these
+// frames, never the other way around: that invariant is what makes
+// any mix of widgets read as one coherent grid, and it's the direct
+// replacement for the previous per-widget ad-hoc table (155/159/176/
+// 338/content-driven heights) that made mixed sizes look broken.
+export const TIER_DIMENSIONS: Record<WidgetSize, SizeDimensions> = {
+  small: { width: WIDGET_UNIT, height: WIDGET_UNIT },
+  medium: { width: WIDGET_MEDIUM_WIDTH, height: WIDGET_UNIT },
+  large: { width: WIDGET_MEDIUM_WIDTH, height: WIDGET_MEDIUM_WIDTH },
 };
 
-export function supportedSizes(id: WidgetId): WidgetSize[] {
-  return Object.keys(WIDGET_SIZE_TIERS[id]) as WidgetSize[];
+export const ALL_SIZES: WidgetSize[] = ["small", "medium", "large"];
+
+// Every widget supports every tier — the "purest form" of the widget
+// mechanism, no per-widget restrictions.
+export function supportedSizes(_id: WidgetId): WidgetSize[] {
+  return ALL_SIZES;
 }
 
-export function getSizeDimensions(id: WidgetId, size: WidgetSize): SizeDimensions {
-  const tiers = WIDGET_SIZE_TIERS[id];
-  return tiers[size] ?? tiers[supportedSizes(id)[0]]!;
+export function getSizeDimensions(_id: WidgetId, size: WidgetSize): SizeDimensions {
+  return TIER_DIMENSIONS[size];
 }
 
-// Given a widget's own tier table and a live width/height (e.g. mid
-// resize-drag), finds the tier whose defined dimensions are
-// numerically closest. A tier with no `height` (content-driven) is
-// compared on width alone.
-export function nearestSizeTier(
-  tiers: Partial<Record<WidgetSize, SizeDimensions>>,
-  liveWidth: number,
-  liveHeight: number
-): WidgetSize {
-  const entries = Object.entries(tiers) as [WidgetSize, SizeDimensions][];
-  let best = entries[0][0];
+// Given a live width/height mid resize-drag, finds the tier whose
+// frame is numerically closest — the tier the widget springs to on
+// release.
+export function nearestSizeTier(liveWidth: number, liveHeight: number): WidgetSize {
+  let best: WidgetSize = ALL_SIZES[0];
   let bestDist = Infinity;
-  for (const [size, dims] of entries) {
-    const dist =
-      dims.height === undefined
-        ? Math.abs(dims.width - liveWidth)
-        : Math.hypot(dims.width - liveWidth, dims.height - liveHeight);
+  for (const size of ALL_SIZES) {
+    const dims = TIER_DIMENSIONS[size];
+    const dist = Math.hypot(dims.width - liveWidth, dims.height - liveHeight);
     if (dist < bestDist) {
       bestDist = dist;
       best = size;

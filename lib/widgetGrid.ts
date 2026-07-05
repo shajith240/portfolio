@@ -1,24 +1,35 @@
-/* Single source of truth for desktop widget card geometry. Before
-   this, every widget hardcoded its own slightly-different padding
-   (14px NowPlayingWidget, 18px AIToolsWidget, 22px/18px ClockWidget)
-   with no shared pattern — the opposite of how real Apple widgets
-   work, where every size class in a family shares one content-margin
-   convention so mixed widgets still read as one coherent grid.
+/* Single source of truth for desktop widget geometry — Apple's real
+   widget grid system, not per-widget ad-hoc sizes.
 
-   WIDGET_UNIT/WIDGET_GAP were already established (PhotoWidget's
-   260px width, DesktopWidgetStack/RightWidgetStack's 14px gap) —
-   pulled here rather than redeclared so every widget references the
-   same values instead of copies that can drift.
+   macOS desktop widgets use one universal size family shared by every
+   widget: small is a square, medium is exactly two smalls plus one
+   gutter wide (same height as small), large is a square with medium's
+   width. Individual widgets NEVER define their own dimensions — they
+   adapt their content to the family's fixed frames.
 
-   COMPACT_CARD_HEIGHT is the shared height for the right-hand
-   AIToolsWidget/ClockWidget pair: AIToolsWidget's icon grid is
-   content-tight with zero slack (16px padding + two 64px rows + one
-   16px row-gap = 176px exactly), so that's the real floor: ClockWidget
-   centers its shorter content inside the same frame rather than the
-   two cards sitting at visibly different heights in the same column. */
+   Placement is a strict CELL LATTICE, exactly like the macOS desktop:
+   the desktop is divided into WIDGET_UNIT-sized cells separated by
+   WIDGET_GAP gutters, inset from every screen edge by DESKTOP_MARGIN.
+   A widget occupies whole cells (small 1×1, medium 2×1, large 2×2)
+   and can only ever rest on a cell — that single invariant is what
+   produces Apple's "perfect fit" look: every edge on the desktop
+   lines up with every other edge by construction, overlap is
+   structurally impossible, and nothing can be parked half off-grid.
 
-export const WIDGET_UNIT = 260;
+   WIDGET_UNIT 170 / WIDGET_GAP 14 mirror macOS desktop's own metrics
+   (small 170×170pt, medium 354×170pt, large 354×354pt ⇒ the gutter
+   implied by medium's width is 354 − 2×170 = 14pt). */
+
+export const WIDGET_UNIT = 170;
 export const WIDGET_GAP = 14;
+export const WIDGET_MEDIUM_WIDTH = WIDGET_UNIT * 2 + WIDGET_GAP; // 354
 export const WIDGET_PADDING = 16;
-export const WIDGET_RADIUS = 20;
-export const COMPACT_CARD_HEIGHT = 176;
+export const WIDGET_RADIUS = 22;
+
+// Minimum clearance between any widget and the usable desktop's
+// edges (viewport sides, MenuBar line, Dock line) — the "border
+// padding" that keeps widgets from kissing the screen edge.
+export const DESKTOP_MARGIN = 24;
+
+// Distance from one cell's origin to the next.
+export const CELL_STRIDE = WIDGET_UNIT + WIDGET_GAP; // 184

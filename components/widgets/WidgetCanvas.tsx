@@ -3,61 +3,32 @@
 
 import { useState, useCallback } from "react";
 import { useWidgetLayout } from "@/contexts/WidgetLayoutContext";
-import { TOP_BOUND, BOTTOM_RESERVE } from "@/contexts/WindowManagerContext";
-import { getSizeDimensions } from "@/lib/widgetSizeTiers";
+import { spanForSize, type Occupancy, type Rect } from "@/lib/widgetPositioning";
 import { WIDGET_RADIUS } from "@/lib/widgetGrid";
-import type { Rect } from "@/lib/widgetPositioning";
 import type { WidgetId } from "@/lib/widgetLayoutSchema";
 import WidgetFrame from "@/components/widgets/WidgetFrame";
 import PhotoWidget from "@/components/widgets/PhotoWidget";
 import NowPlayingWidget from "@/components/widgets/NowPlayingWidget";
 import AIToolsWidget from "@/components/widgets/AIToolsWidget";
-import ClockWidget from "@/components/widgets/ClockWidget";
+import LocationWidget from "@/components/widgets/LocationWidget";
 import MotivationWidget from "@/components/widgets/MotivationWidget";
 
-const WIDGET_IDS: WidgetId[] = ["photo", "nowPlaying", "aiTools", "clock", "motivation"];
-
-// Zero-width/zero-height sentinel rects representing the four
-// viewport edges a widget can also snap against. computeAlignmentSnap
-// already compares a rect's left/center/right (or top/center/bottom)
-// against another rect's same three lines; a zero-size rect collapses
-// those three lines to one coordinate, which is exactly "this one
-// edge is a snap target." Top/bottom use TOP_BOUND/BOTTOM_RESERVE
-// (the MenuBar/Dock clearance lines) rather than raw 0/viewportHeight,
-// since those are the actual usable-desktop edges widgets are
-// constrained to.
-function viewportEdgeRects(viewportWidth: number, viewportHeight: number): Rect[] {
-  return [
-    { x: 0, y: 0, width: 0, height: viewportHeight }, // left edge
-    { x: viewportWidth, y: 0, width: 0, height: viewportHeight }, // right edge
-    { x: 0, y: TOP_BOUND, width: viewportWidth, height: 0 }, // top edge (below MenuBar)
-    { x: 0, y: viewportHeight - BOTTOM_RESERVE, width: viewportWidth, height: 0 }, // bottom edge (above Dock)
-  ];
-}
+const WIDGET_IDS: WidgetId[] = ["photo", "nowPlaying", "aiTools", "location", "motivation"];
 
 export default function WidgetCanvas() {
   const { layout, isEditing, exitEditMode, resetLayout } = useWidgetLayout();
-  // Real macOS drag feedback: a white widget-shaped outline at the
-  // suggested landing position ("a white widget-shaped outline
-  // appears where macOS suggests you place it" — Sonoma's actual
-  // documented behavior), not guide lines. null = dragging far from
-  // any alignment, no outline.
+  // The white widget-shaped outline at the lattice cell the dragged
+  // widget will land on — macOS's own drag feedback. Because drops
+  // are cell-resolved, the outline is always a legal position.
   const [snapPreview, setSnapPreview] = useState<Rect | null>(null);
 
-  const rectFor = useCallback(
-    (id: WidgetId): Rect => {
+  const occupancyFor = useCallback(
+    (id: WidgetId): Occupancy => {
       const entry = layout[id];
-      const dims = getSizeDimensions(id, entry.size);
-      return { x: entry.x, y: entry.y, width: dims.width, height: dims.height ?? 0 };
+      return { cell: { col: entry.col, row: entry.row }, span: spanForSize(entry.size) };
     },
     [layout]
   );
-
-  // Computed once per render (not once per widget inside the map
-  // below) — window dimensions don't change mid-render, and this
-  // component only ever renders after WidgetLayoutProvider's mount
-  // effect has populated layout, so window is always available here.
-  const edgeRects = viewportEdgeRects(window.innerWidth, window.innerHeight);
 
   return (
     <div
@@ -72,16 +43,16 @@ export default function WidgetCanvas() {
       style={{ position: "fixed", inset: 0, zIndex: 20, pointerEvents: isEditing ? "auto" : "none" }}
     >
       {WIDGET_IDS.map((id) => {
-        const otherRects = [...WIDGET_IDS.filter((other) => other !== id).map(rectFor), ...edgeRects];
+        const others = WIDGET_IDS.filter((other) => other !== id).map(occupancyFor);
         return (
           <div key={id} onClick={(e) => e.stopPropagation()} style={{ pointerEvents: "auto" }}>
-            <WidgetFrame id={id} otherRects={otherRects} onSnapPreview={setSnapPreview}>
+            <WidgetFrame id={id} others={others} onSnapPreview={setSnapPreview}>
               {(size) => {
                 if (id === "photo") return <PhotoWidget size={size} />;
                 if (id === "nowPlaying") return <NowPlayingWidget size={size} />;
                 if (id === "aiTools") return <AIToolsWidget size={size} />;
-                if (id === "clock") return <ClockWidget size={size} />;
-                return <MotivationWidget size={size as "medium" | "large"} />;
+                if (id === "location") return <LocationWidget size={size} />;
+                return <MotivationWidget size={size} />;
               }}
             </WidgetFrame>
           </div>
@@ -103,7 +74,7 @@ export default function WidgetCanvas() {
             pointerEvents: "none",
             // Below the dragged widget (zIndex 40 while dragging) so
             // the outline reads as the destination underneath it, but
-            // above the other resting widgets (30).
+            // above the other resting widgets.
             zIndex: 35,
           }}
         />
