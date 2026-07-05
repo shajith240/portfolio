@@ -44,7 +44,21 @@ export function computeWordTimings(lines: LyricLine[]): TimedLine[] {
     const totalChars = words.reduce((sum, w) => sum + w.length, 0) || 1;
 
     const estimated = totalChars / CHARS_PER_SECOND + words.length * PER_WORD_PAUSE;
-    const singDuration = Math.min(gap * MAX_GAP_FRACTION, estimated);
+
+    // Melisma handling — the fix for held notes ("samayamaaaa…"):
+    // plain LRC carries no word timestamps, but lyric files give a
+    // sustained phrase its OWN timestamped line (this repo's Telugu
+    // track does exactly that: "సమయమా" alone owns 3.2s, "ఒట్టుగా"
+    // alone owns 2.5s). So a tiny line with a big gap is not "one
+    // quick word then silence" — it IS the hold, and the karaoke
+    // wipe must stretch across nearly the whole gap. Longer lines
+    // get the rate estimate with a 1.35x stretch allowance (singers
+    // deliver slower than speech), capped by the gap; the cap also
+    // keeps trailing instrumentals from dragging words late.
+    const isHold = words.length <= 2 || totalChars <= 14;
+    const singDuration = isHold
+      ? Math.min(gap * 0.9, Math.max(estimated, Math.min(gap * 0.85, 8)))
+      : Math.min(gap * MAX_GAP_FRACTION, estimated * 1.35);
 
     // Weight = chars + 2 so one-letter words ("a", "I") still get an
     // audible slice instead of a near-zero one.

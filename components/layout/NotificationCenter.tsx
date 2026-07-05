@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
 import { PROJECTS } from "@/data/projects";
-import GitHubHeatmapWidget from "@/components/widgets/GitHubHeatmapWidget";
 
 /* macOS Notification Center — opens from the menu-bar clock (the
    real trigger since Big Sur), slides in from the right edge.
@@ -72,12 +71,17 @@ export default function NotificationCenter({
   return createPortal(
     <AnimatePresence>
       {open && (
+        // Opacity-only entrance: sliding cards that carry
+        // backdrop-filter forces the blur to re-render over moving
+        // content for the whole slide — that was the "glass loads
+        // late" artifact. Opacity composites on the GPU; the blur
+        // renders once, already in place.
         <motion.div
           ref={panelRef}
-          initial={{ x: 60, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: 60, opacity: 0 }}
-          transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: [0, 0, 0.58, 1] }}
           style={{
             position: "fixed",
             top: "32px",
@@ -107,12 +111,6 @@ export default function NotificationCenter({
             <div style={{ fontSize: "30px", fontWeight: 300, color: "rgba(255,255,255,0.95)", lineHeight: 1.1 }}>
               {monthDay}
             </div>
-          </div>
-
-          {/* GitHub activity card — the heatmap widget self-measures,
-              so it renders correctly at this card's width. */}
-          <div style={{ ...CARD_STYLE, height: "150px" }}>
-            <GitHubHeatmapWidget size="medium" />
           </div>
 
           {/* Latest project card */}

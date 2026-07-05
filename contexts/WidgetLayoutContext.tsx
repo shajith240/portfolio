@@ -61,8 +61,42 @@ function writeStoredLayoutRaw(value: string) {
 function clearStoredLayoutRaw() {
   try {
     window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(GRID_LAYOUTS_KEY);
   } catch {
     // Same as above — nothing to recover from if storage is blocked.
+  }
+}
+
+/* Per-lattice layout memory — the monitor-switch fix. A laptop
+   screen and an external monitor produce different lattices; the
+   old behavior refit (squeezed) the one stored layout on every
+   switch, and the first drag afterwards PERSISTED the squeeze,
+   permanently destroying the big-screen arrangement. Instead, each
+   lattice signature ("colsxrows") remembers its own arrangement:
+   switching monitors restores that screen's layout untouched, and a
+   lattice seen for the first time gets one deterministic refit that
+   is then remembered for it alone. */
+const GRID_LAYOUTS_KEY = `${STORAGE_KEY}:grids`;
+
+function gridSignature(spec: GridSpec): string {
+  return `${spec.cols}x${spec.rows}`;
+}
+
+function readGridMap(): Record<string, string> {
+  try {
+    const raw = window.localStorage.getItem(GRID_LAYOUTS_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeGridMap(map: Record<string, string>) {
+  try {
+    window.localStorage.setItem(GRID_LAYOUTS_KEY, JSON.stringify(map));
+  } catch {
+    // Storage unavailable — same fallback story as above.
   }
 }
 
@@ -78,7 +112,14 @@ function refitLayout(layout: WidgetLayout, spec: GridSpec): WidgetLayout {
   const next = {} as WidgetLayout;
   const occupied: Occupancy[] = [];
   let changed = false;
-  for (const id of WIDGET_IDS) {
+  // Reading order (top-left first), not registry order: widgets that
+  // were visually first claim their cells first, so a squeeze keeps
+  // the arrangement's shape instead of scattering by declaration
+  // order.
+  const orderedIds = [...WIDGET_IDS].sort(
+    (a, b) => layout[a].row - layout[b].row || layout[a].col - layout[b].col,
+  );
+  for (const id of orderedIds) {
     const entry = layout[id];
     const span = spanForSize(entry.size);
     const cell = resolveCellCollision(spec, clampCell(spec, entry, span), span, occupied);
@@ -95,30 +136,66 @@ export function WidgetLayoutProvider({ children }: { children: ReactNode }) {
   const [isEditing, setIsEditing] = useState(false);
 
   // Load once on mount — SSR-safe "null until mounted" convention.
+  // This lattice's own remembered layout wins; the legacy single
+  // stored layout is the fallback for pre-per-grid visitors.
   useEffect(() => {
     const mountSpec = currentSpec();
     const defaults = computeDefaultLayout(mountSpec);
     setSpec(mountSpec);
-    setLayout(parseStoredLayout(readStoredLayoutRaw(), defaults, mountSpec));
+    const remembered = readGridMap()[gridSignature(mountSpec)] ?? readStoredLayoutRaw();
+    setLayout(parseStoredLayout(remembered, defaults, mountSpec));
   }, []);
 
-  // Window resize recomputes the lattice; cell coordinates survive
-  // unchanged unless the new lattice is too small for them, in which
-  // case refitLayout nudges the affected widgets to the nearest legal
-  // cells.
+  // Window resize recomputes the lattice. DEBOUNCED: dragging the
+  // browser between monitors fires a storm of intermediate sizes —
+  // reacting to each one would refit against lattices the user never
+  // sees (and remember those junk fits). Only the settled size
+  // counts. A lattice we've seen before restores its own remembered
+  // arrangement; a brand-new one gets a single refit, remembered for
+  // it from then on.
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const handleResize = () => {
-      const nextSpec = currentSpec();
-      setSpec(nextSpec);
-      setLayout((prev) => (prev ? refitLayout(prev, nextSpec) : prev));
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        const nextSpec = currentSpec();
+        setSpec(nextSpec);
+        setLayout((prev) => {
+          if (!prev) return prev;
+          const sig = gridSignature(nextSpec);
+          const remembered = readGridMap()[sig];
+          if (remembered) {
+            return parseStoredLayout(remembered, computeDefaultLayout(nextSpec), nextSpec);
+          }
+          const refit = refitLayout(prev, nextSpec);
+          const map = readGridMap();
+          map[sig] = serializeLayout(refit);
+          writeGridMap(map);
+          return refit;
+        });
+      }, 150);
     };
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
-  const persist = useCallback((next: WidgetLayout) => {
-    writeStoredLayoutRaw(serializeLayout(next));
-  }, []);
+  // Persist to both stores: the legacy key (mount fallback) and this
+  // lattice's own slot — a drag on the laptop can no longer clobber
+  // the external monitor's arrangement.
+  const persist = useCallback(
+    (next: WidgetLayout) => {
+      writeStoredLayoutRaw(serializeLayout(next));
+      if (spec) {
+        const map = readGridMap();
+        map[gridSignature(spec)] = serializeLayout(next);
+        writeGridMap(map);
+      }
+    },
+    [spec],
+  );
 
   const enterEditMode = useCallback(() => setIsEditing(true), []);
   const exitEditMode = useCallback(() => setIsEditing(false), []);
