@@ -27,24 +27,36 @@ export default function AppSwitcher() {
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const ctrlPressedRef = useRef(false);
 
-  // Get list of open windows (filtered to non-minimized)
-  const openWindows = windows.filter((w) => !w.minimized);
+  // Open windows in RECENCY order (front-most first), like the real
+  // switcher — index 0 is the current app, index 1 the previous one.
+  const openWindows = [...windows]
+    .filter((w) => !w.minimized)
+    .sort((a, b) => b.zIndex - a.zIndex);
   const shouldRender = isActive && openWindows.length > 0;
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      const { ctrlKey, key, shiftKey } = e;
+      const { ctrlKey, shiftKey } = e;
 
-      // Check for Ctrl+Tab or Ctrl+` to activate
-      if (ctrlKey && (key === "Tab" || key === "`")) {
+      // The working binding is Ctrl+` (Backquote): Chrome/Edge
+      // reserve Ctrl+Tab for their own tab switching and never
+      // deliver it to the page. Tab stays as a best-effort alias
+      // (it does arrive in PWA/kiosk contexts). e.code makes the
+      // backquote layout-independent.
+      const isSwitchKey = e.code === "Backquote" || e.key === "Tab";
+      if (ctrlKey && isSwitchKey) {
         e.preventDefault();
         if (!isActive) {
-          // Activate switcher
           setIsActive(true);
           ctrlPressedRef.current = true;
-          setHighlightedIndex(0);
-        } else if (key === "Tab") {
-          // Already active: Tab/Shift+Tab moves highlight
+          // macOS semantics: the first press highlights the PREVIOUS
+          // app, not the one already in front.
+          setHighlightedIndex(openWindows.length > 1 ? 1 : 0);
+        } else {
+          // Every further press cycles (Shift reverses) — including
+          // repeat presses of `, not just the browser-eaten Tab.
+          // (The original build only advanced on Tab, so Ctrl+`
+          // opened the strip and then appeared dead.)
           setHighlightedIndex((prev) => {
             const next = shiftKey
               ? (prev - 1 + openWindows.length) % openWindows.length
@@ -55,20 +67,8 @@ export default function AppSwitcher() {
         return;
       }
 
-      // While active and Ctrl still held, Tab/Shift+Tab moves highlight
-      if (isActive && ctrlPressedRef.current && key === "Tab") {
-        e.preventDefault();
-        setHighlightedIndex((prev) => {
-          const next = shiftKey
-            ? (prev - 1 + openWindows.length) % openWindows.length
-            : (prev + 1) % openWindows.length;
-          return next;
-        });
-        return;
-      }
-
       // Escape cancels
-      if (isActive && key === "Escape") {
+      if (isActive && e.key === "Escape") {
         setIsActive(false);
         ctrlPressedRef.current = false;
         return;

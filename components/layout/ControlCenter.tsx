@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 /* macOS Control Center — deliberately SMALL, because everything in
@@ -191,21 +192,28 @@ export default function ControlCenter() {
 
   return (
     <div ref={wrapRef} style={{ position: "relative", display: "flex", alignItems: "center" }}>
-      {/* Screen dim layer — the Display slider's real effect. Sits
-          over everything, ignores the pointer, dims like a backlight
-          (capped so the screen can never go fully black). */}
-      {brightness < 1 && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "#000",
-            opacity: (1 - brightness) * 0.7,
-            pointerEvents: "none",
-            zIndex: 3000,
-          }}
-        />
-      )}
+      {/* Screen dim layer — the Display slider's real effect. MUST be
+          portaled to <body>: this component lives inside the menu
+          bar, whose backdrop-filter makes it the containing block
+          for fixed-position descendants — un-portaled, "inset: 0"
+          meant "the 24px bar strip", which is why the wallpaper
+          stayed bright while the bar dimmed. Capped so the screen
+          can never go fully black. */}
+      {brightness < 1 &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "#000",
+              opacity: (1 - brightness) * 0.7,
+              pointerEvents: "none",
+              zIndex: 3000,
+            }}
+          />,
+          document.body,
+        )}
 
       <button
         onClick={() => setOpen((o) => !o)}
