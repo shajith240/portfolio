@@ -152,24 +152,21 @@ function SectionLabel({ children }: { children: string }) {
 }
 
 /* ─── Item — Spotlight row anatomy: plain glyph, single-line text,
-       solid system-blue selection with white text; faint white wash
-       on hover. No sideways drift, no icon chip, no springy
-       materialisation — selection moves instantly like a native
-       list. ───────────────────────────────────────────────────── */
+       translucent system-blue selection wash. Real Spotlight rows
+       do NOT react to the pointer: no hover highlight, no fade, and
+       the keyboard selection never follows the mouse — the row only
+       responds to click. Selection moves instantly (no transition),
+       like every native list. ──────────────────────────────────── */
 
 function PaletteItem({
-  icon, label, hint, active, onClick, onHover,
+  icon, label, hint, active, onClick,
 }: {
   icon: React.ReactNode; label: string; hint?: string;
-  active: boolean; onClick: () => void; onHover: () => void;
+  active: boolean; onClick: () => void;
 }) {
-  const [hovered, setHovered] = useState(false);
-
   return (
     <button
       onClick={onClick}
-      onMouseEnter={() => { setHovered(true); onHover(); }}
-      onMouseLeave={() => setHovered(false)}
       style={{
         position: "relative",
         width: "100%",
@@ -188,12 +185,7 @@ function PaletteItem({
         // fill — that's what real Spotlight does on the glass panel
         // (researched: ~a third-opacity blue over the material,
         // radius 8, no solid #0a84ff block).
-        background: active
-          ? "rgba(10, 132, 255, 0.32)"
-          : hovered
-          ? "rgba(255, 255, 255, 0.07)"
-          : "transparent",
-        transition: "background 0.12s ease-out",
+        background: active ? "rgba(10, 132, 255, 0.32)" : "transparent",
       }}
     >
       <span
@@ -466,9 +458,6 @@ export default function CommandPalette() {
                             hint={item.hint}
                             active={isActive}
                             onClick={() => handleSelect(item)}
-                            // Hover moves the selection, like Spotlight —
-                            // one highlight, keyboard and mouse share it.
-                            onHover={() => setCursor(idx)}
                           />
                         </div>
                       );

@@ -24,9 +24,13 @@ interface MonthLabel {
 let cachedContributions: ContributionDay[] | null = null;
 let cachePromise: Promise<ContributionDay[]> | null = null;
 
-// GitHub's dark-mode contribution palette
+// GitHub's dark-mode greens, but a NEUTRAL translucent empty cell:
+// #161b22 was designed for GitHub's solid #0d1117 page — on our
+// wallpaper-tinted glass it reads as alien navy boxes. A white wash
+// lets the glass material show through, so empty cells belong to
+// the widget the way Apple widgets treat their inactive elements.
 const LEVEL_COLORS: Record<0 | 1 | 2 | 3 | 4, string> = {
-  0: "#161b22",
+  0: "rgba(255, 255, 255, 0.09)",
   1: "#0e4429",
   2: "#006d32",
   3: "#26a641",
@@ -105,8 +109,15 @@ function computeMonthLabels(
 
     // Only add label if month changed (or it's the first week with a valid date)
     if (currentMonth !== prevMonth) {
-      // Apply GitHub's collision rule: skip if within 2 columns of last label
-      // or if this is column 0 and next label would be too close
+      // Column 0 gets a label only if the month actually STARTS in
+      // that first visible week — labeling a mid-month partial
+      // ("Jan" over three leftover January days) is what GitHub
+      // avoids and what looked wrong in the widget.
+      if (weekIdx === 0 && new Date(firstDayWithDate.date).getUTCDate() > 7) continue;
+      // Skip labels in the last two columns — they'd clip at the
+      // grid's right edge (the "Ju" artifact).
+      if (weekIdx > weekChunks.length - 3) continue;
+      // GitHub's collision rule: skip if within 2 columns of last label
       const tooClose = weekIdx - lastLabelWeek <= 2;
       if (!tooClose) {
         const monthLabel = new Intl.DateTimeFormat("en-US", {
@@ -248,9 +259,9 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
                 position: "absolute",
                 left: `${weekIndex * CELL_STRIDE}px`,
                 top: 0,
-                fontSize: "9px",
-                fontWeight: 400,
-                color: "#7d8590",
+                fontSize: "10px",
+                fontWeight: 500,
+                color: "rgba(255, 255, 255, 0.45)",
                 lineHeight: `${LABEL_HEIGHT}px`,
                 whiteSpace: "nowrap",
               }}
@@ -277,19 +288,17 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
               const color = LEVEL_COLORS[level];
 
               return (
-                // stroke, not CSS outline — outline is not a valid
-                // SVG presentation property; GitHub's own cells use a
-                // hairline stroke for the keyline.
+                // No keyline stroke: GitHub's hairline exists to
+                // separate solid cells from its solid page; on
+                // translucent cells over glass it just reads dirty.
                 <rect
                   key={`${weekIdx}-${dayIdx}`}
-                  x={x + 0.5}
-                  y={y + 0.5}
-                  width={CELL_SIZE - 1}
-                  height={CELL_SIZE - 1}
+                  x={x}
+                  y={y}
+                  width={CELL_SIZE}
+                  height={CELL_SIZE}
                   fill={color}
                   rx={2}
-                  stroke="rgba(255, 255, 255, 0.04)"
-                  strokeWidth={1}
                 />
               );
             })
