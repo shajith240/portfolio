@@ -13,11 +13,11 @@ export interface GeneratedTrack {
 
 export const GENERATED_SONGS: GeneratedTrack[] = [
   {
-    "title": "Samayama Anurag Kulkarni Sithara Krishnakumar",
-    "artist": "",
+    "title": "Samayama",
+    "artist": "Anurag Kulakarni & Sithara KrishnaKumar",
     "src": "/songs/Samayama-Anurag Kulkarni Sithara Krishnakumar.m4a",
     "artwork": "/songs/Samayama-Anurag-Kulkarni-Sithara-Krishnakumar-cover.webp",
-    "lyricsSrc": null
+    "lyricsSrc": "/songs/Anurag Kulkarni, Sithara Krishnakumar, Hesham Abdul Wahab - Samayama.lrc"
   },
   {
     "title": "Someone You Loved",

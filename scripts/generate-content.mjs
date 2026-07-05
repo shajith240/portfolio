@@ -49,11 +49,44 @@ function normalize(name) {
   return name.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-function fuzzyMatch(aBase, bBase) {
+function tokenSet(name) {
+  return new Set(name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+}
+
+// Two-stage match: containment of the full normalized names (the
+// original rule), else word-token overlap. The overlap stage is what
+// pairs real-world filenames where the artists are reordered or one
+// file lists MORE artists than the other — e.g. audio
+// "Samayama-Anurag Kulkarni Sithara Krishnakumar" vs lyrics
+// "Anurag Kulkarni, Sithara Krishnakumar, Hesham Abdul Wahab -
+// Samayama". Containment fails there in both directions; token
+// overlap scores 5/5 = 1.0.
+function matchScore(aBase, bBase) {
   const a = normalize(aBase);
   const b = normalize(bBase);
-  if (!a || !b) return false;
-  return a.includes(b) || b.includes(a);
+  if (!a || !b) return 0;
+  if (a.includes(b) || b.includes(a)) return 1;
+  const ta = tokenSet(aBase);
+  const tb = tokenSet(bBase);
+  if (!ta.size || !tb.size) return 0;
+  let shared = 0;
+  for (const t of ta) if (tb.has(t)) shared++;
+  return shared / Math.min(ta.size, tb.size);
+}
+
+// Highest-scoring candidate above the threshold — never "first hit",
+// so a weakly-related file can't steal the pairing from a better one.
+function bestMatch(candidates, base, threshold = 0.5) {
+  let best = null;
+  let bestScore = 0;
+  for (const c of candidates) {
+    const s = matchScore(basename(c, extname(c)), base);
+    if (s > bestScore) {
+      bestScore = s;
+      best = c;
+    }
+  }
+  return bestScore >= threshold ? best : null;
 }
 
 function prettify(slug) {
@@ -74,12 +107,12 @@ function buildSongs() {
   return audios.map((audio) => {
     const base = basename(audio, extname(audio));
 
-    let artwork = images.find((img) => fuzzyMatch(basename(img, extname(img)), base)) ?? null;
+    let artwork = bestMatch(images, base);
     // Single-track folders: one audio + one image is an unambiguous
     // pair even when the names share nothing.
     if (!artwork && audios.length === 1 && images.length === 1) artwork = images[0];
 
-    let lyrics = lrcs.find((l) => fuzzyMatch(basename(l, extname(l)), base)) ?? null;
+    let lyrics = bestMatch(lrcs, base);
     if (!lyrics && audios.length === 1 && lrcs.length === 1) lyrics = lrcs[0];
 
     let title = prettify(base);
@@ -89,8 +122,16 @@ function buildSongs() {
       artist = a.trim();
       title = t.join(" - ").trim();
     }
-    const sidecar = join(root, "public", "songs", `${base}.json`);
-    if (existsSync(sidecar)) {
+    // Sidecar json is found the same fuzzy way as art/lyrics (exact
+    // basename still wins by scoring 1.0) — requiring the exact
+    // audio basename silently dropped metadata whenever the json
+    // used hyphens where the audio used spaces.
+    const jsons = files.filter((f) => extname(f).toLowerCase() === ".json");
+    const sidecarName = existsSync(join(root, "public", "songs", `${base}.json`))
+      ? `${base}.json`
+      : bestMatch(jsons, base, 0.6);
+    if (sidecarName) {
+      const sidecar = join(root, "public", "songs", sidecarName);
       try {
         const meta = JSON.parse(readFileSync(sidecar, "utf8"));
         if (typeof meta.title === "string" && meta.title) title = meta.title;

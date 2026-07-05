@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
 import ControlCenter from "@/components/layout/ControlCenter";
+import NotificationCenter from "@/components/layout/NotificationCenter";
 
 /* macOS menu bar — Tahoe dark mode, and every item WORKS. No fake
    File/Edit menus, no decorative glyphs: the bar is real navigation
@@ -126,6 +127,8 @@ export default function MenuBar() {
   const { openWindow, windows } = useWindowManager();
   const [clock, setClock] = useState("");
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [hoveredTitle, setHoveredTitle] = useState<string | null>(null);
+  const [ncOpen, setNcOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -233,7 +236,9 @@ export default function MenuBar() {
                 // the titles switches menus without another click.
                 onMouseEnter={() => {
                   if (openMenu && !isOpen) setOpenMenu(menu.title);
+                  setHoveredTitle(menu.title);
                 }}
+                onMouseLeave={() => setHoveredTitle(null)}
                 style={{
                   height: "100%",
                   padding: "0 10px",
@@ -242,7 +247,14 @@ export default function MenuBar() {
                   fontSize: "13px",
                   fontWeight: menu.bold ? 600 : 400,
                   color: "rgba(255, 255, 255, 0.92)",
-                  background: isOpen ? "rgba(255, 255, 255, 0.18)" : "transparent",
+                  // Closed titles still give hover feedback (a
+                  // fainter pill than the open state) — without it
+                  // the bar reads dead until the first click.
+                  background: isOpen
+                    ? "rgba(255, 255, 255, 0.18)"
+                    : hoveredTitle === menu.title
+                    ? "rgba(255, 255, 255, 0.10)"
+                    : "transparent",
                   cursor: "default",
                 }}
               >
@@ -277,7 +289,29 @@ export default function MenuBar() {
           <SearchGlyph />
         </button>
         <ControlCenter />
-        <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{clock}</span>
+        {/* The clock is Notification Center's trigger — the real
+            macOS gesture since Big Sur. */}
+        <button
+          onClick={() => setNcOpen((o) => !o)}
+          // Without this, clicking the clock while the panel is open
+          // would fire the panel's outside-click close first and the
+          // toggle would immediately reopen it.
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{
+            border: "none",
+            background: ncOpen ? "rgba(255, 255, 255, 0.18)" : "transparent",
+            borderRadius: "5px",
+            padding: "2px 6px",
+            fontSize: "13px",
+            color: "rgba(255, 255, 255, 0.92)",
+            whiteSpace: "nowrap",
+            fontVariantNumeric: "tabular-nums",
+            cursor: "default",
+          }}
+        >
+          {clock}
+        </button>
+        <NotificationCenter open={ncOpen} onClose={() => setNcOpen(false)} />
       </div>
     </div>
   );

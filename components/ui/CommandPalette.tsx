@@ -164,9 +164,13 @@ function PaletteItem({
   icon: React.ReactNode; label: string; hint?: string;
   active: boolean; onClick: () => void;
 }) {
+  const [hovered, setHovered] = useState(false);
+
   return (
     <button
       onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         position: "relative",
         width: "100%",
@@ -185,7 +189,14 @@ function PaletteItem({
         // fill — that's what real Spotlight does on the glass panel
         // (researched: ~a third-opacity blue over the material,
         // radius 8, no solid #0a84ff block).
-        background: active ? "rgba(10, 132, 255, 0.32)" : "transparent",
+        // Hover is a faint instant wash under the pointer (macOS
+        // shows one); it never moves the keyboard selection and
+        // never fades — both states snap like a native list.
+        background: active
+          ? "rgba(10, 132, 255, 0.32)"
+          : hovered
+          ? "rgba(255, 255, 255, 0.06)"
+          : "transparent",
       }}
     >
       <span
