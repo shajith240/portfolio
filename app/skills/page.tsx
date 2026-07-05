@@ -22,6 +22,33 @@ function AppIcon({
   const iconSize = isPhone ? 60 : 64
   const borderRadius = Math.round(iconSize * 0.22)
 
+  // Brand colors — match real app icon aesthetics
+  const brandColors: Record<string, string> = {
+    javascript: '#F7DF1E',
+    typescript: '#3178C6',
+    python: '#306998',
+    c: '#03599C',
+    java: '#ED8B00',
+    html: '#E34F26',
+    css: '#1572B6',
+    react: '#23272f',
+    nodejs: '#333',
+    git: '#F05032',
+    github: '#24292e',
+    vscode: '#007ACC',
+    docker: '#1D63ED',
+    linux: '#FCC624',
+    N8N: '#FF6B35',
+    mongo_db: '#13AA52',
+    postgres: '#336791',
+    chatgpt: '#00A67E',
+    claude: '#001F3F',
+    gemini_google: '#8B5CF6',
+    anitigravity: '#7C3AED',
+  }
+
+  const bgColor = brandColors[file] || '#666'
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -41,7 +68,10 @@ function AppIcon({
         WebkitTapHighlightColor: 'transparent',
       }}
     >
-      <motion.div
+      <motion.img
+        src={`/icons/${file}.png`}
+        alt={name}
+        draggable={false}
         whileTap={{ scale: 0.92 }}
         transition={{
           type: 'spring',
@@ -50,29 +80,14 @@ function AppIcon({
           mass: 0.8,
         }}
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
           width: iconSize,
           height: iconSize,
           borderRadius: borderRadius,
-          background: 'rgba(255, 255, 255, 0.08)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.35)',
+          display: 'block',
+          backgroundColor: bgColor,
+          objectFit: 'cover',
         }}
-      >
-        <img
-          src={`/icons/${file}.png`}
-          alt={name}
-          draggable={false}
-          style={{
-            width: Math.round(iconSize * 0.65),
-            height: Math.round(iconSize * 0.65),
-            display: 'block',
-            objectFit: 'contain',
-          }}
-        />
-      </motion.div>
+      />
       <span
         style={{
           fontSize: 12,
