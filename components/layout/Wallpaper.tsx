@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useWallpaper } from "@/lib/useWallpaper";
 import DesktopContextMenu from "@/components/layout/DesktopContextMenu";
 import WallpaperPicker from "@/components/widgets/WallpaperPicker";
+import SelectionMarquee from "@/components/layout/SelectionMarquee";
 
 const PLACEHOLDER_BG =
   "radial-gradient(ellipse 120% 90% at 30% 20%, #2a2a2e 0%, #17171a 55%, #0d0d0f 100%)";
@@ -13,6 +14,7 @@ export default function Wallpaper() {
   const { wallpaper, setWallpaper } = useWallpaper();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const desktopRef = useRef<HTMLDivElement>(null);
 
   // Close the context menu on any click/Escape, regardless of where it
   // lands (MenuBar, Dock, a widget) — not just clicks on the wallpaper
@@ -42,6 +44,7 @@ export default function Wallpaper() {
   return (
     <>
       <div
+        ref={desktopRef}
         aria-hidden
         onContextMenu={(e) => {
           if (e.target !== e.currentTarget) return;
@@ -55,6 +58,8 @@ export default function Wallpaper() {
           background: wallpaper ? `url(/wallpapers/${wallpaper}) center / cover no-repeat` : PLACEHOLDER_BG,
         }}
       />
+
+      <SelectionMarquee desktopRef={desktopRef} />
 
       <AnimatePresence>
         {menu && (

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
+import ControlCenter from "@/components/layout/ControlCenter";
 
 /* macOS menu bar — Tahoe dark mode, and every item WORKS. No fake
    File/Edit menus, no decorative glyphs: the bar is real navigation
@@ -102,8 +103,9 @@ function MenuRow({ entry, onClose }: { entry: Exclude<MenuEntry, "separator">; o
         fontWeight: 400,
         lineHeight: "18px",
         color: "rgba(255, 255, 255, 0.92)",
-        // Real macOS menus fill hovered rows with the accent, no fade.
-        background: hovered ? ACCENT : "transparent",
+        // Translucent accent wash, not a solid block — macOS menu
+        // highlights are vibrancy-tinted, so the glass shows through.
+        background: hovered ? "rgba(10, 132, 255, 0.55)" : "transparent",
         cursor: "default",
       }}
     >
@@ -121,7 +123,7 @@ const SearchGlyph = () => (
 
 export default function MenuBar() {
   const { isMobileLayout, openSearch } = useLayout();
-  const { openWindow } = useWindowManager();
+  const { openWindow, windows } = useWindowManager();
   const [clock, setClock] = useState("");
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -154,9 +156,16 @@ export default function MenuBar() {
 
   const external = (url: string) => () => window.open(url, "_blank", "noopener,noreferrer");
 
+  // Real macOS swaps the bold app-name slot to the frontmost app.
+  // Here: the highest-z window's title while any window is open,
+  // "Shajith" back on the bare desktop (Finder's role).
+  const frontmost = windows.length
+    ? windows.reduce((a, b) => (a.zIndex > b.zIndex ? a : b))
+    : null;
+
   const menus: { title: string; bold?: boolean; entries: MenuEntry[] }[] = [
     {
-      title: "Shajith",
+      title: frontmost?.title ?? "Shajith",
       bold: true,
       entries: [
         { label: "About This Portfolio", action: () => openWindow("/about", "About") },
@@ -267,6 +276,7 @@ export default function MenuBar() {
         >
           <SearchGlyph />
         </button>
+        <ControlCenter />
         <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{clock}</span>
       </div>
     </div>
