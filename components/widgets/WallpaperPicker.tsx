@@ -21,10 +21,15 @@ export default function WallpaperPicker({ current, onSelect, onClose }: Wallpape
         style={{ position: "fixed", inset: 0, zIndex: 599 }}
       />
       <motion.div
-        initial={{ opacity: 0, scale: 0.94, y: 12 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.94, y: 12 }}
-        transition={{ type: "spring", stiffness: 400, damping: 32 }}
+        // Opacity-only entrance, deliberately: animating scale/y on a
+        // panel that carries backdrop-filter forces the browser to
+        // re-run the blur over a moving region every frame — that was
+        // the visible lag when opening this picker. Opacity
+        // composites; the blur renders once.
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.16, ease: [0, 0, 0.58, 1] }}
         style={{
           position: "fixed",
           top: "50%",
@@ -36,8 +41,8 @@ export default function WallpaperPicker({ current, onSelect, onClose }: Wallpape
           borderRadius: "20px",
           background: "var(--glass-thick-bg)",
           border: "1px solid var(--glass-border)",
-          backdropFilter: "blur(var(--glass-blur-thick)) saturate(var(--glass-saturate))",
-          WebkitBackdropFilter: "blur(var(--glass-blur-thick)) saturate(var(--glass-saturate))",
+          backdropFilter: "blur(30px) saturate(var(--glass-saturate))",
+          WebkitBackdropFilter: "blur(30px) saturate(var(--glass-saturate))",
           boxShadow: "0 30px 70px rgba(0, 0, 0, 0.45)",
         }}
       >
@@ -65,10 +70,23 @@ export default function WallpaperPicker({ current, onSelect, onClose }: Wallpape
                   border: isSelected ? "2px solid #0a84ff" : "1px solid var(--glass-border)",
                   padding: 0,
                   cursor: "pointer",
-                  background: `url(/wallpapers/${filename}) center / cover no-repeat`,
+                  background: "#1c1c1e",
                 }}
                 title={filename}
-              />
+              >
+                {/* <img> instead of a CSS background so the browser
+                    can decode off the main thread (decoding=async) —
+                    six multi-MB wallpapers decoding synchronously
+                    during the open animation was the other half of
+                    the lag. */}
+                <img
+                  src={`/wallpapers/${filename}`}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </button>
             );
           })}
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { WIDGET_RADIUS } from "@/lib/widgetGrid";
 import type { WidgetSize } from "@/lib/widgetLayoutSchema";
@@ -42,11 +42,11 @@ const ENTRANCE_SPRING = {
   restDelta: 0.01,
 } as const;
 
-// Target weeks per tier: most recent weeks only
-// small: 10 weeks (127px), medium/large: 18 weeks (231px)
-function targetWeeks(size: WidgetSize): number {
-  return size === "small" ? 10 : 18;
-}
+// Weeks are derived from the MEASURED inner width of the card, not
+// from assumed tier pixel sizes — WidgetFrame owns the real size and
+// hardcoding 170/354 here left the grid overflowing or off-center
+// whenever the frame's actual box differed. Cells stay exactly 10px;
+// only the number of visible weeks adapts.
 
 // Fetch contributions for shajith240
 async function fetchContributions(): Promise<ContributionDay[]> {
@@ -123,14 +123,27 @@ function computeMonthLabels(
 
 export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
   const [contributions, setContributions] = useState<ContributionDay[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [inner, setInner] = useState<{ width: number; height: number } | null>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     (async () => {
       const data = await fetchContributions();
       setContributions(data);
-      setIsLoading(false);
     })();
+  }, []);
+
+  // Measure the card's real content box (and re-measure when the
+  // frame resizes between tiers).
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const measure = () =>
+      setInner({ width: host.clientWidth, height: host.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(host);
+    return () => ro.disconnect();
   }, []);
 
   // Grid dimensions: cells 10px, gaps 3px (13px stride), rows are Sun-Sat (7 columns)
@@ -138,8 +151,10 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
   const CELL_GAP = 3;
   const CELL_STRIDE = CELL_SIZE + CELL_GAP; // 13
 
-  // Target weeks for this size tier (most recent only)
-  const targetWeek = targetWeeks(size);
+  // How many whole week-columns fit the measured width.
+  const targetWeek = inner
+    ? Math.max(4, Math.floor((inner.width + CELL_GAP) / CELL_STRIDE))
+    : 0;
 
   // The API returns days in CHRONOLOGICAL order (oldest → newest).
   // Build Sunday-aligned week columns exactly like GitHub does — a
@@ -180,29 +195,12 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
   const monthLabels = computeMonthLabels(weekChunks);
 
   // Grid dimensions based on exact target weeks
-  const gridWidth = targetWeek * CELL_STRIDE - CELL_GAP; // Last stride doesn't have trailing gap
+  const gridWidth = Math.max(0, targetWeek * CELL_STRIDE - CELL_GAP); // Last stride doesn't have trailing gap
   const gridHeight = 7 * CELL_STRIDE - CELL_GAP;
 
   // Label row dimensions
   const LABEL_HEIGHT = 13;
   const LABEL_GAP = 4;
-
-  // Calculate available inner width/height based on tier
-  // small: 170, medium: 354, large: 354
-  // Subtract padding to get usable area
-  const innerWidth =
-    size === "small" ? 170 - 2 * 14 : size === "medium" ? 354 - 2 * 14 : 354 - 2 * 14;
-  const innerHeight = size === "large" ? 354 - 2 * 14 : 170 - 2 * 14;
-
-  // Total height includes labels + gap + grid
-  const totalContentHeight = LABEL_HEIGHT + LABEL_GAP + gridHeight;
-
-  // Center grid + labels unit vertically for large
-  const verticalPadding =
-    size === "large" ? Math.max(0, (innerHeight - totalContentHeight) / 2) : 0;
-
-  // Center horizontally
-  const horizontalPadding = Math.max(0, (innerWidth - gridWidth) / 2);
 
   return (
     <motion.div
@@ -216,22 +214,25 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
         borderRadius: `${WIDGET_RADIUS}px`,
         background: "var(--glass-regular-bg)",
         border: "1px solid var(--glass-border)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
         boxSizing: "border-box",
         boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
       }}
     >
+      {/* Measured host: fills the padded content box; the grid unit
+          is flex-centered inside it, no margin arithmetic. */}
       <div
+        ref={hostRef}
         style={{
-          position: "relative",
-          width: gridWidth,
-          marginLeft: `${horizontalPadding}px`,
-          marginTop: `${verticalPadding}px`,
-          marginBottom: `${verticalPadding}px`,
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
         }}
       >
+        {targetWeek > 0 && (
+        <div style={{ position: "relative", width: gridWidth }}>
         {/* Month labels row (absolutely positioned above grid) */}
         <div
           style={{
@@ -294,6 +295,8 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
             })
           )}
         </svg>
+        </div>
+        )}
       </div>
     </motion.div>
   );

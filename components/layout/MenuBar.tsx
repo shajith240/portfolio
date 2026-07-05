@@ -112,8 +112,15 @@ function MenuRow({ entry, onClose }: { entry: Exclude<MenuEntry, "separator">; o
   );
 }
 
+const SearchGlyph = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+    <circle cx="6" cy="6" r="4.6" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" />
+    <path d="M9.6 9.6L13 13" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
 export default function MenuBar() {
-  const { isMobileLayout } = useLayout();
+  const { isMobileLayout, openSearch } = useLayout();
   const { openWindow } = useWindowManager();
   const [clock, setClock] = useState("");
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -243,6 +250,23 @@ export default function MenuBar() {
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
         <WifiGlyph />
         <BatteryGlyph />
+        {/* Spotlight lives in the status cluster, left of the clock —
+            same slot as real macOS. The palette itself already
+            existed; this is its visible trigger. */}
+        <button
+          onClick={openSearch}
+          aria-label="Spotlight search"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            border: "none",
+            background: "transparent",
+            padding: "2px",
+            cursor: "default",
+          }}
+        >
+          <SearchGlyph />
+        </button>
         <span style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{clock}</span>
       </div>
     </div>
