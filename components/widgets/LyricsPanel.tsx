@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { motion, useMotionValue, useTransform, animate, type MotionValue } from "framer-motion";
-import { NOW_PLAYING } from "@/data/nowPlaying";
 import { parseLRC } from "@/lib/parseLRC";
 import { computeWordTimings, type TimedLine, type TimedWord } from "@/lib/lyricsWordTiming";
 
@@ -79,9 +78,11 @@ function LineRow({
 export default function LyricsPanel({
   audioRef,
   playing,
+  lyricsSrc,
 }: {
   audioRef: RefObject<HTMLAudioElement | null>;
   playing: boolean;
+  lyricsSrc: string | null;
 }) {
   const [lines, setLines] = useState<TimedLine[] | null>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -92,9 +93,12 @@ export default function LyricsPanel({
   const rafRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
-    if (!NOW_PLAYING.lyricsSrc) return;
+    if (!lyricsSrc) {
+      setLines(null);
+      return;
+    }
     let cancelled = false;
-    fetch(NOW_PLAYING.lyricsSrc)
+    fetch(lyricsSrc)
       .then((r) => r.text())
       .then((raw) => {
         if (cancelled) return;
@@ -107,7 +111,7 @@ export default function LyricsPanel({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [lyricsSrc]);
 
   useEffect(() => {
     if (!playing || !lines) return;

@@ -2,27 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { NOW_PLAYING } from "@/data/nowPlaying";
+import { PLAYLIST, NOW_PLAYING } from "@/data/nowPlaying";
 import LyricsPanel from "@/components/widgets/LyricsPanel";
 import { WIDGET_UNIT, WIDGET_PADDING, WIDGET_RADIUS } from "@/lib/widgetGrid";
 import { getSizeDimensions } from "@/lib/widgetSizeTiers";
 import type { WidgetSize } from "@/lib/widgetLayoutSchema";
 
-/* macOS "Now Playing" widget — real <audio> playback (no Spotify
-   OAuth/infra). Matches the real macOS Control Center Now Playing
-   panel's actual layout, which has no collapsed/hover-expanded state
-   at all: album art + title/artist sit on top, a full-width scrubber
-   spans the whole card below that, and a centered prev/play/next row
-   sits below the scrubber — everything visible permanently, not
-   revealed on hover (an earlier version of this widget invented a
-   hover-to-reveal interaction that isn't how the real widget behaves
-   at all, which is why it read as inauthentic). Spring/card styling
-   match docs/design-system/motion.md's `entrance` preset and the
-   existing PhotoWidget/AboutWidget Liquid Glass card exactly — see
-   docs/superpowers/specs/2026-07-01-desktop-widgets-design.md.
+/* macOS "Now Playing" widget — real <audio> playback (no Spotify OAuth/infra).
+   Matches the real macOS Notification Center Now Playing widget anatomy:
+   - Small (170×170): full-bleed artwork + bottom-right play/pause button
+   - Medium (354×170): left artwork (120×120, rounded), right text+controls (prev/play/next)
+   - Large (354×354): header (medium layout) + LyricsPanel filling remaining height
 
-   An album-art color-extraction tinted backdrop was tried and then
-   explicitly reverted — kept to the plain glass card instead. */
+   KEY DISTINCTION: Apple's Notification Center Now Playing widget has NO scrubber
+   and NO volume slider (those only exist in Control Center). The previous version
+   had both, which made it "vibecoded" rather than authentic.
+
+   BACKGROUND: artwork-tinted (blurred, saturated, darkened) as layer 1 behind
+   text; falls back to glass when artwork is null. This matches Sequoia's tinted
+   widget treatment.
+
+   Spring/card styling matches docs/design-system/motion.md's `entrance` preset
+   and the existing PhotoWidget/AboutWidget Liquid Glass card. */
 
 const ENTRANCE_SPRING = { type: "spring", stiffness: 520, damping: 44, mass: 0.85, restDelta: 0.01 } as const;
 
@@ -66,108 +67,70 @@ function SkipGlyph({ direction }: { direction: "prev" | "next" }) {
   );
 }
 
-// Matches SF Symbols' speaker.wave.2.fill / speaker.slash.fill — the
-// two states real macOS volume controls actually use (not a
-// low/medium/high three-way split, which would need a third glyph
-// with no clear real-world trigger point).
-function SpeakerGlyph({ muted }: { muted: boolean }) {
-  return (
-    <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
-      <path d="M2 7.5H5L9 4V16L5 12.5H2V7.5Z" fill="var(--text-muted)" />
-      {muted ? (
-        <>
-          <line x1="12.5" y1="7.5" x2="17.5" y2="12.5" stroke="var(--text-muted)" strokeWidth="1.4" strokeLinecap="round" />
-          <line x1="17.5" y1="7.5" x2="12.5" y2="12.5" stroke="var(--text-muted)" strokeWidth="1.4" strokeLinecap="round" />
-        </>
-      ) : (
-        <>
-          <path d="M12.3 7.2a3.2 3.2 0 0 1 0 5.6" stroke="var(--text-muted)" strokeWidth="1.3" strokeLinecap="round" fill="none" />
-          <path d="M14.3 5a6 6 0 0 1 0 10" stroke="var(--text-muted)" strokeWidth="1.3" strokeLinecap="round" fill="none" />
-        </>
-      )}
-    </svg>
-  );
-}
-
 export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
+  const [trackIndex, setTrackIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [muted, setMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const scrubberRef = useRef<HTMLDivElement>(null);
-  const volumeTrackRef = useRef<HTMLDivElement>(null);
+
+  const current = PLAYLIST[trackIndex] ?? NOW_PLAYING;
 
   const togglePlay = () => {
+    if (current.src === "") return;
     const audio = audioRef.current;
     if (!audio) return;
     if (playing) {
       audio.pause();
     } else {
       audio.play().catch(() => {
-        // Autoplay-policy block or missing file at NOW_PLAYING.src —
+        // Autoplay-policy block or missing file at current.src —
         // stay paused rather than throwing an unhandled rejection.
       });
     }
   };
 
-  // Single source of truth for the audio element's real volume —
-  // whatever changes `volume`/`muted`, the <audio> element is kept in
-  // sync here rather than set ad hoc at each call site.
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.volume = muted ? 0 : volume;
-  }, [volume, muted]);
 
-  const toggleMute = () => setMuted((m) => !m);
-
-  const setVolumeFromClientX = (clientX: number) => {
-    const track = volumeTrackRef.current;
-    if (!track) return;
-    const rect = track.getBoundingClientRect();
-    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-    setVolume(ratio);
-    // Dragging the slider un-mutes, matching real macOS volume sliders
-    // — there's no reason to leave it muted once the user has
-    // explicitly picked a level.
-    if (ratio > 0) setMuted(false);
-  };
-
-  const onVolumePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    setVolumeFromClientX(e.clientX);
-    const onMove = (ev: PointerEvent) => setVolumeFromClientX(ev.clientX);
-    const onUp = () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-    };
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-  };
-
-  // There's only one track (no playlist/queue in scope), so prev/next
-  // both restart it — a real, honest action rather than a dead button
-  // that looks clickable but does nothing.
   const restart = () => {
     const audio = audioRef.current;
     if (!audio) return;
     audio.currentTime = 0;
   };
 
-  // Real macOS's scrubber is draggable/click-to-seek, not just a
-  // read-only progress display — clicking anywhere on the track jumps
-  // playback to that position.
-  const seekToClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const audio = audioRef.current;
-    const track = scrubberRef.current;
-    if (!audio || !track || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
-    const rect = track.getBoundingClientRect();
-    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
-    audio.currentTime = ratio * audio.duration;
+  const nextTrack = () => {
+    if (current.src === "") return;
+    if (PLAYLIST.length <= 1) {
+      restart();
+      return;
+    }
+    setTrackIndex((i) => (i + 1) % PLAYLIST.length);
   };
 
+  const prevTrack = () => {
+    if (current.src === "") return;
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.currentTime > 3 || PLAYLIST.length <= 1) {
+      restart();
+      return;
+    }
+    setTrackIndex((i) => (i - 1 + PLAYLIST.length) % PLAYLIST.length);
+  };
+
+  // When trackIndex changes, update audio.src and reset progress; if
+  // playing, continue playing the new track.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const wasPlaying = playing;
+    audio.src = current.src;
+    audio.currentTime = 0;
+    if (wasPlaying && current.src !== "") {
+      audio.play().catch(() => {
+        // Autoplay or file error — silent catch.
+      });
+    }
+  }, [trackIndex, current.src, playing]);
+
   if (size === "small") {
-    const dims = getSizeDimensions("nowPlaying", "small");
     return (
       <motion.div
         initial={{ y: 16, opacity: 0 }}
@@ -175,28 +138,33 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
         transition={ENTRANCE_SPRING}
         style={{
           position: "relative",
-          width: `${dims.width}px`,
-          height: `${dims.height}px`,
+          width: "100%",
+          height: "100%",
           borderRadius: `${WIDGET_RADIUS}px`,
           overflow: "hidden",
+          boxSizing: "border-box",
           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28)",
         }}
       >
         <audio
           ref={audioRef}
-          src={NOW_PLAYING.src}
+          src={current.src}
           preload="none"
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
-          onEnded={(e) => {
-            setPlaying(false);
-            e.currentTarget.currentTime = 0;
+          onEnded={() => {
+            if (PLAYLIST.length > 1) {
+              setTrackIndex((i) => (i + 1) % PLAYLIST.length);
+              // Continue playing will happen via the useEffect that watches trackIndex
+            } else {
+              setPlaying(false);
+            }
           }}
         />
-        {NOW_PLAYING.artwork ? (
+        {current.artwork ? (
           <img
-            src={NOW_PLAYING.artwork}
-            alt={NOW_PLAYING.title}
+            src={current.artwork}
+            alt={current.title}
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
         ) : (
@@ -207,7 +175,7 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "linear-gradient(160deg, #FF7A45 0%, #7A1F00 100%)",
+              background: "linear-gradient(160deg, #48484a 0%, #1c1c1e 100%)",
             }}
           >
             <MusicNoteGlyph />
@@ -228,7 +196,8 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
             background: "rgba(0, 0, 0, 0.5)",
             backdropFilter: "blur(8px)",
             border: "none",
-            cursor: "pointer",
+            cursor: current.src === "" ? "default" : "pointer",
+            opacity: current.src === "" ? 0.4 : 1,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -246,61 +215,117 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
       animate={{ y: 0, opacity: 1 }}
       transition={ENTRANCE_SPRING}
       style={{
-        width: `${WIDGET_UNIT}px`,
-        padding: `${WIDGET_PADDING}px`,
+        position: "relative",
+        width: "100%",
+        height: "100%",
         borderRadius: `${WIDGET_RADIUS}px`,
-        background: "var(--glass-regular-bg)",
-        border: "1px solid var(--glass-border)",
-        backdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
-        WebkitBackdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
-        // Tight, close-to-surface shadow, not a wide diffuse glow —
-        // real macOS widgets rest near the surface rather than
-        // levitating, and a wider blur here would bleed past
-        // DesktopWidgetStack's 14px inter-widget gap into whatever's
-        // stacked next to it.
-        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
         overflow: "hidden",
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
+      {/* Artwork-tinted background (layer 1): blurred, saturated,
+          darkened artwork fills the card. Fallback to glass when no artwork. */}
+      {current.artwork ? (
+        <>
+          <img
+            src={current.artwork}
+            alt=""
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center",
+              filter: "blur(50px) saturate(160%) brightness(0.5)",
+              zIndex: 0,
+            }}
+          />
+          {/* Wash for text contrast */}
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              background: "rgba(0, 0, 0, 0.25)",
+              zIndex: 1,
+            }}
+          />
+        </>
+      ) : (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "var(--glass-regular-bg)",
+            border: "1px solid var(--glass-border)",
+            backdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
+            WebkitBackdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
+            zIndex: 0,
+          }}
+        />
+      )}
+
       <audio
         ref={audioRef}
-        src={NOW_PLAYING.src}
+        src={current.src}
         preload="none"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        onEnded={(e) => {
-          setPlaying(false);
-          e.currentTarget.currentTime = 0;
-        }}
-        onTimeUpdate={(e) => {
-          const audio = e.currentTarget;
-          // duration is NaN until loadedmetadata fires — guard to 0
-          // rather than letting a NaN% width leak into the scrubber.
-          const pct = Number.isFinite(audio.duration) && audio.duration > 0 ? (audio.currentTime / audio.duration) * 100 : 0;
-          setProgress(pct);
+        onEnded={() => {
+          if (PLAYLIST.length > 1) {
+            setTrackIndex((i) => (i + 1) % PLAYLIST.length);
+          } else {
+            setPlaying(false);
+          }
         }}
       />
 
-      {/* Top row: album art + title/artist only — no controls here,
-          matching the real widget's layout. */}
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+      {/* Header block: artwork (left) | text + controls (right).
+          At large, this sits at the top 170px of the card. */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          padding: `${WIDGET_PADDING}px`,
+          display: "flex",
+          alignItems: "center",
+          gap: "20px",
+          height: size === "large" ? "170px" : "100%",
+          width: "100%",
+          boxSizing: "border-box",
+        }}
+      >
+        {/* Sharp artwork (120×120 medium, left-aligned & rounded) */}
         <div
           style={{
-            width: "56px",
-            height: "56px",
             flexShrink: 0,
-            borderRadius: "22%",
+            width: "120px",
+            height: "120px",
+            borderRadius: "12px",
             overflow: "hidden",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: NOW_PLAYING.artwork ? undefined : "linear-gradient(160deg, #FF7A45 0%, #7A1F00 100%)",
+            background: current.artwork ? undefined : "linear-gradient(160deg, #48484a 0%, #1c1c1e 100%)",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.35)",
           }}
         >
-          {NOW_PLAYING.artwork ? (
+          {current.artwork ? (
             <img
-              src={NOW_PLAYING.artwork}
-              alt={NOW_PLAYING.title}
+              src={current.artwork}
+              alt={current.title}
+              draggable={false}
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           ) : (
@@ -308,167 +333,122 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
           )}
         </div>
 
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p
-            style={{
-              margin: 0,
-              fontSize: "14px",
-              fontWeight: 600,
-              color: "var(--text-primary)",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {NOW_PLAYING.title}
-          </p>
-          <p
-            style={{
-              margin: 0,
-              fontSize: "12px",
-              color: "var(--text-muted)",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {NOW_PLAYING.artist}
-          </p>
-        </div>
-      </div>
-
-      {/* Scrubber — full card width, click/drag-to-seek, a neutral
-          white fill (not the site's orange accent) matching real
-          macOS's Now Playing scrubber. A visible playhead thumb is
-          load-bearing, not decorative: at 0% progress the fill is 0
-          width, so without a thumb the bar is just one flat "unplayed
-          track" color with nothing to anchor "this is the start" —
-          indistinguishable at a glance from "fully played." Real
-          macOS/Apple Music scrubbers always show this dot for exactly
-          that reason. The thumb lives outside the track's own
-          overflow:hidden (a sibling, not a child) so it's never
-          clipped at the 0%/100% extremes, where it straddles the
-          track's edge — the same way a native slider thumb does. */}
-      <div style={{ position: "relative", marginTop: "12px" }}>
+        {/* Text + controls column (right) */}
         <div
-          ref={scrubberRef}
-          onClick={seekToClick}
           style={{
-            height: "3px",
-            borderRadius: "2px",
-            background: "rgba(255, 255, 255, 0.14)",
-            overflow: "hidden",
-            cursor: "pointer",
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            gap: "16px",
           }}
         >
-          <div
-            style={{
-              height: "100%",
-              width: `${progress}%`,
-              background: "rgba(255, 255, 255, 0.85)",
-              borderRadius: "2px",
-            }}
-          />
-        </div>
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: `${progress}%`,
-            width: "8px",
-            height: "8px",
-            borderRadius: "50%",
-            background: "#fff",
-            transform: "translate(-50%, -50%)",
-            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.45)",
-            pointerEvents: "none",
-          }}
-        />
-      </div>
-
-      {/* Controls row — prev / play-pause / next, centered under the
-          full card width, always visible (never dimmed/disabled) with
-          play-pause visually larger than prev/next, matching the real
-          widget's control hierarchy. */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "28px", marginTop: "10px" }}>
-        <button
-          onClick={restart}
-          aria-label="Previous"
-          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex" }}
-        >
-          <SkipGlyph direction="prev" />
-        </button>
-        <button
-          onClick={togglePlay}
-          aria-label={playing ? "Pause" : "Play"}
-          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex" }}
-        >
-          {playing ? <PauseGlyph /> : <PlayGlyph />}
-        </button>
-        <button
-          onClick={restart}
-          aria-label="Next"
-          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex" }}
-        >
-          <SkipGlyph direction="next" />
-        </button>
-      </div>
-
-      {/* Volume — speaker icon toggles mute, slider is click-and-drag
-          (not click-only like the scrubber intentionally is; a volume
-          slider is the one control real macOS always lets you drag).
-          Same neutral white fill / track treatment as the scrubber
-          above for visual consistency between the two sliders in this
-          widget. */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "12px" }}>
-        <button
-          onClick={toggleMute}
-          aria-label={muted ? "Unmute" : "Mute"}
-          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", flexShrink: 0 }}
-        >
-          <SpeakerGlyph muted={muted || volume === 0} />
-        </button>
-        <div style={{ position: "relative", flex: 1 }}>
-          <div
-            ref={volumeTrackRef}
-            onPointerDown={onVolumePointerDown}
-            style={{
-              height: "3px",
-              borderRadius: "2px",
-              background: "rgba(255, 255, 255, 0.14)",
-              overflow: "hidden",
-              cursor: "pointer",
-            }}
-          >
-            <div
+          {/* Title + artist */}
+          <div>
+            <p
               style={{
-                height: "100%",
-                width: `${(muted ? 0 : volume) * 100}%`,
-                background: "rgba(255, 255, 255, 0.85)",
-                borderRadius: "2px",
+                margin: 0,
+                fontSize: "15px",
+                fontWeight: 600,
+                color: "rgba(255, 255, 255, 0.95)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                letterSpacing: "-0.01em",
               }}
-            />
+            >
+              {current.title}
+            </p>
+            <p
+              style={{
+                margin: 0,
+                marginTop: "4px",
+                fontSize: "13px",
+                fontWeight: 400,
+                color: "rgba(255, 255, 255, 0.6)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {current.artist}
+            </p>
           </div>
-          <div
-            aria-hidden
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: `${(muted ? 0 : volume) * 100}%`,
-              width: "8px",
-              height: "8px",
-              borderRadius: "50%",
-              background: "#fff",
-              transform: "translate(-50%, -50%)",
-              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.45)",
-              pointerEvents: "none",
-            }}
-          />
+
+          {/* Transport controls: prev / play-pause / next */}
+          <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+            <button
+              onClick={prevTrack}
+              aria-label="Previous"
+              style={{
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: current.src === "" ? "default" : "pointer",
+                opacity: current.src === "" ? 0.4 : 0.9,
+                display: "flex",
+                color: "rgba(255, 255, 255, 0.9)",
+              }}
+            >
+              <SkipGlyph direction="prev" />
+            </button>
+            <button
+              onClick={togglePlay}
+              aria-label={playing ? "Pause" : "Play"}
+              style={{
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: current.src === "" ? "default" : "pointer",
+                opacity: current.src === "" ? 0.4 : 0.9,
+                display: "flex",
+                color: "rgba(255, 255, 255, 0.9)",
+              }}
+            >
+              {playing ? (
+                <PauseGlyph />
+              ) : (
+                <PlayGlyph />
+              )}
+            </button>
+            <button
+              onClick={nextTrack}
+              aria-label="Next"
+              style={{
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: current.src === "" ? "default" : "pointer",
+                opacity: current.src === "" ? 0.4 : 0.9,
+                display: "flex",
+                color: "rgba(255, 255, 255, 0.9)",
+              }}
+            >
+              <SkipGlyph direction="next" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {size === "large" && <LyricsPanel audioRef={audioRef} playing={playing} />}
+      {/* Lyrics panel: only at large size, fills remaining height */}
+      {size === "large" && (
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            flex: 1,
+            minHeight: 0,
+            paddingLeft: `${WIDGET_PADDING}px`,
+            paddingRight: `${WIDGET_PADDING}px`,
+            paddingBottom: `${WIDGET_PADDING}px`,
+            width: "100%",
+            boxSizing: "border-box",
+          }}
+        >
+          <LyricsPanel audioRef={audioRef} playing={playing} lyricsSrc={current.lyricsSrc} />
+        </div>
+      )}
     </motion.div>
   );
 }
