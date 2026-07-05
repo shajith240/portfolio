@@ -1,15 +1,21 @@
-export interface NowPlayingTrack {
-  title: string
-  artist: string
-  src: string
-  artwork: string | null
-  lyricsSrc: string | null
+import { GENERATED_SONGS, type GeneratedTrack } from './generated/content'
+
+export type NowPlayingTrack = GeneratedTrack
+
+// Auto-discovered from public/songs by scripts/generate-content.mjs —
+// drop in an audio file (+ optional cover image, .lrc lyrics, and
+// "<name>.json" {title, artist} sidecar) and it joins the playlist on
+// the next dev start / deploy, no code changes.
+export const PLAYLIST: NowPlayingTrack[] = GENERATED_SONGS
+
+// Silent placeholder so the player renders (disabled) even with an
+// empty public/songs folder rather than crashing.
+const EMPTY_TRACK: NowPlayingTrack = {
+  title: 'No songs yet',
+  artist: '',
+  src: '',
+  artwork: null,
+  lyricsSrc: null,
 }
 
-export const NOW_PLAYING: NowPlayingTrack = {
-  title: 'Someone You Loved',
-  artist: 'Lewis Capaldi',
-  src: '/songs/someone-you-loved.m4a',
-  artwork: '/songs/someone-you-loved-cover.webp',
-  lyricsSrc: '/songs/Lewis-Capaldi-Someone-You-Loved-(Official-Audio).lrc',
-}
+export const NOW_PLAYING: NowPlayingTrack = PLAYLIST[0] ?? EMPTY_TRACK
