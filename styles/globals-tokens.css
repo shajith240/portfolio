@@ -172,24 +172,36 @@
     radial-gradient(ellipse 80% 50% at 20% 20%, rgba(10, 132, 255, 0.02) 0%, transparent 60%),
     radial-gradient(ellipse 60% 40% at 80% 80%, rgba(10, 132, 255, 0.01) 0%, transparent 50%),
     linear-gradient(160deg, #1c1c1c 0%, #1c1c1c 40%, #1c1c1c 100%);
+  /* Liquid Glass inset anatomy [WWDC 2025-era, web adaptation]:
+     four optical layers, not the old two-line frosted recipe —
+     (1) sharp 1px specular rim at the top edge (the "wet" light),
+     (2) a soft 4-6px form shadow just inside the top (concave depth),
+     (3) a dark 1-2px thickness edge at the bottom (the glass slab's
+         far side), (4) ambient drop shadows for elevation. The rim
+     is deliberately brighter than the old 0.10 — Liquid Glass rims
+     read as lit edges, not hairlines. */
   --glass-card-bg:      rgba(255, 255, 255, 0.04);
   --glass-card-border:  rgba(255, 255, 255, 0.08);
   --glass-card-shadow:
-    inset 0  1px 0 rgba(255, 255, 255, 0.10),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.20),
+    inset 0  1px 1px rgba(255, 255, 255, 0.25),
+    inset 0  4px 6px rgba(0, 0, 0, 0.10),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.28),
     0  8px 32px rgba(0, 0, 0, 0.40),
     0  2px  8px rgba(0, 0, 0, 0.30);
   --glass-elevated-bg:     rgba(255, 255, 255, 0.06);
   --glass-elevated-border: rgba(255, 255, 255, 0.10);
   --glass-elevated-shadow:
-    inset 0  1px 0 rgba(255, 255, 255, 0.14),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    inset 0  1px 1px rgba(255, 255, 255, 0.32),
+    inset 0  4px 8px rgba(0, 0, 0, 0.12),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.32),
     0 16px 48px rgba(0, 0, 0, 0.50),
     0  4px 12px rgba(0, 0, 0, 0.35);
   --glass-accent-bg:     rgba(10, 132, 255, 0.12);
   --glass-accent-border: rgba(10, 132, 255, 0.20);
   --glass-accent-shadow:
-    inset 0 1px 0 rgba(10, 132, 255, 0.15),
+    inset 0  1px 1px rgba(120, 190, 255, 0.30),
+    inset 0  4px 6px rgba(0, 0, 0, 0.10),
+    inset 0 -1px 2px rgba(0, 0, 30, 0.25),
     0  8px 32px rgba(10, 132, 255, 0.08),
     0  2px  8px rgba(0, 0, 0, 0.30);
   --glass-divider-gradient:

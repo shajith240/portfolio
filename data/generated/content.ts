@@ -56,6 +56,8 @@ export const GENERATED_WALLPAPERS: string[] = [
   "zenitsu-agatsuma-3840x2160-24356.jpg"
 ];
 
+export const GENERATED_MOBILE_WALLPAPERS: string[] = [];
+
 export const GENERATED_MOTIVATION_IMAGES: string[] = [
   "/motivation_quotes/0%luck-100%hardwork.jpg",
   "/motivation_quotes/L E A R N E D.jpg",

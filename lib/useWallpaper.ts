@@ -1,14 +1,22 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { GENERATED_WALLPAPERS } from "@/data/generated/content";
+import { GENERATED_WALLPAPERS, GENERATED_MOBILE_WALLPAPERS } from "@/data/generated/content";
 
 const STORAGE_KEY = "portfolio.wallpaper";
+const MOBILE_STORAGE_KEY = "portfolio.wallpaper.mobile";
+// Same breakpoint LayoutContext uses for isPhone (mobile && !tablet).
+const PHONE_MAX_WIDTH = 640;
 
 // Auto-discovered from public/wallpapers by scripts/generate-content.mjs
 // — drop an image in that folder and it appears in the picker on the
-// next dev start / deploy, no code changes.
+// next dev start / deploy, no code changes. Phones get their own
+// PORTRAIT set from public/wallpapers/mobile (entries carry the
+// "mobile/" prefix so the /wallpapers/<name> URL convention holds),
+// with the desktop set as fallback while the mobile folder is empty.
 export const WALLPAPERS = GENERATED_WALLPAPERS;
+export const MOBILE_WALLPAPERS =
+  GENERATED_MOBILE_WALLPAPERS.length > 0 ? GENERATED_MOBILE_WALLPAPERS : GENERATED_WALLPAPERS;
 
 /**
  * Compute average color from an image file by downsampling to 12x12 and averaging RGB.
@@ -169,20 +177,33 @@ async function handleWallpaperChange(imagePath: string) {
 // entrance-animation guard, MenuBar's clock).
 export function useWallpaper() {
   const [wallpaper, setWallpaperState] = useState<string | null>(null);
+  const [isPhone, setIsPhone] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored && WALLPAPERS.includes(stored)) {
+    // Device class decides WHICH list and WHICH persistence slot this
+    // hook works against — the phone remembers its own wallpaper
+    // independently of the desktop. Checked once at mount (a device
+    // doesn't change class mid-session; a resized desktop browser
+    // keeping its desktop wallpaper is correct behavior).
+    const phone = window.innerWidth < PHONE_MAX_WIDTH;
+    setIsPhone(phone);
+    const list = phone ? MOBILE_WALLPAPERS : WALLPAPERS;
+    const key = phone ? MOBILE_STORAGE_KEY : STORAGE_KEY;
+    const stored = window.localStorage.getItem(key);
+    if (stored && list.includes(stored)) {
       setWallpaperState(stored);
       handleWallpaperChange(`/wallpapers/${stored}`);
     }
   }, []);
 
-  const setWallpaper = useCallback((filename: string) => {
-    setWallpaperState(filename);
-    window.localStorage.setItem(STORAGE_KEY, filename);
-    handleWallpaperChange(`/wallpapers/${filename}`);
-  }, []);
+  const setWallpaper = useCallback(
+    (filename: string) => {
+      setWallpaperState(filename);
+      window.localStorage.setItem(isPhone ? MOBILE_STORAGE_KEY : STORAGE_KEY, filename);
+      handleWallpaperChange(`/wallpapers/${filename}`);
+    },
+    [isPhone],
+  );
 
-  return { wallpaper, setWallpaper };
+  return { wallpaper, setWallpaper, isPhone };
 }

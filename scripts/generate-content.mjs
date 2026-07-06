@@ -184,6 +184,13 @@ async function buildSongs() {
 
 const songs = await buildSongs();
 const wallpapers = listDir("wallpapers").filter((f) => IMAGE_EXTS.has(extname(f).toLowerCase()));
+// Phone wallpapers are PORTRAIT images in their own subfolder —
+// drop files into public/wallpapers/mobile/ and the phone experience
+// picks them up. Entries carry the "mobile/" prefix so every
+// consumer's `/wallpapers/${name}` URL convention keeps working.
+const mobileWallpapers = listDir("wallpapers/mobile")
+  .filter((f) => IMAGE_EXTS.has(extname(f).toLowerCase()))
+  .map((f) => `mobile/${f}`);
 const motivationImages = listDir("motivation_quotes")
   .filter((f) => IMAGE_EXTS.has(extname(f).toLowerCase()))
   .map((f) => `/motivation_quotes/${f}`);
@@ -206,6 +213,8 @@ export interface GeneratedTrack {
 export const GENERATED_SONGS: GeneratedTrack[] = ${JSON.stringify(songs, null, 2)};
 
 export const GENERATED_WALLPAPERS: string[] = ${JSON.stringify(wallpapers, null, 2)};
+
+export const GENERATED_MOBILE_WALLPAPERS: string[] = ${JSON.stringify(mobileWallpapers, null, 2)};
 
 export const GENERATED_MOTIVATION_IMAGES: string[] = ${JSON.stringify(motivationImages, null, 2)};
 `;
