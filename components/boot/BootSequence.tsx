@@ -3,18 +3,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
 import BootScreen from "@/components/boot/BootScreen";
-import LoginScreen from "@/components/boot/LoginScreen";
 
 const SESSION_KEY = "portfolio.bootSeen";
 
-/* Orchestrates the two stages. Defaults to "boot" (matches the
-   server's render — no hydration mismatch), then a mount-time effect
-   jumps straight to "done" if this session has already seen it. Biased
+/* Boot only — the click-to-continue LoginScreen stage was removed
+   (per request): the enhanced boot progress plays and hands off
+   STRAIGHT to the desktop. Defaults to "boot" (matches the server's
+   render — no hydration mismatch), then a mount-time effect jumps
+   straight to "done" if this session has already seen it. Biased
    toward correctly showing the sequence on a first visit rather than
    risking a flash of the desktop first. */
 
 export default function BootSequence() {
-  const [stage, setStage] = useState<"boot" | "login" | "done">("boot");
+  const [stage, setStage] = useState<"boot" | "done">("boot");
 
   useEffect(() => {
     if (window.sessionStorage.getItem(SESSION_KEY)) {
@@ -22,9 +23,7 @@ export default function BootSequence() {
     }
   }, []);
 
-  const handleBootComplete = useCallback(() => setStage("login"), []);
-
-  const handleUnlock = useCallback(() => {
+  const handleBootComplete = useCallback(() => {
     window.sessionStorage.setItem(SESSION_KEY, "1");
     setStage("done");
   }, []);
@@ -35,7 +34,6 @@ export default function BootSequence() {
     <div style={{ position: "fixed", inset: 0, zIndex: 9999 }}>
       <AnimatePresence>
         {stage === "boot" && <BootScreen key="boot" onComplete={handleBootComplete} />}
-        {stage === "login" && <LoginScreen key="login" onUnlock={handleUnlock} />}
       </AnimatePresence>
     </div>
   );

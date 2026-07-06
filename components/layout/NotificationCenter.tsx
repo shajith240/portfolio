@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
 import { PROJECTS } from "@/data/projects";
+import { useLiquidGlass } from "@/lib/liquidGlass";
 
 /* macOS Notification Center — opens from the menu-bar clock (the
    real trigger since Big Sur), slides in from the right edge.
@@ -25,15 +26,44 @@ import { PROJECTS } from "@/data/projects";
    fixed-position descendants (same trap the Control Center dim
    overlay hit). */
 
+/* Every card is a Liquid Glass surface — refraction engine + rim
+   class; this style only carries shape. */
 const CARD_STYLE: React.CSSProperties = {
   borderRadius: "16px",
-  background: "rgba(30, 30, 32, 0.62)",
-  backdropFilter: "blur(40px) saturate(180%)",
-  WebkitBackdropFilter: "blur(40px) saturate(180%)",
-  border: "1px solid rgba(255, 255, 255, 0.08)",
-  boxShadow: "0 8px 28px rgba(0, 0, 0, 0.35)",
   overflow: "hidden",
 };
+
+function NCCard({
+  children,
+  as,
+  onClick,
+  style,
+}: {
+  children: React.ReactNode;
+  as?: "button";
+  onClick?: () => void;
+  style?: React.CSSProperties;
+}) {
+  const ref = useLiquidGlass<HTMLDivElement>({ radius: 16, bezel: 12, strength: 0.58, blur: 8, brightness: 0.78, tint: 0.24 });
+  const shared = { ...CARD_STYLE, ...style };
+  if (as === "button") {
+    return (
+      <button
+        ref={ref as React.RefObject<HTMLButtonElement | null> as never}
+        className="liquid-glass"
+        onClick={onClick}
+        style={{ ...shared, border: "none", textAlign: "left", cursor: "default", display: "block", width: "100%" }}
+      >
+        {children}
+      </button>
+    );
+  }
+  return (
+    <div ref={ref} className="liquid-glass" style={shared}>
+      {children}
+    </div>
+  );
+}
 
 export default function NotificationCenter({
   open,
@@ -97,7 +127,7 @@ export default function NotificationCenter({
           }}
         >
           {/* Calendar card */}
-          <div style={{ ...CARD_STYLE, padding: "14px 16px" }}>
+          <NCCard style={{ padding: "14px 16px" }}>
             <div
               style={{
                 fontSize: "11px",
@@ -111,22 +141,16 @@ export default function NotificationCenter({
             <div style={{ fontSize: "30px", fontWeight: 300, color: "rgba(255,255,255,0.95)", lineHeight: 1.1 }}>
               {monthDay}
             </div>
-          </div>
+          </NCCard>
 
           {/* Latest project card */}
-          <button
+          <NCCard
+            as="button"
             onClick={() => {
               onClose();
               openWindow("/projects", "Projects");
             }}
-            style={{
-              ...CARD_STYLE,
-              padding: "14px 16px",
-              textAlign: "left",
-              cursor: "default",
-              display: "block",
-              width: "100%",
-            }}
+            style={{ padding: "14px 16px" }}
           >
             <div style={{ fontSize: "11px", fontWeight: 600, color: "rgba(255,255,255,0.5)", marginBottom: "4px" }}>
               Latest project
@@ -147,7 +171,7 @@ export default function NotificationCenter({
             >
               {latest.description}
             </div>
-          </button>
+          </NCCard>
         </motion.div>
       )}
     </AnimatePresence>,

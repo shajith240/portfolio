@@ -87,6 +87,10 @@ interface CFData {
     contribution: number
   } | null
   problemsSolved: number
+  buckets?: { easy: number; medium: number; hard: number; unrated: number }
+  topTags?: { name: string; count: number }[]
+  activity?: Record<string, number>
+  ratingHistory?: { name: string; time: number; rating: number; rank: number }[]
   error?: boolean
 }
 
@@ -1475,6 +1479,168 @@ function ErrorCard({ platform }: { platform: string }) {
   )
 }
 
+/* CF rating chart — polyline over the contest history, banded like
+   the real site: horizontal grid lines at rating-band boundaries,
+   line/dots in the user's current rank color. */
+function CFRatingChart({ history, color, compact }: { history: NonNullable<CFData['ratingHistory']>; color: string; compact: boolean }) {
+  const W = 640
+  const H = 170
+  const PAD = 24
+  const min = Math.min(...history.map((h) => h.rating), 0)
+  const max = Math.max(...history.map((h) => h.rating), 800)
+  const span = Math.max(1, max - min)
+  const x = (i: number) => (history.length === 1 ? W / 2 : PAD + (i / (history.length - 1)) * (W - PAD * 2))
+  const y = (r: number) => H - PAD - ((r - min) / span) * (H - PAD * 2)
+  const bands = [400, 800, 1200, 1600].filter((b) => b > min && b < max + 120)
+
+  return (
+    <div style={{ ...PANEL, padding: compact ? 20 : 26 }}>
+      <div style={{ fontSize: 13, color: '#999', marginBottom: 12 }}>
+        Contest rating · {history.length} contest{history.length === 1 ? '' : 's'}
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+        {bands.map((b) => (
+          <g key={b}>
+            <line x1={PAD} x2={W - PAD} y1={y(b)} y2={y(b)} stroke="#3a3a3a" strokeWidth="1" strokeDasharray="4 5" />
+            <text x={W - PAD + 2} y={y(b) + 3} fontSize="9" fill="#666">{b}</text>
+          </g>
+        ))}
+        <motion.polyline
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.56, ease: 'easeOut' }}
+          points={history.map((h, i) => `${x(i)},${y(h.rating)}`).join(' ')}
+          fill="none"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        {history.map((h, i) => (
+          <g key={h.time}>
+            <circle cx={x(i)} cy={y(h.rating)} r="4" fill={color} />
+            <text x={x(i)} y={y(h.rating) - 10} fontSize="11" fontWeight="600" fill="#ddd" textAnchor="middle">
+              {h.rating}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  )
+}
+
+/* Difficulty split — CF problem ratings bucketed the way the
+   LeetCode wheel splits E/M/H, drawn as horizontal bars. */
+function CFDifficultySplit({ buckets, compact }: { buckets: NonNullable<CFData['buckets']>; compact: boolean }) {
+  const rows = [
+    { label: '≤ 1200', count: buckets.easy, color: EASY },
+    { label: '1201 – 1600', count: buckets.medium, color: MEDIUM },
+    { label: '1600+', count: buckets.hard, color: HARD },
+  ]
+  const maxCount = Math.max(1, ...rows.map((r) => r.count))
+  return (
+    <div style={{ ...PANEL, padding: compact ? 20 : 26, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ fontSize: 13, color: '#999' }}>Solved by problem rating</div>
+      {rows.map((r) => (
+        <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ width: 86, fontSize: 12, color: '#bbb', flexShrink: 0 }}>{r.label}</span>
+          <div style={{ flex: 1, height: 8, borderRadius: 4, background: '#333', overflow: 'hidden' }}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${(r.count / maxCount) * 100}%` }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+              style={{ height: '100%', borderRadius: 4, background: r.color }}
+            />
+          </div>
+          <span style={{ width: 30, fontSize: 13, fontWeight: 600, color: '#fff', textAlign: 'right' }}>{r.count}</span>
+        </div>
+      ))}
+      {buckets.unrated > 0 && (
+        <div style={{ fontSize: 11, color: '#666' }}>+{buckets.unrated} unrated problems</div>
+      )}
+    </div>
+  )
+}
+
+/* Tag chips + a compact 26-week submission heatmap (CF's own
+   profile shows both) sharing one panel. */
+function CFTagsAndActivity({
+  tags,
+  activity,
+  compact,
+}: {
+  tags: NonNullable<CFData['topTags']>
+  activity: Record<string, number>
+  compact: boolean
+}) {
+  const WEEKS = compact ? 20 : 26
+  const today = new Date()
+  const cells: { key: string; count: number }[][] = []
+  // Sunday-aligned columns ending this week, like every heatmap on
+  // this site.
+  const end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()))
+  const start = new Date(end)
+  start.setUTCDate(start.getUTCDate() - start.getUTCDay() - (WEEKS - 1) * 7)
+  for (let w = 0; w < WEEKS; w++) {
+    const col: { key: string; count: number }[] = []
+    for (let d = 0; d < 7; d++) {
+      const day = new Date(start)
+      day.setUTCDate(start.getUTCDate() + w * 7 + d)
+      if (day.getTime() > end.getTime()) break
+      const key = `${day.getUTCFullYear()}-${String(day.getUTCMonth() + 1).padStart(2, '0')}-${String(day.getUTCDate()).padStart(2, '0')}`
+      col.push({ key, count: activity[key] ?? 0 })
+    }
+    cells.push(col)
+  }
+  const level = (c: number) => (c === 0 ? 0 : c <= 2 ? 1 : c <= 5 ? 2 : c <= 9 ? 3 : 4)
+
+  return (
+    <div style={{ ...PANEL, padding: compact ? 20 : 26, display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div>
+        <div style={{ fontSize: 13, color: '#999', marginBottom: 10 }}>Top tags</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {tags.map((t) => (
+            <span
+              key={t.name}
+              style={{
+                padding: '4px 10px',
+                borderRadius: 999,
+                background: '#2e2e2e',
+                border: '1px solid #3a3a3a',
+                fontSize: 12,
+                color: '#ccc',
+              }}
+            >
+              {t.name} <span style={{ color: '#777' }}>×{t.count}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div style={{ fontSize: 13, color: '#999', marginBottom: 10 }}>Submission activity</div>
+        <div style={{ display: 'flex', gap: HEATMAP_GAP }}>
+          {cells.map((col, i) => (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: HEATMAP_GAP }}>
+              {col.map((c) => (
+                <div
+                  key={c.key}
+                  title={`${c.key}: ${c.count}`}
+                  style={{
+                    width: HEATMAP_CELL,
+                    height: HEATMAP_CELL,
+                    borderRadius: 2,
+                    background: heatmapColor(level(c.count)),
+                  }}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function CodeforcesTab({ data, loading, compact }: { data: CFData | null; loading: boolean; compact: boolean }) {
   const ratingCount = useCountUp(data?.user?.rating ?? 0)
   const solvedCount = useCountUp(data?.problemsSolved ?? 0, 120)
@@ -1532,6 +1698,21 @@ function CodeforcesTab({ data, loading, compact }: { data: CFData | null; loadin
           </div>
         </div>
       </Block>
+      {data.ratingHistory && data.ratingHistory.length > 0 && (
+        <Block delay={0.16}>
+          <CFRatingChart history={data.ratingHistory} color={color} compact={compact} />
+        </Block>
+      )}
+      {data.buckets && (
+        <Block delay={0.24}>
+          <CFDifficultySplit buckets={data.buckets} compact={compact} />
+        </Block>
+      )}
+      {data.topTags && data.activity && data.topTags.length > 0 && (
+        <Block delay={0.32}>
+          <CFTagsAndActivity tags={data.topTags} activity={data.activity} compact={compact} />
+        </Block>
+      )}
     </div>
   )
 }

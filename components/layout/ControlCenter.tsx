@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLiquidGlass } from "@/lib/liquidGlass";
 
 /* macOS Control Center — deliberately SMALL, because everything in
    it must genuinely work (house rule: no dummy chrome):
@@ -142,6 +143,34 @@ function CCSlider({
   );
 }
 
+/* Panel shell — Liquid Glass surface via the refraction engine +
+   .liquid-glass rim class; motion owns only opacity so the blur
+   never re-renders frame-by-frame. */
+function CCPanel({ children }: { children: React.ReactNode }) {
+  const ref = useLiquidGlass<HTMLDivElement>({ radius: 16, bezel: 12, strength: 0.58, blur: 9, brightness: 0.78, tint: 0.26 });
+  return (
+    <motion.div
+      ref={ref}
+      className="liquid-glass"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.14, ease: [0, 0, 0.58, 1] }}
+      style={{
+        position: "absolute",
+        top: "calc(100% + 7px)",
+        right: 0,
+        width: `${PANEL_W}px`,
+        padding: "6px",
+        borderRadius: "16px",
+        zIndex: 3001,
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 export default function ControlCenter() {
   const [open, setOpen] = useState(false);
   const [brightness, setBrightness] = useState(1);
@@ -232,26 +261,7 @@ export default function ControlCenter() {
 
       <AnimatePresence>
         {open && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.14, ease: [0, 0, 0.58, 1] }}
-            style={{
-              position: "absolute",
-              top: "calc(100% + 7px)",
-              right: 0,
-              width: `${PANEL_W}px`,
-              padding: "6px",
-              borderRadius: "16px",
-              background: "rgba(30, 30, 32, 0.72)",
-              backdropFilter: "blur(50px) saturate(180%)",
-              WebkitBackdropFilter: "blur(50px) saturate(180%)",
-              border: "1px solid rgba(255, 255, 255, 0.10)",
-              boxShadow: "0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06)",
-              zIndex: 3001,
-            }}
-          >
+          <CCPanel>
             <div
               style={{
                 borderRadius: "12px",
@@ -264,7 +274,7 @@ export default function ControlCenter() {
             <div style={{ borderRadius: "12px", background: "rgba(255, 255, 255, 0.06)" }}>
               <CCSlider label="Sound" glyph={<SpeakerGlyph />} value={volume} onChange={onVolume} />
             </div>
-          </motion.div>
+          </CCPanel>
         )}
       </AnimatePresence>
     </div>

@@ -6,6 +6,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useShellMetrics } from "@/lib/useShellMetrics";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
 import { NAV_ITEMS } from "@/data/nav";
+import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
 
 /* ── Icon art — plain /icons/*.png, no clip mask or box-shadow "chip"
    imposed on top (that was the "invisible border" bug — a rectangular
@@ -211,6 +212,32 @@ export default function Dock() {
   const glassBg = isDarkTheme ? "rgba(28, 28, 30, 0.78)" : "rgba(255, 255, 255, 0.78)";
   const glassBorder = isDarkTheme ? "rgba(255, 255, 255, 0.10)" : "rgba(0, 0, 0, 0.06)";
 
+  // Liquid Glass refraction on the slab — applied ONCE at mount +
+  // window resize, deliberately NOT via ResizeObserver: the dock
+  // animates its own width on every magnification frame, and
+  // rebuilding the displacement canvas per frame would be jank. The
+  // percentage-based filter region stretches the map through the
+  // magnification instead.
+  useEffect(() => {
+    const el = dockRef.current;
+    if (!el) return;
+    const radius = Math.round((BASE_ICON_SIZE + 20) * 0.22);
+    const apply = () => applyLiquidGlass(el, { radius, bezel: 13, strength: 0.66, blur: 5, brightness: 0.82, tint: 0.15 });
+    apply();
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const onResize = () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(apply, 150);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      if (t) clearTimeout(t);
+      window.removeEventListener("resize", onResize);
+      releaseLiquidGlass(el);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <motion.div
       animate={{ left: `${metrics.contentLeft}px`, right: `${metrics.inset}px` }}
@@ -243,14 +270,12 @@ export default function Dock() {
           // was nearly semicircular at the ends, which is why it looked
           // over-rounded compared to the real thing.
           borderRadius: `${Math.round((BASE_ICON_SIZE + 20) * 0.22)}px`,
-          background: glassBg,
-          border: `0.5px solid ${glassBorder}`,
-          backdropFilter: "blur(24px) saturate(180%)",
-          WebkitBackdropFilter: "blur(24px) saturate(180%)",
-          boxShadow: "0 16px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
-          transition: "background 0.22s ease, border-color 0.22s ease",
+          // Material comes from the refraction engine (effect above)
+          // + the .liquid-glass rim/gloss class — no inline frosted
+          // background/blur/shadow here anymore.
           pointerEvents: "auto",
         }}
+        className="liquid-glass"
       >
         {DOCK_ITEMS.map((item, i) => {
           const scale = scales[i] ?? MIN_SCALE;

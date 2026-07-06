@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { WIDGET_RADIUS } from "@/lib/widgetGrid";
+import { useLiquidGlass } from "@/lib/liquidGlass";
 import type { WidgetSize } from "@/lib/widgetLayoutSchema";
 
 interface ContributionDay {
@@ -136,6 +137,8 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
   const [contributions, setContributions] = useState<ContributionDay[]>([]);
   const [inner, setInner] = useState<{ width: number; height: number } | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
+  // Card material: refraction engine + .liquid-glass rim class.
+  const lgRef = useLiquidGlass<HTMLDivElement>({ radius: WIDGET_RADIUS, bezel: 14, strength: 0.6, blur: 7, brightness: 0.8, tint: 0.18 });
 
   useEffect(() => {
     (async () => {
@@ -215,6 +218,8 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
 
   return (
     <motion.div
+      ref={lgRef}
+      className="liquid-glass"
       initial={{ y: 16, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={ENTRANCE_SPRING}
@@ -223,10 +228,7 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
         height: "100%",
         padding: "14px",
         borderRadius: `${WIDGET_RADIUS}px`,
-        background: "var(--glass-regular-bg)",
-        border: "1px solid var(--glass-border)",
         boxSizing: "border-box",
-        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
       }}
     >
       {/* Measured host: fills the padded content box; the grid unit
