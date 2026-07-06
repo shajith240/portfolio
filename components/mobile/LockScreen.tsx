@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, useMotionValue } from "framer-motion";
 import IOSStatusBar from "@/components/mobile/IOSStatusBar";
+import { useLiquidGlass } from "@/lib/liquidGlass";
 
 /* iPhone lock screen — iOS 26 anatomy. The clock is the element
    every visitor recognizes, so it gets the full treatment: the
@@ -17,6 +18,8 @@ import IOSStatusBar from "@/components/mobile/IOSStatusBar";
    parallax follow while dragging); the screen departs upward and
    AnimatePresence in IPhoneShell plays the exit. */
 
+/* Shape only — the material comes from the refraction engine
+   (useLiquidGlass) + the .liquid-glass rim class. */
 const GLASS_BUTTON: React.CSSProperties = {
   width: "52px",
   height: "52px",
@@ -24,12 +27,18 @@ const GLASS_BUTTON: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  background: "rgba(60, 60, 66, 0.42)",
-  backdropFilter: "blur(20px) saturate(180%)",
-  WebkitBackdropFilter: "blur(20px) saturate(180%)",
   border: "none",
-  boxShadow: "inset 0 1px 1px rgba(255,255,255,0.22), inset 0 -1px 2px rgba(0,0,0,0.25)",
+  padding: 0,
 };
+
+function LockGlassButton({ children, label }: { children: React.ReactNode; label: string }) {
+  const ref = useLiquidGlass<HTMLButtonElement>({ radius: 26, bezel: 10, strength: 0.7, blur: 5, brightness: 0.8, tint: 0.2 });
+  return (
+    <motion.button ref={ref} className="liquid-glass" whileTap={{ scale: 0.88 }} style={GLASS_BUTTON} aria-label={label}>
+      {children}
+    </motion.button>
+  );
+}
 
 const FlashlightGlyph = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -116,7 +125,12 @@ export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
           </div>
           <div
             style={{
-              fontSize: "min(46vw, 178px)",
+              // Sized to FIT: "9:41" is 4 glyphs but "11:51" is 5 —
+              // a fixed vw clipped the fifth glyph off the right
+              // edge. Divide the viewport by the actual glyph count
+              // (colon ≈ 0.42 of a digit's advance) so every time of
+              // day fills the width without overflowing.
+              fontSize: `min(${(92 / (clock.length - 0.58)).toFixed(1)}vw, 172px)`,
               fontWeight: 700,
               lineHeight: 1.0,
               letterSpacing: "-0.045em",
@@ -147,12 +161,12 @@ export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
           justifyContent: "space-between",
         }}
       >
-        <motion.button whileTap={{ scale: 0.88 }} style={GLASS_BUTTON} aria-label="Flashlight">
+        <LockGlassButton label="Flashlight">
           <FlashlightGlyph />
-        </motion.button>
-        <motion.button whileTap={{ scale: 0.88 }} style={GLASS_BUTTON} aria-label="Camera">
+        </LockGlassButton>
+        <LockGlassButton label="Camera">
           <CameraGlyph />
-        </motion.button>
+        </LockGlassButton>
       </div>
 
       {/* Swipe affordance + home indicator — iOS shows this exact
