@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useWallpaper } from "@/lib/useWallpaper";
+import { useWindowManager } from "@/contexts/WindowManagerContext";
+import { openFinderAtFolder } from "@/components/window/FinderApp";
 import DesktopContextMenu from "@/components/layout/DesktopContextMenu";
 import WallpaperPicker from "@/components/widgets/WallpaperPicker";
 import SelectionMarquee from "@/components/layout/SelectionMarquee";
@@ -21,6 +23,7 @@ const IOS_PLACEHOLDER_BG =
 
 export default function Wallpaper() {
   const { wallpaper, setWallpaper, isPhone } = useWallpaper();
+  const { openFinder } = useWindowManager();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const desktopRef = useRef<HTMLDivElement>(null);
@@ -94,6 +97,11 @@ export default function Wallpaper() {
               setPickerOpen(false);
             }}
             onClose={() => setPickerOpen(false)}
+            onSeeMore={() => {
+              openFinderAtFolder("Wallpapers");
+              openFinder();
+              setPickerOpen(false);
+            }}
           />
         )}
       </AnimatePresence>

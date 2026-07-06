@@ -89,14 +89,18 @@ export default function WidgetCanvas() {
           }}
           style={{
             position: "fixed",
-            top: "16px",
-            right: "50%",
-            transform: "translateX(50%)",
+            // Below the 24px menu bar (was 16px, which overlapped it).
+            top: "38px",
+            left: "50%",
+            transform: "translateX(-50%)",
             zIndex: 40,
-            padding: "8px 16px",
+            padding: "8px 18px",
             borderRadius: "20px",
             background: "var(--glass-regular-bg)",
+            backdropFilter: "blur(24px) saturate(180%)",
+            WebkitBackdropFilter: "blur(24px) saturate(180%)",
             border: "1px solid var(--glass-border)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.35), inset 0 1px 0.5px rgba(255,255,255,0.25)",
             color: "var(--text-primary)",
             fontSize: "13px",
             fontWeight: 600,

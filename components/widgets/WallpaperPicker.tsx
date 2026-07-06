@@ -7,13 +7,20 @@ interface WallpaperPickerProps {
   current: string | null;
   onSelect: (filename: string) => void;
   onClose: () => void;
+  onSeeMore: () => void;
 }
+
+// The picker shows a curated handful; the full set lives in Finder's
+// Wallpapers folder. Real macOS's own picker works the same way — a
+// short strip here, "browse all" elsewhere.
+const PREVIEW_COUNT = 5;
 
 /* Lightweight glass popover — real macOS's own wallpaper picker is a
    System Settings pane, not a Finder window, so this doesn't need
    window chrome. Centered on screen, dismissible by backdrop click. */
 
-export default function WallpaperPicker({ current, onSelect, onClose }: WallpaperPickerProps) {
+export default function WallpaperPicker({ current, onSelect, onClose, onSeeMore }: WallpaperPickerProps) {
+  const preview = WALLPAPERS.slice(0, PREVIEW_COUNT);
   return (
     <>
       <div
@@ -46,9 +53,28 @@ export default function WallpaperPicker({ current, onSelect, onClose }: Wallpape
           boxShadow: "0 30px 70px rgba(0, 0, 0, 0.45)",
         }}
       >
-        <p style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 600, color: "var(--text-primary)" }}>
-          Change Wallpaper
-        </p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+          <p style={{ margin: 0, fontSize: "15px", fontWeight: 600, color: "var(--text-primary)" }}>
+            Change Wallpaper
+          </p>
+          <button
+            onClick={onSeeMore}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontWeight: 500,
+              color: "#0a84ff",
+              display: "flex",
+              alignItems: "center",
+              gap: "2px",
+              padding: 0,
+            }}
+          >
+            See more ›
+          </button>
+        </div>
         <div
           style={{
             display: "grid",
@@ -56,7 +82,7 @@ export default function WallpaperPicker({ current, onSelect, onClose }: Wallpape
             gap: "12px",
           }}
         >
-          {WALLPAPERS.map((filename) => {
+          {preview.map((filename) => {
             const isSelected = filename === current;
             return (
               <button
