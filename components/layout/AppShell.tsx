@@ -14,7 +14,7 @@ import { WidgetLayoutProvider } from "@/contexts/WidgetLayoutContext";
 import WidgetCanvas from "@/components/widgets/WidgetCanvas";
 import CommandPalette from "@/components/ui/CommandPalette";
 import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
-import MobileTabBar from "@/components/ui/MobileTabBar";
+import IPhoneShell from "@/components/mobile/IPhoneShell";
 import Dock from "@/components/ui/Dock";
 import WindowLayer from "@/components/window/WindowLayer";
 import LiquidGlassFilters from "@/components/ui/LiquidGlassFilters";
@@ -62,14 +62,13 @@ function Shell({ children }: { children: ReactNode }) {
       <LiquidGlassFilters />
       <BootSequence />
 
-      {/* Phone layout: no menu bar/widgets — tab bar handles navigation.
-          Phone intentionally keeps real page navigation (no window
-          system there), so it's excluded from the redirect above. */}
+      {/* Phone layout: the full iPhone experience — lock screen,
+          home-screen icon grid, apps zooming out of their icons,
+          Control Center. Real page navigation underneath (no window
+          system on phones), so it's excluded from the redirect above. */}
       {isPhone ? (
         <>
-          <PageBreadcrumb />
-          {children}
-          <MobileTabBar />
+          <IPhoneShell>{children}</IPhoneShell>
           <CommandPalette />
         </>
       ) : (
