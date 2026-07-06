@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
 import { NAV_ITEMS } from "@/data/nav";
-import { useLiquidGlass } from "@/lib/liquidGlass";
+import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
 
 /* macOS Spotlight (Tahoe, dark mode) — restyled to match the real
    thing, not a generic web command palette. The load-bearing
@@ -266,8 +266,20 @@ export default function CommandPalette() {
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  // Panel material — refraction engine (see the panel motion.div).
-  const panelLgRef = useLiquidGlass<HTMLDivElement>({ radius: 24, bezel: 14, strength: 0.6, blur: 10, brightness: 0.78, tint: 0.28 });
+  // Panel material — refraction engine, attached via CALLBACK ref:
+  // the panel only exists while search is open, so a mount-time
+  // hook in this component would run before the node exists and
+  // never apply (that was the fully-transparent-Spotlight bug).
+  const panelNode = useRef<HTMLDivElement | null>(null);
+  const attachPanelGlass = (el: HTMLDivElement | null) => {
+    if (el) {
+      panelNode.current = el;
+      applyLiquidGlass(el, { radius: 24, bezel: 14, strength: 0.6, blur: 10, brightness: 0.78, tint: 0.3 });
+    } else if (panelNode.current) {
+      releaseLiquidGlass(panelNode.current);
+      panelNode.current = null;
+    }
+  };
   const activeRef = useRef<HTMLDivElement>(null);
 
   const allItems: AnyItem[] = useMemo(() => [
@@ -364,7 +376,7 @@ export default function CommandPalette() {
                  higher tint so 22px query text stays readable. ──── */}
           <motion.div
             key="cp-panel"
-            ref={panelLgRef}
+            ref={attachPanelGlass}
             className="liquid-glass"
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}

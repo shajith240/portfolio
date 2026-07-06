@@ -6,6 +6,7 @@ import { PLAYLIST, NOW_PLAYING } from "@/data/nowPlaying";
 import LyricsPanel from "@/components/widgets/LyricsPanel";
 import { WIDGET_UNIT, WIDGET_PADDING, WIDGET_RADIUS } from "@/lib/widgetGrid";
 import { getSizeDimensions } from "@/lib/widgetSizeTiers";
+import { useLiquidGlass } from "@/lib/liquidGlass";
 import type { WidgetSize } from "@/lib/widgetLayoutSchema";
 
 /* macOS "Now Playing" widget — real <audio> playback (no Spotify OAuth/infra).
@@ -152,6 +153,17 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
     }
   }, [trackIndex, current.src]);
 
+  // Liquid Glass refs — declared unconditionally before the
+  // size==="small" early return (rules of hooks). Small tier: a
+  // circular glass play/pause button over full-bleed sharp artwork.
+  // Medium/large: a thin refracting shell OVER the blurred-artwork
+  // wash (low tint/blur — the artwork wash already does the heavy
+  // blur; this only adds the bending rim + specular read), or the
+  // full material when there's no artwork to show at all.
+  const smallButtonRef = useLiquidGlass<HTMLButtonElement>({ radius: 16, bezel: 8, strength: 0.6, blur: 6, brightness: 0.85, tint: 0.2 });
+  const artworkShellRef = useLiquidGlass<HTMLDivElement>({ radius: WIDGET_RADIUS, bezel: 16, strength: 0.45, blur: 3, brightness: 0.92, tint: 0.05 });
+  const noArtworkShellRef = useLiquidGlass<HTMLDivElement>({ radius: WIDGET_RADIUS, bezel: 16, strength: 0.6, blur: 8, brightness: 0.8, tint: 0.16 });
+
   if (size === "small") {
     return (
       <motion.div
@@ -209,6 +221,8 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
         {/* Single tap target, matching real Apple Music's own Small
             widget — no scrubber, no lyrics, no volume at this tier. */}
         <button
+          ref={smallButtonRef}
+          className="liquid-glass"
           onClick={togglePlay}
           aria-label={playing ? "Pause" : "Play"}
           style={{
@@ -218,8 +232,6 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
             width: "32px",
             height: "32px",
             borderRadius: "50%",
-            background: "rgba(0, 0, 0, 0.5)",
-            backdropFilter: "blur(8px)",
             border: "none",
             cursor: current.src === "" ? "default" : "pointer",
             opacity: current.src === "" ? 0.4 : 1,
@@ -282,20 +294,24 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
               zIndex: 1,
             }}
           />
+          {/* Liquid Glass shell — real refraction ON TOP of the
+              artwork wash. Deliberately light touch (blur 3, tint
+              0.05): the wash beneath already carries the heavy blur;
+              this layer's job is just the bending rim + specular
+              read that makes the whole card feel like glass over
+              the album art, not a flat photo. */}
+          <div ref={artworkShellRef} className="liquid-glass" style={{ position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none" }} />
         </>
       ) : (
         <div
+          ref={noArtworkShellRef}
+          className="liquid-glass"
           style={{
             position: "absolute",
             top: 0,
             left: 0,
             width: "100%",
             height: "100%",
-            background: "var(--glass-regular-bg)",
-            border: "1px solid var(--glass-border)",
-            backdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
-            WebkitBackdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08)",
             zIndex: 0,
           }}
         />

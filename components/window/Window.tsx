@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from "react";
 import { motion, useMotionValue, useDragControls, animate } from "framer-motion";
 import { useWindowManager, getPositionBounds, type WindowState } from "@/contexts/WindowManagerContext";
 import { genieClipPath } from "@/lib/genieClipPath";
+import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
 import FinderApp from "@/components/window/FinderApp";
 
 /* macOS-authentic window chrome. Dragging uses Framer Motion's own
@@ -132,6 +133,7 @@ export default function Window({ win, active }: { win: WindowState; active: bool
   const { closeWindow, minimizeWindow, toggleMaximize, bringToFront, updateBounds, getDockIconRect } = useWindowManager();
   const dragControls = useDragControls();
   const rootRef = useRef<HTMLDivElement>(null);
+  const glassLayerRef = useRef<HTMLDivElement | null>(null);
   const [lightsHovered, setLightsHovered] = useState(false);
   // While the window is being dragged, the content iframe must stop
   // receiving pointer events AND stop being interactive — a live
@@ -154,6 +156,32 @@ export default function Window({ win, active }: { win: WindowState; active: bool
   const [clipActive, setClipActive] = useState(true);
   // Store the pre-zoom bounds so double-click zoom can toggle between them
   const preZoomBoundsRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+
+  // Liquid Glass on the window body — real refraction engine on the
+  // existing blur layer (already isolated from the outer transformed
+  // element for the corner-bleed fix below, which is exactly the
+  // right host: a plain, non-transformed, absolutely-positioned
+  // child). Debounced ResizeObserver: the window resizes on every
+  // pointermove during a drag-resize or zoom, and rebuilding the
+  // displacement canvas on every one of those would be jank — only
+  // rebuild 120ms after sizing settles.
+  useEffect(() => {
+    const el = glassLayerRef.current;
+    if (!el) return;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const apply = () => applyLiquidGlass(el, { radius: 12, bezel: 12, strength: 0.55, blur: 8, brightness: 0.84, tint: 0.13 });
+    apply();
+    const ro = new ResizeObserver(() => {
+      if (t) clearTimeout(t);
+      t = setTimeout(apply, 120);
+    });
+    ro.observe(el);
+    return () => {
+      if (t) clearTimeout(t);
+      ro.disconnect();
+      releaseLiquidGlass(el);
+    };
+  }, []);
 
   // Keeps the titlebar always reachable by drag alone — the bug this
   // guards against: dragging a window until its titlebar is fully
@@ -451,13 +479,14 @@ export default function Window({ win, active }: { win: WindowState; active: bool
           while still reading as one continuous frosted material behind
           the titlebar + body tint layers. */}
       <div
+        ref={glassLayerRef}
         aria-hidden
+        className="liquid-glass"
         style={{
           position: "absolute",
           inset: 0,
           zIndex: 0,
-          backdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
-          WebkitBackdropFilter: "blur(var(--glass-blur-regular)) saturate(var(--glass-saturate))",
+          borderRadius: "12px",
         }}
       />
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
