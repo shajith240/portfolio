@@ -125,6 +125,14 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
     playingRef.current = playing;
   }, [playing]);
 
+  // When a track ENDS, the browser fires `pause` BEFORE `ended` — so
+  // by the time onEnded advances trackIndex, playingRef is already
+  // false and looks identical to a manual pause. This ref is the
+  // explicit "that pause was the song finishing, keep playing"
+  // signal set by onEnded (this is what broke auto-advance after the
+  // pause-restart fix).
+  const autoAdvanceRef = useRef(false);
+
   // Runs ONLY on a real track change. The mount guard matters too:
   // the <audio> element's src attribute is already correct on mount,
   // and re-assigning .src (even to the same URL) resets playback.
@@ -136,7 +144,8 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
     if (!audio) return;
     audio.src = current.src;
     audio.currentTime = 0;
-    if (playingRef.current && current.src !== "") {
+    if ((playingRef.current || autoAdvanceRef.current) && current.src !== "") {
+      autoAdvanceRef.current = false;
       audio.play().catch(() => {
         // Autoplay or file error — silent catch.
       });
@@ -167,8 +176,11 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
           onPause={() => setPlaying(false)}
           onEnded={() => {
             if (PLAYLIST.length > 1) {
+              // The ended-pause already flipped playingRef false —
+              // mark this as an auto-advance so the track-switch
+              // effect keeps playing.
+              autoAdvanceRef.current = true;
               setTrackIndex((i) => (i + 1) % PLAYLIST.length);
-              // Continue playing will happen via the useEffect that watches trackIndex
             } else {
               setPlaying(false);
             }
@@ -297,6 +309,8 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
         onPause={() => setPlaying(false)}
         onEnded={() => {
           if (PLAYLIST.length > 1) {
+            // Same auto-advance signal as the small tier's element.
+            autoAdvanceRef.current = true;
             setTrackIndex((i) => (i + 1) % PLAYLIST.length);
           } else {
             setPlaying(false);
