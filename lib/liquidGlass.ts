@@ -196,9 +196,16 @@ export function releaseLiquidGlass(element: HTMLElement) {
 }
 
 /* Attach to any element: <div ref={useLiquidGlass({...}) as ...>.
-   Re-applies on resize (the displacement map is size-dependent). */
+   Re-applies on resize (the displacement map is size-dependent).
+
+   observe: false skips the ResizeObserver and re-applies only on
+   window resize — REQUIRED for elements that animate their own size
+   continuously (the Dock magnifies every mousemove frame; rebuilding
+   the displacement canvas per frame would be jank). The SVG filter
+   region is percentage-based, so the map stretches gracefully with
+   small size changes between rebuilds. */
 export function useLiquidGlass<T extends HTMLElement = HTMLDivElement>(
-  opts?: LiquidGlassOptions,
+  opts?: LiquidGlassOptions & { observe?: boolean },
 ): RefObject<T | null> {
   const ref = useRef<T | null>(null);
   const optsRef = useRef(opts);
@@ -208,16 +215,30 @@ export function useLiquidGlass<T extends HTMLElement = HTMLDivElement>(
     const el = ref.current;
     if (!el) return;
     let raf = 0;
+    let debounce: ReturnType<typeof setTimeout> | undefined;
     const apply = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => applyLiquidGlass(el, optsRef.current));
     };
     apply();
-    const ro = new ResizeObserver(apply);
-    ro.observe(el);
+    const observe = optsRef.current?.observe !== false;
+    let ro: ResizeObserver | undefined;
+    let onWinResize: (() => void) | undefined;
+    if (observe) {
+      ro = new ResizeObserver(apply);
+      ro.observe(el);
+    } else {
+      onWinResize = () => {
+        if (debounce) clearTimeout(debounce);
+        debounce = setTimeout(apply, 150);
+      };
+      window.addEventListener("resize", onWinResize);
+    }
     return () => {
       cancelAnimationFrame(raf);
-      ro.disconnect();
+      if (debounce) clearTimeout(debounce);
+      ro?.disconnect();
+      if (onWinResize) window.removeEventListener("resize", onWinResize);
       releaseLiquidGlass(el);
     };
   }, []);

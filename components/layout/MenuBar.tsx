@@ -6,6 +6,7 @@ import { useLayout } from "@/contexts/LayoutContext";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
 import ControlCenter from "@/components/layout/ControlCenter";
 import NotificationCenter from "@/components/layout/NotificationCenter";
+import { applyLiquidGlass, releaseLiquidGlass, useLiquidGlass } from "@/lib/liquidGlass";
 
 /* macOS menu bar — Tahoe dark mode, and every item WORKS. No fake
    File/Edit menus, no decorative glyphs: the bar is real navigation
@@ -50,8 +51,14 @@ const BatteryGlyph = () => (
 );
 
 function MenuDropdown({ entries, onClose }: { entries: MenuEntry[]; onClose: () => void }) {
+  // Menus are real Liquid Glass surfaces too — engine + rim class,
+  // higher tint than panels so 13px text stays readable over busy
+  // wallpapers.
+  const lgRef = useLiquidGlass<HTMLDivElement>({ radius: 10, bezel: 8, strength: 0.55, blur: 9, brightness: 0.78, tint: 0.3 });
   return (
     <motion.div
+      ref={lgRef}
+      className="liquid-glass"
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.98 }}
@@ -63,11 +70,6 @@ function MenuDropdown({ entries, onClose }: { entries: MenuEntry[]; onClose: () 
         minWidth: "216px",
         padding: "5px",
         borderRadius: "10px",
-        background: "rgba(30, 30, 32, 0.72)",
-        backdropFilter: "blur(50px) saturate(180%)",
-        WebkitBackdropFilter: "blur(50px) saturate(180%)",
-        border: "1px solid rgba(255, 255, 255, 0.10)",
-        boxShadow: "0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06)",
         transformOrigin: "top left",
         zIndex: 10,
       }}
@@ -136,6 +138,27 @@ export default function MenuBar() {
     update();
     const id = setInterval(update, 15_000);
     return () => clearInterval(id);
+  }, []);
+
+  // Liquid Glass on the bar itself (radius 0 — the refraction lives
+  // along the top/bottom edges). barRef already exists for
+  // outside-click detection, so the engine attaches via effect.
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    const apply = () => applyLiquidGlass(el, { radius: 0, bezel: 8, strength: 0.5, blur: 8, brightness: 0.8, tint: 0.22 });
+    apply();
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const onResize = () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(apply, 150);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      if (t) clearTimeout(t);
+      window.removeEventListener("resize", onResize);
+      releaseLiquidGlass(el);
+    };
   }, []);
 
   // Escape and outside-click both dismiss, like real menus.
@@ -216,9 +239,7 @@ export default function MenuBar() {
         alignItems: "center",
         justifyContent: "space-between",
         padding: "0 16px 0 10px",
-        background: "rgba(18, 18, 20, 0.5)",
-        backdropFilter: "blur(30px) saturate(180%)",
-        WebkitBackdropFilter: "blur(30px) saturate(180%)",
+        // Material from the refraction engine (effect above).
         borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
         fontSize: "13px",
         color: "rgba(255, 255, 255, 0.92)",

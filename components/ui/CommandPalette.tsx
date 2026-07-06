@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
 import { NAV_ITEMS } from "@/data/nav";
+import { useLiquidGlass } from "@/lib/liquidGlass";
 
 /* macOS Spotlight (Tahoe, dark mode) — restyled to match the real
    thing, not a generic web command palette. The load-bearing
@@ -265,6 +266,8 @@ export default function CommandPalette() {
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Panel material — refraction engine (see the panel motion.div).
+  const panelLgRef = useLiquidGlass<HTMLDivElement>({ radius: 24, bezel: 14, strength: 0.6, blur: 10, brightness: 0.78, tint: 0.28 });
   const activeRef = useRef<HTMLDivElement>(null);
 
   const allItems: AnyItem[] = useMemo(() => [
@@ -357,9 +360,12 @@ export default function CommandPalette() {
             style={{ position: "fixed", inset: 0, zIndex: 100 }}
           />
 
-          {/* ── Liquid Glass panel ───────────────────────────────── */}
+          {/* ── Liquid Glass panel — refraction engine + rim class;
+                 higher tint so 22px query text stays readable. ──── */}
           <motion.div
             key="cp-panel"
+            ref={panelLgRef}
+            className="liquid-glass"
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.12, ease: "easeIn" } }}
@@ -374,16 +380,7 @@ export default function CommandPalette() {
               maxWidth: "calc(100vw - 40px)",
               borderRadius: "24px",
               overflow: "hidden",
-              background: "rgba(30, 30, 30, 0.62)",
-              backdropFilter: "blur(40px) saturate(180%)",
-              WebkitBackdropFilter: "blur(40px) saturate(180%)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
-              // Top-edge inner specular highlight + one deep soft
-              // shadow — the Liquid Glass rim treatment.
-              boxShadow:
-                "inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 20px 60px rgba(0, 0, 0, 0.5)",
               willChange: "transform, opacity",
-              contain: "layout style paint",
             }}
           >
 

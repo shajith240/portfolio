@@ -29,18 +29,20 @@ export const WIDGET_IDS: WidgetId[] = ["photo", "nowPlaying", "aiTools", "locati
 // clock widget was removed and replaced by the location widget.
 export const STORAGE_KEY = "portfolio-widget-layout-v5";
 
-// Default layout in cells: photo + nowPlaying stacked in the two
-// leftmost columns, aiTools + clock in the rightmost, motivation at
-// bottom-right. Every placement runs through resolveCellCollision in
-// sequence, so the result is collision-free by construction even on
-// narrow lattices where the naive spots would collide.
+// Default layout in cells — the owner's curated arrangement (made
+// default for every visitor per request): photo small at top-left;
+// a right-side column stack of GitHub heatmap (medium) over
+// location + motivation (two smalls side by side) over the music
+// player (large). Every placement runs through resolveCellCollision
+// in sequence, so the result is collision-free by construction even
+// on narrow lattices where the naive spots would collide.
 export function computeDefaultLayout(spec: GridSpec): WidgetLayout {
   const placements: [WidgetId, WidgetSize, Cell][] = [
-    ["photo", "medium", { col: 0, row: 0 }],
-    ["nowPlaying", "large", { col: 0, row: 1 }],
+    ["photo", "small", { col: 0, row: 0 }],
     ["aiTools", "medium", { col: spec.cols - 2, row: 0 }],
-    ["location", "small", { col: spec.cols - 1, row: 1 }],
-    ["motivation", "medium", { col: spec.cols - 2, row: spec.rows - 1 }],
+    ["location", "small", { col: spec.cols - 2, row: 1 }],
+    ["motivation", "small", { col: spec.cols - 1, row: 1 }],
+    ["nowPlaying", "large", { col: spec.cols - 2, row: 2 }],
   ];
 
   const layout = {} as WidgetLayout;
