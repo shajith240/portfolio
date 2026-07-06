@@ -18,6 +18,15 @@ import type { WidgetSize } from "@/lib/widgetLayoutSchema";
 // — one shared motion signature across the family.
 const ENTRANCE_SPRING = { type: "spring", stiffness: 520, damping: 44, mass: 0.85, restDelta: 0.01 } as const;
 
+/* Map view — TUNE THESE to adjust what the widget shows. A `q=`
+   search embed centers on whatever Google resolves the query to
+   (it was landing on Morampudi); `ll=` centers on these exact
+   coordinates instead, so the view is fully yours to control.
+   Higher zoom = closer. */
+const MAP_LAT = 16.9891; // Rajahmundry
+const MAP_LNG = 81.7837;
+const MAP_ZOOM = 13;
+
 export default function LocationWidget({ size }: { size: WidgetSize }) {
   const isSmall = size === "small";
 
@@ -40,7 +49,7 @@ export default function LocationWidget({ size }: { size: WidgetSize }) {
           the map from intercepting drag/resize gestures on the widget
           frame, keeping the selection & edit experience intact. */}
       <iframe
-        src="https://maps.google.com/maps?q=Rajahmundry,+Andhra+Pradesh,+India&z=12&output=embed"
+        src={`https://maps.google.com/maps?ll=${MAP_LAT},${MAP_LNG}&z=${MAP_ZOOM}&output=embed`}
         width="100%"
         height="100%"
         style={{
