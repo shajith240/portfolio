@@ -13,7 +13,6 @@ import MenuBar from "@/components/layout/MenuBar";
 import { WidgetLayoutProvider } from "@/contexts/WidgetLayoutContext";
 import WidgetCanvas from "@/components/widgets/WidgetCanvas";
 import CommandPalette from "@/components/ui/CommandPalette";
-import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
 import IPhoneShell from "@/components/mobile/IPhoneShell";
 import Dock from "@/components/ui/Dock";
 import WindowLayer from "@/components/window/WindowLayer";
@@ -79,7 +78,10 @@ function Shell({ children }: { children: ReactNode }) {
               <WidgetCanvas />
             </WidgetLayoutProvider>
           )}
-          <PageBreadcrumb />
+          {/* No breadcrumb on the desktop: every route opens as a
+              window, so the old "Back to Home / <Page>" top-left
+              breadcrumb was both redundant and flashed during the
+              stray-route → window redirect. Removed. */}
           {/* Suppress the raw page while the redirect above is in
               flight, so a stray /about visit never flashes as a full
               page before it's relocated into a window. */}

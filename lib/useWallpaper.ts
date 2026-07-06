@@ -5,6 +5,9 @@ import { GENERATED_WALLPAPERS, GENERATED_MOBILE_WALLPAPERS } from "@/data/genera
 
 const STORAGE_KEY = "portfolio.wallpaper";
 const MOBILE_STORAGE_KEY = "portfolio.wallpaper.mobile";
+// Fired on setWallpaper so every useWallpaper() instance stays synced
+// (desktop background ⇄ Finder folder ⇄ picker).
+const WALLPAPER_EVENT = "portfolio:wallpaper-change";
 // Same breakpoint LayoutContext uses for isPhone (mobile && !tablet).
 const PHONE_MAX_WIDTH = 640;
 
@@ -201,6 +204,20 @@ export function useWallpaper() {
       setWallpaperState(list[0]);
       handleWallpaperChange(`/wallpapers/${list[0]}`);
     }
+
+    // Cross-instance sync: multiple components call useWallpaper()
+    // (the desktop Wallpaper, the Finder wallpapers folder, the
+    // picker). Without this, choosing a wallpaper in Finder writes
+    // localStorage but the desktop's own hook instance never
+    // re-renders. A window event keeps every instance in lockstep.
+    const onExternalChange = (e: Event) => {
+      const filename = (e as CustomEvent<string>).detail;
+      if (typeof filename !== "string") return;
+      setWallpaperState(filename);
+      handleWallpaperChange(`/wallpapers/${filename}`);
+    };
+    window.addEventListener(WALLPAPER_EVENT, onExternalChange);
+    return () => window.removeEventListener(WALLPAPER_EVENT, onExternalChange);
   }, []);
 
   const setWallpaper = useCallback(
@@ -208,6 +225,7 @@ export function useWallpaper() {
       setWallpaperState(filename);
       window.localStorage.setItem(isPhone ? MOBILE_STORAGE_KEY : STORAGE_KEY, filename);
       handleWallpaperChange(`/wallpapers/${filename}`);
+      window.dispatchEvent(new CustomEvent(WALLPAPER_EVENT, { detail: filename }));
     },
     [isPhone],
   );

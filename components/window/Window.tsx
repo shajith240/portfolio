@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { motion, useMotionValue, useDragControls, animate } from "framer-motion";
-import { useWindowManager, getPositionBounds, type WindowState } from "@/contexts/WindowManagerContext";
+import { useWindowManager, getPositionBounds, TOP_BOUND, type WindowState } from "@/contexts/WindowManagerContext";
 import { genieClipPath } from "@/lib/genieClipPath";
 import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
 import FinderApp from "@/components/window/FinderApp";
@@ -334,29 +334,49 @@ export default function Window({ win, active }: { win: WindowState; active: bool
     const startWindowX = x.get();
     const startWindowY = y.get();
 
+    // The edges that DON'T move stay anchored; the moving edge is
+    // clamped so (a) the window never shrinks below its minimum with
+    // the opposite edge sliding anyway, and (b) it stays on-screen —
+    // top edge can't cross the menu bar, no edge can leave the
+    // viewport. The previous version moved newX/newY by the raw delta
+    // even after width/height had clamped, so dragging the top edge
+    // up slid the whole window off the top of the screen with no
+    // limit (the reported bug).
+    const rightEdge = startWindowX + startWidth;
+    const bottomEdge = startWindowY + startHeight;
+
     const handlePointerMove = (moveEvent: PointerEvent) => {
       const deltaX = moveEvent.clientX - startX;
       const deltaY = moveEvent.clientY - startY;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
 
       let newWidth = startWidth;
       let newHeight = startHeight;
       let newX = startWindowX;
       let newY = startWindowY;
 
-      // Horizontal edges/corners: e, w, ne, nw, se, sw
       if (edge.includes("e")) {
-        newWidth = Math.max(MIN_WIDTH, startWidth + deltaX);
+        // Right edge moves; clamp so it stays inside the viewport.
+        newWidth = Math.min(Math.max(MIN_WIDTH, startWidth + deltaX), vw - startWindowX);
       } else if (edge.includes("w")) {
-        newWidth = Math.max(MIN_WIDTH, startWidth - deltaX);
-        newX = startWindowX + deltaX;
+        // Left edge moves, right edge (rightEdge) stays fixed.
+        let left = startWindowX + deltaX;
+        left = Math.max(0, Math.min(left, rightEdge - MIN_WIDTH));
+        newX = left;
+        newWidth = rightEdge - left;
       }
 
-      // Vertical edges/corners: n, s, ne, nw, se, sw
       if (edge.includes("s")) {
-        newHeight = Math.max(MIN_HEIGHT, startHeight + deltaY);
+        // Bottom edge moves; clamp so it stays inside the viewport.
+        newHeight = Math.min(Math.max(MIN_HEIGHT, startHeight + deltaY), vh - startWindowY);
       } else if (edge.includes("n")) {
-        newHeight = Math.max(MIN_HEIGHT, startHeight - deltaY);
-        newY = startWindowY + deltaY;
+        // Top edge moves, bottom edge (bottomEdge) stays fixed; the
+        // top can never rise above the menu bar.
+        let top = startWindowY + deltaY;
+        top = Math.max(TOP_BOUND, Math.min(top, bottomEdge - MIN_HEIGHT));
+        newY = top;
+        newHeight = bottomEdge - top;
       }
 
       x.set(newX);
@@ -576,6 +596,13 @@ export default function Window({ win, active }: { win: WindowState; active: bool
         />
       )}
       </div>
+
+      {/* Liquid Glass rim + gloss ABOVE the content: the backdrop
+          layer's own rim is hidden under the opaque titlebar/body, so
+          this overlay is what actually makes the window read as glass
+          (bright directional edge + top sheen). pointer-events none,
+          below the resize zones (z 100), above content (z 1). */}
+      <div className="lg-rim" style={{ borderRadius: "12px", zIndex: 50 }} />
 
       {/* Resize zones: 6px-wide edges + 12px corners, invisible but with cursors */}
       {/* Top edge */}

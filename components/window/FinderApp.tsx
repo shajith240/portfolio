@@ -5,6 +5,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
 import { PROJECTS, type Project } from "@/data/projects";
 import { CATEGORIES } from "@/data/skills";
+import { useWallpaper, WALLPAPERS } from "@/lib/useWallpaper";
+
+/* When "See more" in the wallpaper picker opens Finder, it should land
+   directly in the Wallpapers folder rather than at the root. The
+   picker sets this module-level flag and opens a Finder window; the
+   fresh FinderApp instance reads (and clears) it in its initial
+   state. Module-level rather than context because a Finder window is
+   remounted each time it opens, so a plain variable is enough and
+   avoids threading an initial-path prop through the window system. */
+let pendingFinderFolder: string | null = null;
+export function openFinderAtFolder(name: string) {
+  pendingFinderFolder = name;
+}
 
 /* Finder — a real React UI, not an iframe (see WindowState.kind in
    WindowManagerContext). Content tree mirrors real, already-existing
@@ -20,7 +33,8 @@ type FinderNode =
   | { kind: "app"; name: string; iconFile: string; route: string; label: string }
   | { kind: "document"; name: string; iconFile?: string; route: string; label: string }
   | { kind: "project"; name: string; project: Project }
-  | { kind: "skill"; name: string; iconFile: string };
+  | { kind: "skill"; name: string; iconFile: string }
+  | { kind: "wallpaper"; name: string; filename: string };
 
 // Every project shows the same generic dev-project icon rather than
 // the earlier per-project cycling through unrelated tool icons.
@@ -46,6 +60,21 @@ const SKILLS_FOLDER: FinderNode = {
   })),
 };
 
+// Every desktop wallpaper lives here — dropping an image into
+// public/wallpaper picks it up automatically (WALLPAPERS is generated),
+// so this folder needs no manual upkeep. Double-clicking one sets it
+// as the desktop wallpaper live.
+const WALLPAPERS_FOLDER: FinderNode = {
+  kind: "folder",
+  name: "Wallpapers",
+  iconFile: "wallpapers_folder",
+  children: WALLPAPERS.map((filename) => ({
+    kind: "wallpaper",
+    name: filename.replace(/\.[^.]+$/, ""), // drop extension for the label
+    filename,
+  })),
+};
+
 // Root-level Macintosh HD icons all match the Dock's own icon files
 // for the same route (see Dock.tsx's ICON_FILE) — Finder and the Dock
 // should never show two different icons for the same destination.
@@ -56,6 +85,7 @@ const ROOT: FinderNode = {
     { kind: "document", name: "About Me.rtf", iconFile: "contact", route: "/about", label: "About" },
     PROJECTS_FOLDER,
     SKILLS_FOLDER,
+    WALLPAPERS_FOLDER,
     { kind: "app", name: "DSA.app", iconFile: "xcode", route: "/dsa", label: "DSA" },
     { kind: "app", name: "Notes.app", iconFile: "notes", route: "/notes", label: "Notes" },
     { kind: "app", name: "Uses.app", iconFile: "settings", route: "/uses", label: "Uses" },
@@ -146,7 +176,17 @@ function GridItem({ node, onOpen }: { node: FinderNode; onOpen: () => void }) {
       title={name}
     >
       <div style={{ width: "52px", height: "52px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {node.kind === "project" ? (
+        {node.kind === "wallpaper" ? (
+          // The wallpaper IS its own thumbnail — a cropped preview
+          // tile, like macOS shows image files in gallery view.
+          <img
+            src={`/wallpapers/${node.filename}`}
+            alt={name}
+            loading="lazy"
+            decoding="async"
+            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.12)" }}
+          />
+        ) : node.kind === "project" ? (
           <img src={`/icons/${PROJECT_ICON_FILE}.png`} alt={name} style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "22%" }} />
         ) : iconFile ? (
           <img src={`/icons/${iconFile}.png`} alt={name} style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "22%" }} />
@@ -280,10 +320,24 @@ function QuickLook({ node, onClose, onOpenProjects }: { node: FinderNode; onClos
   );
 }
 
+// Resolve a pending "open at this folder" request (from the wallpaper
+// picker's "See more") into an initial Finder path, searching one
+// level under ROOT. Clears the flag so it fires exactly once.
+function initialPathFromPending(): FinderNode[] {
+  const target = pendingFinderFolder;
+  pendingFinderFolder = null;
+  if (target && ROOT.kind === "folder") {
+    const match = ROOT.children.find((c) => c.kind === "folder" && c.name === target);
+    if (match) return [ROOT, match];
+  }
+  return [ROOT];
+}
+
 export default function FinderApp() {
   const { openWindow } = useWindowManager();
-  const [path, setPath] = useState<FinderNode[]>([ROOT]);
-  const [history, setHistory] = useState<FinderNode[][]>([[ROOT]]);
+  const { setWallpaper } = useWallpaper();
+  const [path, setPath] = useState<FinderNode[]>(initialPathFromPending);
+  const [history, setHistory] = useState<FinderNode[][]>(() => [path]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [quickLook, setQuickLook] = useState<FinderNode | null>(null);
 
@@ -314,6 +368,10 @@ export default function FinderApp() {
       navigateTo([...path, node]);
     } else if (node.kind === "app" || node.kind === "document") {
       openWindow(node.route, node.label);
+    } else if (node.kind === "wallpaper") {
+      // Double-clicking a wallpaper sets it live (the cross-instance
+      // event in useWallpaper updates the desktop immediately).
+      setWallpaper(node.filename);
     } else {
       setQuickLook(node);
     }
@@ -327,6 +385,7 @@ export default function FinderApp() {
       { label: "Macintosh HD", target: [ROOT] },
       { label: "Projects", target: [ROOT, PROJECTS_FOLDER] },
       { label: "Skills", target: [ROOT, SKILLS_FOLDER] },
+      { label: "Wallpapers", target: [ROOT, WALLPAPERS_FOLDER] },
     ],
     []
   );
