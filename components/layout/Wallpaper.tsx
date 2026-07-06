@@ -10,8 +10,17 @@ import SelectionMarquee from "@/components/layout/SelectionMarquee";
 const PLACEHOLDER_BG =
   "radial-gradient(ellipse 120% 90% at 30% 20%, #2a2a2e 0%, #17171a 55%, #0d0d0f 100%)";
 
+// Phone default until public/wallpapers/mobile has files — an
+// iOS-style warm-to-cool mesh, NOT the desktop wallpaper (landscape
+// desktop art stretched over a phone was the "same wallpaper on
+// both" bug).
+const IOS_PLACEHOLDER_BG =
+  "radial-gradient(130% 90% at 18% 0%, #e0813c 0%, rgba(224, 129, 60, 0) 58%), " +
+  "radial-gradient(120% 80% at 90% 38%, #6b3fa0 0%, rgba(107, 63, 160, 0) 62%), " +
+  "radial-gradient(160% 110% at 50% 105%, #1e63b4 0%, #12224a 55%, #0a0f24 100%)";
+
 export default function Wallpaper() {
-  const { wallpaper, setWallpaper } = useWallpaper();
+  const { wallpaper, setWallpaper, isPhone } = useWallpaper();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const desktopRef = useRef<HTMLDivElement>(null);
@@ -55,7 +64,11 @@ export default function Wallpaper() {
           position: "fixed",
           inset: 0,
           zIndex: 0,
-          background: wallpaper ? `url(/wallpapers/${wallpaper}) center / cover no-repeat` : PLACEHOLDER_BG,
+          background: wallpaper
+            ? `url(/wallpapers/${wallpaper}) center / cover no-repeat`
+            : isPhone
+            ? IOS_PLACEHOLDER_BG
+            : PLACEHOLDER_BG,
         }}
       />
 

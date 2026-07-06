@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
+import { useLiquidGlass } from "@/lib/liquidGlass";
 
 /* iPhone home screen — iOS 26 anatomy per
    scratchpad/ios26-lock-home-spec.md §2: 4-column grid of 60px
@@ -38,14 +39,9 @@ const DOCK_APPS: HomeApp[] = [
   { label: "Notes", icon: "notes", href: "/notes" },
 ];
 
-const LIQUID_GLASS: React.CSSProperties = {
-  background: "rgba(255,255,255,0.14)",
-  backdropFilter: "blur(20px) saturate(180%)",
-  WebkitBackdropFilter: "blur(20px) saturate(180%)",
-  border: "1px solid rgba(255,255,255,0.18)",
-  boxShadow:
-    "inset 0 1px 1px rgba(255,255,255,0.35), inset 0 4px 6px rgba(0,0,0,0.08), inset 0 -1px 2px rgba(0,0,0,0.22), 0 10px 30px rgba(0,0,0,0.3)",
-};
+/* Both pill and dock run the real refraction engine
+   (lib/liquidGlass.ts) — these style objects only carry shape;
+   material comes from the hook + .liquid-glass rim class. */
 
 function AppIcon({
   app,
@@ -77,6 +73,12 @@ function AppIcon({
         width: `${size}px`,
       }}
     >
+      {/* The artwork IS the icon — no imposed border-radius, no
+          objectFit crop, no box-shadow rectangle. These PNGs carry
+          their own shapes and transparency; forcing a squircle crop
+          + box shadow drew a visible second edge around every one
+          (the "double border" complaint). drop-shadow follows the
+          icon's alpha instead. */}
       <img
         src={`/icons/${app.icon}.png`}
         alt=""
@@ -84,9 +86,8 @@ function AppIcon({
         style={{
           width: `${size}px`,
           height: `${size}px`,
-          borderRadius: `${Math.round(size * 0.225)}px`, // Apple's superellipse ratio ≈ 22.4%
-          objectFit: "cover",
-          boxShadow: "0 4px 10px rgba(0,0,0,0.28)",
+          objectFit: "contain",
+          filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.35))",
         }}
       />
       {showLabel && (
@@ -115,6 +116,8 @@ export default function HomeScreen({
   onOpenApp: (app: HomeApp, center: { x: number; y: number }) => void;
 }) {
   const { openSearch } = useLayout();
+  const pillRef = useLiquidGlass<HTMLButtonElement>({ radius: 18, bezel: 9, strength: 0.7, blur: 4, brightness: 0.85, tint: 0.18 });
+  const dockRef = useLiquidGlass<HTMLDivElement>({ radius: 34, bezel: 13, strength: 0.66, blur: 5, brightness: 0.82, tint: 0.15 });
 
   return (
     <motion.div
@@ -144,13 +147,15 @@ export default function HomeScreen({
       {/* Search pill — the REAL Spotlight trigger, like iOS 18+ */}
       <div style={{ display: "flex", justifyContent: "center", marginBottom: "14px" }}>
         <motion.button
+          ref={pillRef}
+          className="liquid-glass"
           whileTap={{ scale: 0.95 }}
           onClick={openSearch}
           style={{
-            ...LIQUID_GLASS,
             height: "36px",
             padding: "0 16px",
             borderRadius: "18px",
+            border: "none",
             display: "flex",
             alignItems: "center",
             gap: "6px",
@@ -170,8 +175,9 @@ export default function HomeScreen({
       {/* Dock */}
       <div style={{ padding: "0 16px", marginBottom: "max(12px, env(safe-area-inset-bottom, 12px))" }}>
         <div
+          ref={dockRef}
+          className="liquid-glass"
           style={{
-            ...LIQUID_GLASS,
             borderRadius: "34px",
             padding: "12px 0",
             display: "flex",

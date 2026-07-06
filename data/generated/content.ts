@@ -43,9 +43,16 @@ export const GENERATED_SONGS: GeneratedTrack[] = [
   {
     "title": "Someone You Loved",
     "artist": "Lewis Capaldi",
-    "src": "/songs/someone-you-loved.m4a",
-    "artwork": "/songs/someone-you-loved-cover.webp",
-    "lyricsSrc": "/songs/Lewis-Capaldi-Someone-You-Loved-(Official-Audio).lrc"
+    "src": "/songs/Lewis Capaldi - Someone You Loved.m4a",
+    "artwork": "/songs/Lewis Capaldi - Someone You Loved-cover.jpg",
+    "lyricsSrc": "/songs/Lewis Capaldi - Someone You Loved.lrc"
+  },
+  {
+    "title": "Gehra Hua (From \"Dhurandhar\")",
+    "artist": "Shashwat Sachdev, Arijit Singh, Irshad Kamil & Armaan Khan",
+    "src": "/songs/Shashwat Sachdev, Arijit Singh, Irshad Kamil & Armaan Khan - Gehra Hua (From _Dhurandhar_).m4a",
+    "artwork": "/songs/Shashwat Sachdev, Arijit Singh, Irshad Kamil & Armaan Khan - Gehra Hua (From _Dhurandhar_)-cover.jpg",
+    "lyricsSrc": "/songs/Shashwat Sachdev, Arijit Singh, Irshad Kamil & Armaan Khan - Gehra Hua (From _Dhurandhar_).lrc"
   }
 ];
 
@@ -56,7 +63,9 @@ export const GENERATED_WALLPAPERS: string[] = [
   "zenitsu-agatsuma-3840x2160-24356.jpg"
 ];
 
-export const GENERATED_MOBILE_WALLPAPERS: string[] = [];
+export const GENERATED_MOBILE_WALLPAPERS: string[] = [
+  "mobile/iPhone 14 Pro Wallpaper Gold.jpg"
+];
 
 export const GENERATED_MOTIVATION_IMAGES: string[] = [
   "/motivation_quotes/0%luck-100%hardwork.jpg",

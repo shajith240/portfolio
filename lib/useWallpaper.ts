@@ -12,11 +12,12 @@ const PHONE_MAX_WIDTH = 640;
 // — drop an image in that folder and it appears in the picker on the
 // next dev start / deploy, no code changes. Phones get their own
 // PORTRAIT set from public/wallpapers/mobile (entries carry the
-// "mobile/" prefix so the /wallpapers/<name> URL convention holds),
-// with the desktop set as fallback while the mobile folder is empty.
+// "mobile/" prefix so the /wallpapers/<name> URL convention holds).
+// Deliberately NO desktop fallback: landscape desktop art on a phone
+// is exactly the wrong look — until the mobile folder has files, the
+// phone shows its own iOS-style gradient (see Wallpaper.tsx).
 export const WALLPAPERS = GENERATED_WALLPAPERS;
-export const MOBILE_WALLPAPERS =
-  GENERATED_MOBILE_WALLPAPERS.length > 0 ? GENERATED_MOBILE_WALLPAPERS : GENERATED_WALLPAPERS;
+export const MOBILE_WALLPAPERS = GENERATED_MOBILE_WALLPAPERS;
 
 /**
  * Compute average color from an image file by downsampling to 12x12 and averaging RGB.
@@ -193,6 +194,12 @@ export function useWallpaper() {
     if (stored && list.includes(stored)) {
       setWallpaperState(stored);
       handleWallpaperChange(`/wallpapers/${stored}`);
+    } else if (phone && list.length > 0) {
+      // Phone with wallpapers available but nothing chosen yet:
+      // the first portrait file is live immediately — dropping one
+      // image into public/wallpapers/mobile is all it takes.
+      setWallpaperState(list[0]);
+      handleWallpaperChange(`/wallpapers/${list[0]}`);
     }
   }, []);
 

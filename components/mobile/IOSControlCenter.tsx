@@ -1,376 +1,442 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useLiquidGlass } from "@/lib/liquidGlass";
 
-const GLASS_STYLE = {
-  background: "rgba(255, 255, 255, 0.14)",
-  WebkitBackdropFilter: "blur(20px) saturate(180%)",
-  backdropFilter: "blur(20px) saturate(180%)",
-  border: "1px solid rgba(255, 255, 255, 0.18)",
-  boxShadow:
-    "inset 0 1px 1px rgba(255, 255, 255, 0.35), inset 0 4px 6px rgba(0, 0, 0, 0.08), inset 0 -1px 2px rgba(0, 0, 0, 0.22), 0 8px 24px rgba(0, 0, 0, 0.25)",
-};
+/* iOS Control Center — rebuilt against the real panel's anatomy:
 
-export default function IOSControlCenter({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
-  const [mounted, setMounted] = useState(false);
-  const [brightness, setBrightness] = useState(1);
-  const [volume, setVolume] = useState(0.5);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
-    null
+   ┌ connectivity 2×2 ┐ ┌ media: title + ⏮ ▶ ⏭ ┐
+   ┌ brightness ┐ ┌ volume ┐   (tall pills, white fill from bottom,
+   └ sun at foot┘ └ spk    ┘    icon fixed INSIDE at the bottom)
+   ( GitHub ) ( LinkedIn ) ( Mail )
+
+   Every module is one Liquid Glass surface from lib/liquidGlass.ts
+   (real edge refraction) + the .liquid-glass rim/gloss class — no
+   nested "circle on circle" backgrounds anywhere: a connectivity
+   button is a single flat circle whose fill IS its state (solid
+   system blue when active, faint white when not).
+
+   Honesty rules kept: Wi-Fi reflects navigator.onLine; the media
+   card shows "Not Playing" exactly like iOS does when nothing plays
+   (phones don't mount the desktop player); brightness really dims
+   the screen; volume really sets audio volumes.
+
+   Smoothness: the blurred backdrop mounts at full blur immediately
+   (only its opacity fades, 0.15s) and the module column springs in
+   as a transform — nothing re-blurs frame by frame. */
+
+const OPEN_EASE = [0.32, 0.72, 0, 1] as const;
+
+/* ── glyphs ─────────────────────────────────────────────────── */
+const AirplaneGlyph = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,0.95)">
+    <path d="M21.5 15.5v-2l-8-5v-5a1.5 1.5 0 0 0-3 0v5l-8 5v2l8-2.5V18l-2.5 2v1.5l4-1 4 1V20L13.5 18v-5Z" />
+  </svg>
+);
+const CellularGlyph = () => (
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="rgba(255,255,255,0.95)">
+    {[0, 1, 2, 3].map((i) => (
+      <rect key={i} x={i * 5} y={12 - i * 4} width="3.4" height={6 + i * 4} rx="1.2" />
+    ))}
+  </svg>
+);
+const WifiCCGlyph = () => (
+  <svg width="22" height="17" viewBox="0 0 22 17" fill="none">
+    <path d="M2 6a13 13 0 0 1 18 0" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
+    <path d="M5.5 9.6a8 8 0 0 1 11 0" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" />
+    <circle cx="11" cy="14" r="2" fill="#fff" />
+  </svg>
+);
+const BluetoothGlyph = () => (
+  <svg width="18" height="20" viewBox="0 0 24 24" fill="none">
+    <path d="M7 7l10 10-5 5V2l5 5L7 17" stroke="rgba(255,255,255,0.95)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+  </svg>
+);
+const PrevGlyph = ({ dim }: { dim: boolean }) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill={dim ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.95)"} style={{ transform: "scaleX(-1)" }}>
+    <path d="M4 5l8 7-8 7V5Z M13 5l8 7-8 7V5Z" />
+  </svg>
+);
+const NextGlyph = ({ dim }: { dim: boolean }) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill={dim ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.95)"}>
+    <path d="M4 5l8 7-8 7V5Z M13 5l8 7-8 7V5Z" />
+  </svg>
+);
+const PlayPauseGlyph = ({ playing, dim }: { playing: boolean; dim: boolean }) => (
+  <svg width="26" height="26" viewBox="0 0 24 24" fill={dim ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.95)"}>
+    {playing ? <path d="M6 4h4v16H6V4Zm8 0h4v16h-4V4Z" /> : <path d="M7 4l13 8-13 8V4Z" />}
+  </svg>
+);
+const SunGlyph = () => (
+  <svg width="22" height="22" viewBox="0 0 22 22">
+    <circle cx="11" cy="11" r="4.2" fill="rgba(40,40,44,0.85)" />
+    {Array.from({ length: 8 }, (_, i) => {
+      const a = (i * Math.PI) / 4;
+      return (
+        <line
+          key={i}
+          x1={11 + Math.cos(a) * 6.6}
+          y1={11 + Math.sin(a) * 6.6}
+          x2={11 + Math.cos(a) * 9}
+          y2={11 + Math.sin(a) * 9}
+          stroke="rgba(40,40,44,0.85)"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      );
+    })}
+  </svg>
+);
+const SpeakerGlyph = () => (
+  <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+    <path d="M3.5 8v6h3.6L12 18.5v-15L7.1 8H3.5Z" fill="rgba(40,40,44,0.85)" />
+    <path d="M14.5 8a4.4 4.4 0 0 1 0 6M16.8 5.8a7.6 7.6 0 0 1 0 10.4" stroke="rgba(40,40,44,0.85)" strokeWidth="1.8" strokeLinecap="round" />
+  </svg>
+);
+const GitHubGlyph = () => (
+  <svg width="26" height="26" viewBox="0 0 16 16" fill="rgba(255,255,255,0.95)">
+    <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+  </svg>
+);
+const LinkedInGlyph = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="rgba(255,255,255,0.95)">
+    <path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5ZM.4 8.1h4.2V23H.4V8.1Zm7.1 0h4v2h.06c.56-1.05 1.93-2.16 3.97-2.16 4.25 0 5.03 2.8 5.03 6.44V23h-4.2v-7.4c0-1.77-.03-4.05-2.47-4.05-2.47 0-2.85 1.93-2.85 3.92V23H7.5V8.1Z" />
+  </svg>
+);
+const MailGlyph = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <rect x="2" y="5" width="20" height="14" rx="2.5" stroke="rgba(255,255,255,0.95)" strokeWidth="1.8" />
+    <path d="M3 7l9 6.5L21 7" stroke="rgba(255,255,255,0.95)" strokeWidth="1.8" strokeLinecap="round" />
+  </svg>
+);
+
+/* ── connectivity button: ONE circle, fill = state ───────────── */
+function ConnButton({ children, active }: { children: React.ReactNode; active?: boolean }) {
+  return (
+    <motion.button
+      whileTap={{ scale: 0.88 }}
+      style={{
+        width: "48px",
+        height: "48px",
+        borderRadius: "50%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        border: "none",
+        padding: 0,
+        background: active ? "#0a84ff" : "rgba(255,255,255,0.14)",
+      }}
+    >
+      {children}
+    </motion.button>
   );
-  const [isOnline, setIsOnline] = useState(true);
-  const sliderRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+}
+
+/* ── vertical slider: white fill from the bottom, icon at foot ── */
+function VerticalSlider({
+  value,
+  onChange,
+  glyph,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  glyph: React.ReactNode;
+}) {
+  const lgRef = useLiquidGlass<HTMLDivElement>({ radius: 38, bezel: 16, strength: 0.55, blur: 8, brightness: 0.85, tint: 0.14 });
+
+  const setFromClientY = useCallback(
+    (clientY: number) => {
+      const el = lgRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      onChange(Math.min(1, Math.max(0, 1 - (clientY - r.top) / r.height)));
+    },
+    [onChange, lgRef],
+  );
+
+  return (
+    <div
+      ref={lgRef}
+      className="liquid-glass"
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setFromClientY(e.clientY);
+      }}
+      onPointerMove={(e) => {
+        if (e.buttons === 1) setFromClientY(e.clientY);
+      }}
+      style={{
+        flex: 1,
+        height: "192px",
+        borderRadius: "38px",
+        overflow: "hidden",
+        touchAction: "none",
+        cursor: "default",
+      }}
+    >
+      {/* fill — grows from the bottom, square top edge like iOS */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: `${Math.max(0.14, value) * 100}%`,
+          background: "rgba(255,255,255,0.96)",
+        }}
+      />
+      <span
+        style={{
+          position: "absolute",
+          bottom: "16px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          display: "flex",
+          pointerEvents: "none",
+        }}
+      >
+        {glyph}
+      </span>
+    </div>
+  );
+}
+
+/* ── glass modules with the engine attached ─────────────────── */
+function GlassCard({
+  children,
+  radius,
+  style,
+}: {
+  children: React.ReactNode;
+  radius: number;
+  style?: React.CSSProperties;
+}) {
+  const ref = useLiquidGlass<HTMLDivElement>({ radius, bezel: 13, strength: 0.6, blur: 7, brightness: 0.82, tint: 0.16 });
+  return (
+    <div ref={ref} className="liquid-glass" style={{ borderRadius: `${radius}px`, ...style }}>
+      {children}
+    </div>
+  );
+}
+
+function CircleLink({ children, href }: { children: React.ReactNode; href: string }) {
+  const ref = useLiquidGlass<HTMLButtonElement>({ radius: 31, bezel: 11, strength: 0.65, blur: 6, brightness: 0.85, tint: 0.15 });
+  return (
+    <motion.button
+      ref={ref}
+      className="liquid-glass"
+      whileTap={{ scale: 0.9 }}
+      onClick={() => window.open(href, "_blank", "noopener,noreferrer")}
+      style={{
+        width: "62px",
+        height: "62px",
+        borderRadius: "50%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        border: "none",
+        padding: 0,
+      }}
+    >
+      {children}
+    </motion.button>
+  );
+}
+
+export default function IOSControlCenter({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [online, setOnline] = useState(true);
+  const [brightness, setBrightness] = useState(1);
+  const [volume, setVolume] = useState(1);
+  const [audioPlaying, setAudioPlaying] = useState(false);
+  const [hasAudio, setHasAudio] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    const saved = localStorage.getItem("cc-brightness");
-    if (saved) setBrightness(parseFloat(saved));
-
-    const saved_vol = localStorage.getItem("cc-volume");
-    if (saved_vol) setVolume(parseFloat(saved_vol));
-  }, []);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
+    setOnline(navigator.onLine);
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    const b = parseFloat(localStorage.getItem("cc-brightness") ?? "1");
+    const v = parseFloat(localStorage.getItem("cc-volume") ?? "1");
+    if (!Number.isNaN(b)) setBrightness(b);
+    if (!Number.isNaN(v)) setVolume(v);
     return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
     };
   }, []);
 
+  // Media state sampled when the panel opens — phones usually have
+  // no <audio> mounted, which is the honest "Not Playing" state.
   useEffect(() => {
-    if (open) {
-      const audio = document.querySelector("audio");
-      setAudioElement(audio);
-    }
-  }, [open]);
-
-  useEffect(() => {
-    document.documentElement.style.setProperty(
-      "--display-dim",
-      String((1 - brightness) * 0.7)
-    );
-    localStorage.setItem("cc-brightness", String(brightness));
-  }, [brightness]);
-
-  useEffect(() => {
-    localStorage.setItem("cc-volume", String(volume));
-    const audioElements = document.querySelectorAll("audio");
-    audioElements.forEach((el) => {
-      el.volume = volume;
-    });
-  }, [volume]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open) onClose();
+    if (!open) return;
+    const audio = document.querySelector("audio");
+    setHasAudio(!!audio);
+    setAudioPlaying(!!audio && !audio.paused);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const handleSliderChange = (
-    newValue: number,
-    type: "brightness" | "volume"
-  ) => {
-    const clamped = Math.max(0, Math.min(1, newValue));
-    if (type === "brightness") setBrightness(clamped);
-    else setVolume(clamped);
+  const onBrightness = (v: number) => {
+    setBrightness(v);
+    document.documentElement.style.setProperty("--display-dim", String((1 - v) * 0.7));
+    localStorage.setItem("cc-brightness", String(v));
+  };
+  const onVolume = (v: number) => {
+    setVolume(v);
+    document.querySelectorAll("audio").forEach((a) => {
+      (a as HTMLAudioElement).volume = v;
+    });
+    localStorage.setItem("cc-volume", String(v));
+  };
+  const toggleMedia = () => {
+    const audio = document.querySelector("audio");
+    if (!audio) return;
+    if (audio.paused) {
+      audio.play().catch(() => {});
+      setAudioPlaying(true);
+    } else {
+      audio.pause();
+      setAudioPlaying(false);
+    }
   };
 
-  const handleSliderPointerDown = (
-    e: React.PointerEvent,
-    type: "brightness" | "volume"
-  ) => {
-    const container = sliderRefs.current[type];
-    if (!container) return;
-
-    const rect = container.getBoundingClientRect();
-    const handleMove = (moveEvent: PointerEvent) => {
-      const offsetY = moveEvent.clientY - rect.top;
-      const ratio = 1 - Math.max(0, Math.min(1, offsetY / rect.height));
-      handleSliderChange(ratio, type);
-    };
-
-    const handleUp = () => {
-      document.removeEventListener("pointermove", handleMove);
-      document.removeEventListener("pointerup", handleUp);
-    };
-
-    document.addEventListener("pointermove", handleMove);
-    document.addEventListener("pointerup", handleUp);
-  };
-
-  if (!mounted || typeof document === "undefined") return null;
-
-  const backdropVariants = {
-    enter: { opacity: 0 },
-    visible: { opacity: 1 },
-    exit: { opacity: 0 },
-  };
-
-  const contentVariants = {
-    enter: { y: -14, opacity: 0 },
-    visible: { y: 0, opacity: 1 },
-    exit: { y: -14, opacity: 0 },
-  };
-
-  const easing: [number, number, number, number] = [0.32, 0.72, 0, 1];
+  if (typeof document === "undefined") return null;
 
   return createPortal(
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="fixed inset-0 z-[9999]"
-          variants={backdropVariants}
-          initial="enter"
-          animate="visible"
-          exit="exit"
-          transition={{ duration: 0.28, ease: easing }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) onClose();
-          }}
+    <>
+      {/* Screen-dim layer lives OUTSIDE the panel so it persists. */}
+      {brightness < 1 && (
+        <div
           style={{
-            background: "rgba(0, 0, 0, 0.3)",
-            WebkitBackdropFilter: "blur(20px) saturate(180%)",
-            backdropFilter: "blur(20px) saturate(180%)",
+            position: "fixed",
+            inset: 0,
+            background: "#000",
+            opacity: `var(--display-dim, ${(1 - brightness) * 0.7})`,
+            pointerEvents: "none",
+            zIndex: 3000,
           }}
-        >
+        />
+      )}
+      <AnimatePresence>
+        {open && (
           <motion.div
-            className="absolute top-0 left-0 right-0 mx-auto px-4 pt-4 flex flex-col gap-3"
-            style={{ maxWidth: "420px" }}
-            variants={contentVariants}
-            initial="enter"
-            animate="visible"
-            exit="exit"
-            transition={{ duration: 0.28, ease: easing }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) onClose();
+            }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 2600,
+              background: "rgba(0,0,0,0.36)",
+              backdropFilter: "blur(28px) saturate(160%)",
+              WebkitBackdropFilter: "blur(28px) saturate(160%)",
+            }}
           >
-            {/* Row 1: Connectivity + Media */}
-            <div className="flex gap-3">
-              {/* Connectivity Card */}
-              <div
-                className="flex-1 h-[110px] rounded-[16px] p-3"
-                style={GLASS_STYLE}
-              >
-                <div className="grid grid-cols-2 gap-2 h-full">
-                  {/* Airplane */}
-                  <button className="flex items-center justify-center rounded-full bg-white/15 hover:bg-white/20 transition">
-                    <svg
-                      className="w-5 h-5 text-white"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M10.18 9L5 13.18V19h2v-4h4v4h2v-5.82L10.18 9M19 13v-2h-8V7h-2v4H3v2h16z" />
-                    </svg>
-                  </button>
-                  {/* Cellular */}
-                  <button className="flex items-center justify-center rounded-full bg-white/15 hover:bg-white/20 transition">
-                    <svg
-                      className="w-5 h-5 text-white"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M19 3H5v16h14V3zm-2 14h-2v-2h2v2zm0-4h-2v-2h2v2zm-4 4h-2v-2h2v2zm0-4h-2v-2h2v2zm-4 4H7v-2h2v2zm0-4H7v-2h2v2z" />
-                    </svg>
-                  </button>
-                  {/* WiFi */}
-                  <button
-                    className="flex items-center justify-center rounded-full transition"
+            <motion.div
+              initial={{ y: -18, scale: 0.97, opacity: 0 }}
+              animate={{ y: 0, scale: 1, opacity: 1 }}
+              exit={{ y: -14, scale: 0.98, opacity: 0 }}
+              transition={{ duration: 0.28, ease: OPEN_EASE }}
+              style={{
+                maxWidth: "400px",
+                margin: "0 auto",
+                padding: "max(20px, env(safe-area-inset-top, 20px)) 16px 0",
+                display: "flex",
+                flexDirection: "column",
+                gap: "14px",
+                pointerEvents: "auto",
+              }}
+            >
+              {/* Row 1: connectivity + media */}
+              <div style={{ display: "flex", gap: "14px" }}>
+                <GlassCard radius={26} style={{ flex: 1, padding: "14px", minHeight: "132px" }}>
+                  <div
                     style={{
-                      background: isOnline
-                        ? "#0a84ff"
-                        : "rgba(255, 255, 255, 0.15)",
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, 48px)",
+                      gap: "10px",
+                      justifyContent: "center",
+                      alignContent: "center",
+                      height: "100%",
                     }}
                   >
-                    <svg
-                      className="w-5 h-5 text-white"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z" />
-                    </svg>
-                  </button>
-                  {/* Bluetooth */}
-                  <button className="flex items-center justify-center rounded-full bg-white/15 hover:bg-white/20 transition">
-                    <svg
-                      className="w-5 h-5 text-white"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M17.71 15.71L12 21.41l-5.71-5.71c-.39-.39-.39-1.02 0-1.41l4.3-4.29L6.29 5.71c-.39-.39-.39-1.02 0-1.41c.39-.39 1.02-.39 1.41 0L12 7.59l4.3-4.29c.39-.39 1.02-.39 1.41 0c.39.39.39 1.02 0 1.41l-5.71 5.71l4.3 4.29c.39.39.39 1.02 0 1.41zm-.71-10.71l-4 4l4 4l1.41-4.71L12 3.17l5.29 5.29l1.42-4.46z" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              {/* Media Card */}
-              <div
-                className="flex-1 h-[110px] rounded-[16px] p-3 flex items-center justify-center flex-col gap-2"
-                style={GLASS_STYLE}
-              >
-                <div className="text-center">
-                  <div className="text-xs font-semibold text-white/90">
-                    Music
+                    <ConnButton>
+                      <AirplaneGlyph />
+                    </ConnButton>
+                    <ConnButton>
+                      <CellularGlyph />
+                    </ConnButton>
+                    <ConnButton active={online}>
+                      <WifiCCGlyph />
+                    </ConnButton>
+                    <ConnButton>
+                      <BluetoothGlyph />
+                    </ConnButton>
                   </div>
-                  <div className="text-[11px] text-white/55">
-                    {audioElement?.paused !== false
-                      ? "Paused"
-                      : "From the desktop player"}
+                </GlassCard>
+
+                <GlassCard radius={26} style={{ flex: 1, padding: "16px 14px", minHeight: "132px" }}>
+                  <div
+                    style={{
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "12px",
+                    }}
+                  >
+                    <span style={{ fontSize: "14px", fontWeight: 500, color: hasAudio ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.5)" }}>
+                      {hasAudio ? (audioPlaying ? "Playing" : "Paused") : "Not Playing"}
+                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
+                      <motion.button whileTap={{ scale: 0.85 }} style={{ background: "none", border: "none", padding: 0 }}>
+                        <PrevGlyph dim={!hasAudio} />
+                      </motion.button>
+                      <motion.button whileTap={{ scale: 0.85 }} onClick={toggleMedia} style={{ background: "none", border: "none", padding: 0 }}>
+                        <PlayPauseGlyph playing={audioPlaying} dim={!hasAudio} />
+                      </motion.button>
+                      <motion.button whileTap={{ scale: 0.85 }} style={{ background: "none", border: "none", padding: 0 }}>
+                        <NextGlyph dim={!hasAudio} />
+                      </motion.button>
+                    </div>
                   </div>
-                </div>
-                <button
-                  onClick={() => {
-                    if (audioElement) {
-                      if (audioElement.paused) audioElement.play();
-                      else audioElement.pause();
-                    }
-                  }}
-                  className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/25 transition"
-                >
-                  {audioElement?.paused !== false ? (
-                    <svg
-                      className="w-5 h-5 text-white fill-current"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="w-5 h-5 text-white fill-current"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Row 2: Brightness + Volume Sliders */}
-            <div className="flex gap-3">
-              {/* Brightness Slider */}
-              <div
-                className="w-full max-w-[170px] h-[200px] rounded-[40px] p-4 flex flex-col items-center justify-between relative overflow-hidden"
-                style={GLASS_STYLE}
-                ref={(el) => {
-                  if (el) sliderRefs.current.brightness = el;
-                }}
-                onPointerDown={(e) => handleSliderPointerDown(e, "brightness")}
-              >
-                <div className="w-full flex-1 relative">
-                  <div className="absolute inset-0 w-[36px] left-1/2 -translate-x-1/2 rounded-[18px] bg-white/30" />
-                  <div
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[36px] rounded-[18px] bg-white/80 transition-all"
-                    style={{ height: `${brightness * 100}%` }}
-                  />
-                </div>
-                <svg
-                  className="w-6 h-6 text-white/85 mb-2"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <circle cx="12" cy="12" r="5" />
-                  <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24M19.78 19.78l-4.24-4.24m-5.08-5.08l-4.24-4.24" />
-                </svg>
+                </GlassCard>
               </div>
 
-              {/* Volume Slider */}
-              <div
-                className="w-full max-w-[170px] h-[200px] rounded-[40px] p-4 flex flex-col items-center justify-between relative overflow-hidden"
-                style={GLASS_STYLE}
-                ref={(el) => {
-                  if (el) sliderRefs.current.volume = el;
-                }}
-                onPointerDown={(e) => handleSliderPointerDown(e, "volume")}
-              >
-                <div className="w-full flex-1 relative">
-                  <div className="absolute inset-0 w-[36px] left-1/2 -translate-x-1/2 rounded-[18px] bg-white/30" />
-                  <div
-                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[36px] rounded-[18px] bg-white/80 transition-all"
-                    style={{ height: `${volume * 100}%` }}
-                  />
-                </div>
-                <svg
-                  className="w-6 h-6 text-white/85 mb-2"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-                </svg>
+              {/* Row 2: brightness + volume */}
+              <div style={{ display: "flex", gap: "14px" }}>
+                <VerticalSlider value={brightness} onChange={onBrightness} glyph={<SunGlyph />} />
+                <VerticalSlider value={volume} onChange={onVolume} glyph={<SpeakerGlyph />} />
               </div>
-            </div>
 
-            {/* Row 3: Action Buttons */}
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => window.open("https://github.com/shajith240")}
-                className="w-[70px] h-[70px] rounded-full flex items-center justify-center transition hover:bg-white/20"
-                style={GLASS_STYLE}
-              >
-                <svg
-                  className="w-[26px] h-[26px] text-white fill-current"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v 3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-                </svg>
-              </button>
-
-              <button
-                onClick={() => window.open("https://linkedin.com/in/shajith240")}
-                className="w-[70px] h-[70px] rounded-full flex items-center justify-center transition hover:bg-white/20"
-                style={GLASS_STYLE}
-              >
-                <svg
-                  className="w-[26px] h-[26px] text-white fill-current"
-                  viewBox="0 0 24 24"
-                >
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                  <path
-                    d="M7 10v8M11 6.5v11.5M11 10v8M15 10v8"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    fill="none"
-                  />
-                  <circle cx="7" cy="7" r="1" />
-                </svg>
-              </button>
-
-              <button
-                onClick={() => window.open("mailto:shajith240@gmail.com")}
-                className="w-[70px] h-[70px] rounded-full flex items-center justify-center transition hover:bg-white/20"
-                style={GLASS_STYLE}
-              >
-                <svg
-                  className="w-[26px] h-[26px] text-white fill-current"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Display Dim Overlay */}
-            <div
-              className="fixed inset-0 pointer-events-none bg-black z-[3000]"
-              style={{ opacity: "var(--display-dim, 0)" }}
-            />
+              {/* Row 3: real links */}
+              <div style={{ display: "flex", justifyContent: "center", gap: "16px" }}>
+                <CircleLink href="https://github.com/shajith240">
+                  <GitHubGlyph />
+                </CircleLink>
+                <CircleLink href="https://www.linkedin.com/in/shajith240">
+                  <LinkedInGlyph />
+                </CircleLink>
+                <CircleLink href="mailto:shajith240@gmail.com">
+                  <MailGlyph />
+                </CircleLink>
+              </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>,
-    document.body
+        )}
+      </AnimatePresence>
+    </>,
+    document.body,
   );
 }
