@@ -28,6 +28,7 @@
 import { readdirSync, mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { join, dirname, extname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseFile } from "music-metadata";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -98,16 +99,43 @@ function prettify(slug) {
     .join(" ");
 }
 
-function buildSongs() {
+async function buildSongs() {
   const files = listDir("songs");
   const audios = files.filter((f) => AUDIO_EXTS.has(extname(f).toLowerCase()));
   const images = files.filter((f) => IMAGE_EXTS.has(extname(f).toLowerCase()));
   const lrcs = files.filter((f) => extname(f).toLowerCase() === ".lrc");
 
-  return audios.map((audio) => {
+  const tracks = [];
+  for (const audio of audios) {
     const base = basename(audio, extname(audio));
 
+    // The audio container ITSELF is the primary metadata source —
+    // the workflow is "drop audio + lyrics, done": title, artist and
+    // the embedded cover all come out of the file's ID3/MP4 tags.
+    // Sidecar json (if present) still overrides; filename
+    // conventions are the last resort.
+    let tags = null;
+    try {
+      tags = await parseFile(join(root, "public", "songs", audio));
+    } catch {
+      // Unreadable/odd container — filename fallbacks below.
+    }
+
     let artwork = bestMatch(images, base);
+    if (!artwork && tags?.common.picture?.length) {
+      // Extract the embedded cover once into the songs folder; the
+      // next scan finds it as a normal cover file (self-healing,
+      // and committing it makes it part of the content).
+      const pic = tags.common.picture[0];
+      const ext = pic.format && pic.format.includes("png") ? "png" : "jpg";
+      const coverName = `${base}-cover.${ext}`;
+      const coverAbs = join(root, "public", "songs", coverName);
+      if (!existsSync(coverAbs)) {
+        writeFileSync(coverAbs, Buffer.from(pic.data));
+        console.log(`[content]   extracted embedded cover → ${coverName}`);
+      }
+      artwork = coverName;
+    }
     // Single-track folders: one audio + one image is an unambiguous
     // pair even when the names share nothing.
     if (!artwork && audios.length === 1 && images.length === 1) artwork = images[0];
@@ -122,6 +150,8 @@ function buildSongs() {
       artist = a.trim();
       title = t.join(" - ").trim();
     }
+    if (tags?.common.title) title = tags.common.title;
+    if (tags?.common.artist) artist = tags.common.artist;
     // Sidecar json is found the same fuzzy way as art/lyrics (exact
     // basename still wins by scoring 1.0) — requiring the exact
     // audio basename silently dropped metadata whenever the json
@@ -141,17 +171,18 @@ function buildSongs() {
       }
     }
 
-    return {
+    tracks.push({
       title,
       artist,
       src: `/songs/${audio}`,
       artwork: artwork ? `/songs/${artwork}` : null,
       lyricsSrc: lyrics ? `/songs/${lyrics}` : null,
-    };
-  });
+    });
+  }
+  return tracks;
 }
 
-const songs = buildSongs();
+const songs = await buildSongs();
 const wallpapers = listDir("wallpapers").filter((f) => IMAGE_EXTS.has(extname(f).toLowerCase()));
 const motivationImages = listDir("motivation_quotes")
   .filter((f) => IMAGE_EXTS.has(extname(f).toLowerCase()))

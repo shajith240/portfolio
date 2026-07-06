@@ -35,9 +35,56 @@ const CHARS_PER_SECOND = 11;
 const PER_WORD_PAUSE = 0.06; // breath/consonant gap between words
 const MAX_GAP_FRACTION = 0.95; // last word must land before the next line
 
+// Enhanced-LRC path: the file gave us REAL per-word onsets, so no
+// modeling — each word runs from its own stamp to the next word's
+// stamp. A run of words sharing one stamp (multi-word chunk between
+// two tags) splits its window by character weight. A trailing
+// empty-text sentinel (see parseLRC) carries the precise end of the
+// last word — a held final note ("mere hoooo") ends exactly there.
+function wordsFromStamps(
+  stamps: NonNullable<LyricLine["wordStamps"]>,
+  nextLineTime: number,
+): TimedWord[] {
+  // Pull the explicit end boundary out of the trailing sentinel;
+  // the remaining stamps are all real words.
+  let endBoundary = nextLineTime;
+  let real = stamps;
+  const last = stamps[stamps.length - 1];
+  if (last && last.text === "") {
+    endBoundary = last.start;
+    real = stamps.slice(0, -1);
+  }
+
+  const out: TimedWord[] = [];
+  let i = 0;
+  while (i < real.length) {
+    let j = i;
+    while (j < real.length && real[j].start === real[i].start) j++;
+    const groupStart = real[i].start;
+    // Next group's onset is this group's end; the final group ends
+    // at the precise end boundary, never past the next line.
+    const groupEnd = j < real.length ? real[j].start : Math.min(endBoundary, nextLineTime);
+    const group = real.slice(i, j);
+    const totalWeight = group.reduce((s, w) => s + w.text.length + 2, 0) || 1;
+    let cursor = groupStart;
+    for (const w of group) {
+      const dur = Math.max(0.05, groupEnd - groupStart) * ((w.text.length + 2) / totalWeight);
+      out.push({ text: w.text, start: cursor, end: cursor + dur });
+      cursor += dur;
+    }
+    i = j;
+  }
+  return out;
+}
+
 export function computeWordTimings(lines: LyricLine[]): TimedLine[] {
   return lines.map((line, i) => {
     const nextTime = lines[i + 1]?.time ?? line.time + FALLBACK_LAST_LINE_DURATION;
+
+    if (line.wordStamps) {
+      return { time: line.time, text: line.text, words: wordsFromStamps(line.wordStamps, nextTime) };
+    }
+
     const gap = Math.max(0.1, nextTime - line.time);
 
     const words = line.text.split(/\s+/).filter(Boolean);

@@ -13,11 +13,32 @@ export interface GeneratedTrack {
 
 export const GENERATED_SONGS: GeneratedTrack[] = [
   {
-    "title": "Samayama",
-    "artist": "Anurag Kulakarni & Sithara KrishnaKumar",
-    "src": "/songs/Samayama-Anurag Kulkarni Sithara Krishnakumar.m4a",
-    "artwork": "/songs/Samayama-Anurag-Kulkarni-Sithara-Krishnakumar-cover.webp",
-    "lyricsSrc": "/songs/Anurag Kulkarni, Sithara Krishnakumar, Hesham Abdul Wahab - Samayama.lrc"
+    "title": "Deewaana Deewaana",
+    "artist": "A.R. Rahman & Irshad Kamil",
+    "src": "/songs/A.R. Rahman & Irshad Kamil - Deewaana Deewaana.m4a",
+    "artwork": "/songs/A.R. Rahman & Irshad Kamil - Deewaana Deewaana-cover.jpg",
+    "lyricsSrc": "/songs/A.R. Rahman & Irshad Kamil - Deewaana Deewaana.lrc"
+  },
+  {
+    "title": "Poolane Kunukeyamantaa",
+    "artist": "A.R. Rahman, Haricharan & Shreya Ghoshal",
+    "src": "/songs/A.R. Rahman, Haricharan & Shreya Ghoshal - Poolane Kunukeyamantaa.m4a",
+    "artwork": "/songs/A.R. Rahman, Haricharan & Shreya Ghoshal - Poolane Kunukeyamantaa-cover.jpg",
+    "lyricsSrc": "/songs/A.R. Rahman, Haricharan & Shreya Ghoshal - Poolane Kunukeyamantaa.lrc"
+  },
+  {
+    "title": "Jo Tum Mere Ho",
+    "artist": "Anuv Jain",
+    "src": "/songs/Anuv Jain - Jo Tum Mere Ho.m4a",
+    "artwork": "/songs/Anuv Jain - Jo Tum Mere Ho-cover.jpg",
+    "lyricsSrc": "/songs/Anuv Jain - Jo Tum Mere Ho.lrc"
+  },
+  {
+    "title": "Billie Jean",
+    "artist": "Michael Jackson",
+    "src": "/songs/Billie Jean-Michael Jackson.m4a",
+    "artwork": "/songs/Billie Jean-Michael Jackson-cover.jpg",
+    "lyricsSrc": "/songs/Michael Jackson - Billie Jean (Single Version).lrc"
   },
   {
     "title": "Someone You Loved",
@@ -30,14 +51,18 @@ export const GENERATED_SONGS: GeneratedTrack[] = [
 
 export const GENERATED_WALLPAPERS: string[] = [
   "abstract-background-3840x2160-11753.jpeg",
-  "dahlia-flower-orange-flower-black-background-amoled-5k-8k-3840x2160-8535.jpg",
-  "ea-sports-fc-26-key-3840x2160-26590.jpg",
   "maserati-gt2-3840x2160-26562.jpg",
   "microsoft-surface-3840x2160-9246.png",
-  "minions-monsters-3840x2160-26730.jpg",
-  "orange-tulips-black-background-spring-flowers-colorful-4096x2160-2339.jpg"
+  "zenitsu-agatsuma-3840x2160-24356.jpg"
 ];
 
 export const GENERATED_MOTIVATION_IMAGES: string[] = [
-  "/motivation_quotes/levi.webp"
+  "/motivation_quotes/0%luck-100%hardwork.jpg",
+  "/motivation_quotes/L E A R N E D.jpg",
+  "/motivation_quotes/REASON_.jpg",
+  "/motivation_quotes/experience.jpg",
+  "/motivation_quotes/if not me then who.jpg",
+  "/motivation_quotes/remember_why_you_started.jpg",
+  "/motivation_quotes/stayhumble.jpg",
+  "/motivation_quotes/watch me become everytihng i said i would.jpg"
 ];

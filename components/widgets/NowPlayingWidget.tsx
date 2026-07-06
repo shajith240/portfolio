@@ -115,20 +115,33 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
     setTrackIndex((i) => (i - 1 + PLAYLIST.length) % PLAYLIST.length);
   };
 
-  // When trackIndex changes, update audio.src and reset progress; if
-  // playing, continue playing the new track.
+  // `playing` is mirrored into a ref so the track-switch effect can
+  // read it WITHOUT depending on it — the original effect listed
+  // `playing` in its deps, so every pause/play re-ran it, and since
+  // it re-assigns audio.src and zeroes currentTime, pausing
+  // restarted the song from the top.
+  const playingRef = useRef(false);
   useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
+
+  // Runs ONLY on a real track change. The mount guard matters too:
+  // the <audio> element's src attribute is already correct on mount,
+  // and re-assigning .src (even to the same URL) resets playback.
+  const prevTrackRef = useRef(trackIndex);
+  useEffect(() => {
+    if (prevTrackRef.current === trackIndex) return;
+    prevTrackRef.current = trackIndex;
     const audio = audioRef.current;
     if (!audio) return;
-    const wasPlaying = playing;
     audio.src = current.src;
     audio.currentTime = 0;
-    if (wasPlaying && current.src !== "") {
+    if (playingRef.current && current.src !== "") {
       audio.play().catch(() => {
         // Autoplay or file error — silent catch.
       });
     }
-  }, [trackIndex, current.src, playing]);
+  }, [trackIndex, current.src]);
 
   if (size === "small") {
     return (

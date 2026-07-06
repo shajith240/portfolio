@@ -26,6 +26,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "music-metadata": "^11.13.0",
     "puppeteer": "^24.39.1",
     "tailwindcss": "^4",
     "typescript": "^5"
