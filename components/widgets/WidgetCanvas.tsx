@@ -1,11 +1,11 @@
 // components/widgets/WidgetCanvas.tsx
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useWidgetLayout } from "@/contexts/WidgetLayoutContext";
 import { spanForSize, type Occupancy, type Rect } from "@/lib/widgetPositioning";
 import { WIDGET_RADIUS } from "@/lib/widgetGrid";
-import type { WidgetId } from "@/lib/widgetLayoutSchema";
+import type { WidgetId, WidgetSize } from "@/lib/widgetLayoutSchema";
 import WidgetFrame from "@/components/widgets/WidgetFrame";
 import PhotoWidget from "@/components/widgets/PhotoWidget";
 import NowPlayingWidget from "@/components/widgets/NowPlayingWidget";
@@ -31,6 +31,38 @@ export default function WidgetCanvas() {
     [layout]
   );
 
+  // Keyed only on `layout`, not recomputed on every render — dragging any
+  // widget calls `onSnapPreview` (below) on every drag frame, which
+  // re-renders this component via `snapPreview` state. Without this
+  // memo, every widget's `others` array got a brand-new reference on
+  // every one of those frames even though `layout` itself hadn't
+  // changed, which defeated WidgetFrame's own memoization for all 5
+  // widgets, not just the one being dragged.
+  const othersById = useMemo(() => {
+    const result = {} as Record<WidgetId, Occupancy[]>;
+    for (const id of WIDGET_IDS) {
+      result[id] = WIDGET_IDS.filter((other) => other !== id).map(occupancyFor);
+    }
+    return result;
+  }, [occupancyFor]);
+
+  // One stable render function per widget, forever — the widget-to-
+  // component mapping never changes at runtime. Previously this was an
+  // inline arrow defined fresh inside the .map() below on every render;
+  // WidgetFrame now wraps in React.memo, and a memo is worthless if one
+  // of its props (this `children` function) gets a new identity every
+  // single render regardless of whether anything relevant changed.
+  const renderById = useMemo<Record<WidgetId, (size: WidgetSize) => React.ReactNode>>(
+    () => ({
+      photo: (size) => <PhotoWidget size={size} />,
+      nowPlaying: (size) => <NowPlayingWidget size={size} />,
+      aiTools: (size) => <GitHubHeatmapWidget size={size} />,
+      location: (size) => <LocationWidget size={size} />,
+      motivation: (size) => <MotivationWidget size={size} />,
+    }),
+    []
+  );
+
   return (
     <div
       // Tapping empty canvas space (not a widget) exits edit mode. The
@@ -44,17 +76,10 @@ export default function WidgetCanvas() {
       style={{ position: "fixed", inset: 0, zIndex: 20, pointerEvents: isEditing ? "auto" : "none" }}
     >
       {WIDGET_IDS.map((id) => {
-        const others = WIDGET_IDS.filter((other) => other !== id).map(occupancyFor);
         return (
           <div key={id} onClick={(e) => e.stopPropagation()} style={{ pointerEvents: "auto" }}>
-            <WidgetFrame id={id} others={others} onSnapPreview={setSnapPreview}>
-              {(size) => {
-                if (id === "photo") return <PhotoWidget size={size} />;
-                if (id === "nowPlaying") return <NowPlayingWidget size={size} />;
-                if (id === "aiTools") return <GitHubHeatmapWidget size={size} />;
-                if (id === "location") return <LocationWidget size={size} />;
-                return <MotivationWidget size={size} />;
-              }}
+            <WidgetFrame id={id} others={othersById[id]} onSnapPreview={setSnapPreview}>
+              {renderById[id]}
             </WidgetFrame>
           </div>
         );

@@ -142,37 +142,81 @@ export default function Dock() {
   // only thing that actually needs to be "latest" fixes that class of
   // bug entirely.
   const mouseXRef = useRef<number | null>(null);
+  // Mirrors `scales`/`positions` without waiting for a re-render — the
+  // loop needs the true previous value every tick, and reading it back
+  // out of React state would be one render behind.
+  const scalesRef = useRef<number[]>(scales);
+  const positionsRef = useRef<number[]>(positions);
+  const runningRef = useRef(false);
+  // Below this, the lerp's remaining distance to target is visually
+  // indistinguishable from zero — used to detect "at rest" so the loop
+  // can stop scheduling itself instead of ticking at 60fps forever, even
+  // when nobody is anywhere near the Dock. This was previously an
+  // unconditional loop for the component's entire mounted lifetime — the
+  // single largest perpetual main-thread cost in the app.
+  const SETTLE_EPSILON = 0.001;
 
-  useEffect(() => {
-    let alive = true;
-    const tick = () => {
-      if (!alive) return;
-      const mouseX = mouseXRef.current;
-      const targets = targetScales(mouseX);
-      const targetPositions = positionsFromScales(targets);
-      const lerp = mouseX !== null ? 0.22 : 0.14;
+  const tick = useCallback(() => {
+    const mouseX = mouseXRef.current;
+    const targets = targetScales(mouseX);
+    const targetPositions = positionsFromScales(targets);
+    const lerp = mouseX !== null ? 0.22 : 0.14;
 
-      setScales((prev) => prev.map((s, i) => s + (targets[i] - s) * lerp));
-      setPositions((prev) => prev.map((p, i) => p + (targetPositions[i] - p) * lerp));
+    const lerpedScales = scalesRef.current.map((s, i) => s + (targets[i] - s) * lerp);
+    const lerpedPositions = positionsRef.current.map((p, i) => p + (targetPositions[i] - p) * lerp);
 
-      rafRef.current = requestAnimationFrame(tick);
-    };
+    // Only allowed to settle at true rest (mouse not over the Dock) —
+    // otherwise a momentary equality mid-hover would stop the loop with
+    // no way to resume until the next mousemove event restarts it.
+    const settled =
+      mouseX === null &&
+      lerpedScales.every((s, i) => Math.abs(targets[i] - s) < SETTLE_EPSILON) &&
+      lerpedPositions.every((p, i) => Math.abs(targetPositions[i] - p) < SETTLE_EPSILON);
+
+    const finalScales = settled ? targets : lerpedScales;
+    const finalPositions = settled ? targetPositions : lerpedPositions;
+    scalesRef.current = finalScales;
+    positionsRef.current = finalPositions;
+    setScales(finalScales);
+    setPositions(finalPositions);
+
+    if (settled) {
+      runningRef.current = false;
+      rafRef.current = undefined;
+      return;
+    }
     rafRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  const startLoop = useCallback(() => {
+    if (runningRef.current) return;
+    runningRef.current = true;
+    rafRef.current = requestAnimationFrame(tick);
+  }, [tick]);
+
+  // Cancel any in-flight frame on unmount — the loop itself is only ever
+  // (re)started from the mouse handlers below, not on mount, since the
+  // initial state already IS the resting state (nothing to animate yet).
+  useEffect(() => {
     return () => {
-      alive = false;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, []);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!dockRef.current) return;
-    const rect = dockRef.current.getBoundingClientRect();
-    mouseXRef.current = e.clientX - rect.left - PADDING;
-  }, []);
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!dockRef.current) return;
+      const rect = dockRef.current.getBoundingClientRect();
+      mouseXRef.current = e.clientX - rect.left - PADDING;
+      startLoop();
+    },
+    [startLoop]
+  );
 
   const handleMouseLeave = useCallback(() => {
     mouseXRef.current = null;
-  }, []);
+    startLoop();
+  }, [startLoop]);
 
   const handleClick = useCallback(
     (href: string, label: string, index: number, isFinder: boolean, external?: string, isCredits?: boolean, isVSCode?: boolean) => {

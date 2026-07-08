@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useCallback, useRef, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useCallback, useMemo, useRef, useState, useEffect, type ReactNode } from "react";
 
 export interface WindowState {
   id: string;
@@ -219,23 +219,32 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
     return el ? el.getBoundingClientRect() : null;
   }, []);
 
+  // Every consumer (Dock, every open Window, MenuBar, AppSwitcher) re-reads
+  // this value on every provider re-render — without memoizing it, a fresh
+  // object identity forces all of them to re-render even when nothing they
+  // actually use changed. `windows` is the only piece that legitimately
+  // changes on its own; every callback below is already stable via
+  // useCallback, so this only recomputes when `windows` itself changes.
+  const value = useMemo(
+    () => ({
+      windows,
+      openWindow,
+      openFinder,
+      openCredits,
+      openVSCode,
+      closeWindow,
+      minimizeWindow,
+      toggleMaximize,
+      bringToFront,
+      updateBounds,
+      registerDockIconEl,
+      getDockIconRect,
+    }),
+    [windows, openWindow, openFinder, openCredits, openVSCode, closeWindow, minimizeWindow, toggleMaximize, bringToFront, updateBounds, registerDockIconEl, getDockIconRect]
+  );
+
   return (
-    <WindowManagerContext.Provider
-      value={{
-        windows,
-        openWindow,
-        openFinder,
-        openCredits,
-        openVSCode,
-        closeWindow,
-        minimizeWindow,
-        toggleMaximize,
-        bringToFront,
-        updateBounds,
-        registerDockIconEl,
-        getDockIconRect,
-      }}
-    >
+    <WindowManagerContext.Provider value={value}>
       {children}
     </WindowManagerContext.Provider>
   );

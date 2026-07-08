@@ -58,8 +58,11 @@ export const GENERATED_SONGS: GeneratedTrack[] = [
 
 export const GENERATED_WALLPAPERS: string[] = [
   "abstract-background-3840x2160-11753.jpeg",
+  "captain-america-3840x2160-24354.jpg",
   "maserati-gt2-3840x2160-26562.jpg",
   "microsoft-surface-3840x2160-9246.png",
+  "os-x-leopard-5120x3200-24049.jpg",
+  "os-x-lion-beach-mac-5120x2880-24056.jpg",
   "zenitsu-agatsuma-3840x2160-24356.jpg"
 ];
 

@@ -1,7 +1,7 @@
 // components/widgets/WidgetFrame.tsx
 "use client";
 
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { memo, useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { animate, motion, useMotionValue, useReducedMotion, type PanInfo } from "framer-motion";
 import { useWidgetLayout } from "@/contexts/WidgetLayoutContext";
 import { useLongPress } from "@/lib/useLongPress";
@@ -49,7 +49,13 @@ interface WidgetFrameProps {
   children: (size: WidgetSize) => React.ReactNode;
 }
 
-export default function WidgetFrame({ id, others, onSnapPreview, children }: WidgetFrameProps) {
+// Memoized — WidgetCanvas re-renders on every drag frame of ANY widget
+// (onSnapPreview lives there), and without this every OTHER widget's
+// frame re-rendered too on every one of those frames. Only pays off
+// because `others`/`children` are now stable references from the
+// caller (see WidgetCanvas's othersById/renderById) — a memo whose
+// props get a fresh identity every render is a no-op.
+function WidgetFrameImpl({ id, others, onSnapPreview, children }: WidgetFrameProps) {
   const { layout, spec, isEditing, enterEditMode, moveWidget, resizeWidget } = useWidgetLayout();
   const prefersReducedMotion = useReducedMotion();
   const frameRef = useRef<HTMLDivElement>(null);
@@ -96,6 +102,12 @@ export default function WidgetFrame({ id, others, onSnapPreview, children }: Wid
       ay.stop();
     };
   }, [rect.x, rect.y, dropNonce, prefersReducedMotion, mx, my]);
+
+  useEffect(() => {
+    return () => {
+      if (resizeRafRef.current != null) cancelAnimationFrame(resizeRafRef.current);
+    };
+  }, []);
 
   const longPress = useLongPress(enterEditMode);
 
@@ -161,6 +173,16 @@ export default function WidgetFrame({ id, others, onSnapPreview, children }: Wid
     setDropNonce((n) => n + 1);
   }, [mx, my, spec, span, onSnapPreview, moveWidget, id]);
 
+  // The raw pointer event still supplies the freshest coordinates the
+  // instant they arrive; only the React state COMMIT (and the render
+  // it triggers) is coalesced to once per animation frame instead of
+  // once per native pointermove, which can fire well above 60/s on a
+  // high-poll-rate mouse or trackpad. Final size at drop still reads
+  // this ref, not the (possibly one-frame-stale) `liveSize` state, so
+  // precision is identical — only the update cadence changed.
+  const pendingSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const resizeRafRef = useRef<number | null>(null);
+
   const handleResizeMove = useCallback((e: React.PointerEvent) => {
     if (!resizingRef.current || !frameRef.current) return;
     const frame = frameRef.current.getBoundingClientRect();
@@ -168,21 +190,33 @@ export default function WidgetFrame({ id, others, onSnapPreview, children }: Wid
     // frame), clamped to just beyond the tier family's own range.
     const min = TIER_DIMENSIONS.small.width * 0.75;
     const max = TIER_DIMENSIONS.large.width * 1.15;
-    setLiveSize({
+    pendingSizeRef.current = {
       width: Math.min(max, Math.max(min, e.clientX - frame.left)),
       height: Math.min(max, Math.max(min, e.clientY - frame.top)),
-    });
+    };
+    if (resizeRafRef.current == null) {
+      resizeRafRef.current = requestAnimationFrame(() => {
+        resizeRafRef.current = null;
+        setLiveSize(pendingSizeRef.current);
+      });
+    }
   }, []);
 
   const handleResizeEnd = useCallback(() => {
     resizingRef.current = false;
-    if (liveSize) {
-      const size = nearestSizeTier(liveSize.width, liveSize.height);
+    if (resizeRafRef.current != null) {
+      cancelAnimationFrame(resizeRafRef.current);
+      resizeRafRef.current = null;
+    }
+    const finalSize = pendingSizeRef.current ?? liveSize;
+    if (finalSize) {
+      const size = nearestSizeTier(finalSize.width, finalSize.height);
       // Same anchor cell the widget already occupies — resizeWidget
       // (authoritative, in the context) resolves collision against
       // its own freshest state before committing.
       resizeWidget(id, size, entry);
     }
+    pendingSizeRef.current = null;
     setLiveSize(null);
   }, [id, liveSize, entry, resizeWidget]);
 
@@ -343,3 +377,5 @@ export default function WidgetFrame({ id, others, onSnapPreview, children }: Wid
     </motion.div>
   );
 }
+
+export default memo(WidgetFrameImpl);

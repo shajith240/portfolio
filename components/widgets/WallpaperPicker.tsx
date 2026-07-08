@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { WALLPAPERS } from "@/lib/useWallpaper";
 
 interface WallpaperPickerProps {
@@ -100,17 +101,19 @@ export default function WallpaperPicker({ current, onSelect, onClose, onSeeMore 
                 }}
                 title={filename}
               >
-                {/* <img> instead of a CSS background so the browser
-                    can decode off the main thread (decoding=async) —
-                    six multi-MB wallpapers decoding synchronously
-                    during the open animation was the other half of
-                    the lag. */}
-                <img
+                {/* next/image instead of a CSS background: off-main-thread
+                    decode (same reasoning the old plain <img> comment
+                    here described) PLUS real responsive srcset/format
+                    negotiation (AVIF/WebP) — these are multi-MB source
+                    wallpapers, so format negotiation is the biggest single
+                    payload win available for this picker. */}
+                <Image
                   src={`/wallpapers/${filename}`}
                   alt=""
+                  fill
                   loading="lazy"
-                  decoding="async"
-                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                  sizes="(max-width: 640px) 45vw, 180px"
+                  style={{ objectFit: "cover" }}
                 />
               </button>
             );

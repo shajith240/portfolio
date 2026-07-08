@@ -22,6 +22,13 @@ const PHONE_MAX_WIDTH = 640;
 export const WALLPAPERS = GENERATED_WALLPAPERS;
 export const MOBILE_WALLPAPERS = GENERATED_MOBILE_WALLPAPERS;
 
+// Module-level, reused across every call — wallpaper switches are
+// inherently serial (one at a time, never concurrent), so there's no
+// need to allocate and tear down a fresh 12x12 canvas + context on
+// every single wallpaper change.
+let sharedCanvas: HTMLCanvasElement | null = null;
+let sharedCtx: CanvasRenderingContext2D | null = null;
+
 /**
  * Compute average color from an image file by downsampling to 12x12 and averaging RGB.
  * Returns [r, g, b] as 0-255 integers. On error, returns null.
@@ -36,15 +43,19 @@ async function computeAverageColor(imagePath: string): Promise<[number, number, 
     return new Promise((resolve) => {
       img.onload = () => {
         try {
-          const canvas = document.createElement("canvas");
-          canvas.width = 12;
-          canvas.height = 12;
-          const ctx = canvas.getContext("2d");
+          if (!sharedCanvas) {
+            sharedCanvas = document.createElement("canvas");
+            sharedCanvas.width = 12;
+            sharedCanvas.height = 12;
+            sharedCtx = sharedCanvas.getContext("2d");
+          }
+          const ctx = sharedCtx;
           if (!ctx) {
             resolve(null);
             return;
           }
 
+          ctx.clearRect(0, 0, 12, 12);
           ctx.drawImage(img, 0, 0, 12, 12);
           const imageData = ctx.getImageData(0, 0, 12, 12);
           const data = imageData.data;

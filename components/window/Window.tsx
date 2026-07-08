@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { memo, useRef, useEffect, useState } from "react";
 import { motion, useMotionValue, useDragControls, animate } from "framer-motion";
 import { useWindowManager, getPositionBounds, TOP_BOUND, type WindowState } from "@/contexts/WindowManagerContext";
 import { genieClipPath } from "@/lib/genieClipPath";
@@ -131,7 +131,13 @@ const ZoomGlyph = () => (
   </svg>
 );
 
-export default function Window({ win, active }: { win: WindowState; active: boolean }) {
+// Unmemoized, this re-rendered on EVERY WindowManager state change
+// (bringToFront/updateBounds on any window), even though untouched
+// windows already keep a stable `win` object reference (the context's
+// setWindows updaters only replace the one matching window, per-id — see
+// WindowManagerContext.tsx). React.memo is what actually turns that
+// stable reference into a skipped re-render.
+function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
   const { closeWindow, minimizeWindow, toggleMaximize, bringToFront, updateBounds, getDockIconRect } = useWindowManager();
   const dragControls = useDragControls();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -145,6 +151,13 @@ export default function Window({ win, active }: { win: WindowState; active: bool
   // window-manager-in-the-browser does it.
   const [dragging, setDragging] = useState(false);
   const [resizing, setResizing] = useState(false);
+  // Holds the currently in-flight resize's cleanup — only set while a
+  // resize drag is active. Without this, closing/unmounting the window
+  // mid-resize (e.g. the red traffic light, or a programmatic close)
+  // left `pointermove`/`pointerup` listeners on `document` forever,
+  // since they were previously only ever removed from inside
+  // handlePointerUp itself.
+  const activeResizeCleanupRef = useRef<(() => void) | null>(null);
   // clip-path takes precedence over border-radius for clipping a
   // element's own children (border-radius still governs the border/
   // box-shadow, which is why this bug only ever showed up as a faint
@@ -387,6 +400,12 @@ export default function Window({ win, active }: { win: WindowState; active: bool
       height.set(newHeight);
     };
 
+    const cleanup = () => {
+      document.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerup", handlePointerUp);
+      activeResizeCleanupRef.current = null;
+    };
+
     const handlePointerUp = () => {
       setResizing(false);
       updateBounds(win.id, {
@@ -395,13 +414,21 @@ export default function Window({ win, active }: { win: WindowState; active: bool
         width: width.get(),
         height: height.get(),
       });
-      document.removeEventListener("pointermove", handlePointerMove);
-      document.removeEventListener("pointerup", handlePointerUp);
+      cleanup();
     };
 
     document.addEventListener("pointermove", handlePointerMove);
     document.addEventListener("pointerup", handlePointerUp);
+    activeResizeCleanupRef.current = cleanup;
   };
+
+  // Safety net for the leak described above: if the component unmounts
+  // while a resize is in-flight, run whatever cleanup was left active.
+  useEffect(() => {
+    return () => {
+      activeResizeCleanupRef.current?.();
+    };
+  }, []);
 
   const handleTitlebarDoubleClick = () => {
     const currentX = x.get();
@@ -718,3 +745,5 @@ export default function Window({ win, active }: { win: WindowState; active: bool
     </motion.div>
   );
 }
+
+export default memo(WindowImpl);
