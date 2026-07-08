@@ -47,6 +47,7 @@ export default function EducationPage() {
         transition: 'background 0.22s ease',
       }}>
         <motion.div
+          initial={false}
           animate={{ paddingLeft: `${ml + 60}px`, paddingRight: `${mr + 60}px` }}
           transition={{ type: 'spring', stiffness: 520, damping: 44, mass: 0.85 }}
           style={{

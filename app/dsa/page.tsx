@@ -1521,6 +1521,7 @@ export default function DsaPage() {
     <>
       <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: '#1a1a1a' }}>
         <motion.div
+          initial={false}
           animate={{ left: `${metrics.contentLeft}px`, right: `${metrics.contentRight}px` }}
           transition={{ type: 'spring', stiffness: 520, damping: 44, mass: 0.85 }}
           style={{

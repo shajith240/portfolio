@@ -435,6 +435,7 @@ export default function ProjectsPage() {
         }}
       >
         <motion.div
+          initial={false}
           animate={{
             paddingLeft: `${ml + (isMobileLayout ? 16 : 48)}px`,
             paddingRight: `${mr + (isMobileLayout ? 16 : 48)}px`,
