@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import Image from 'next/image'
 import { useLayout } from '@/contexts/LayoutContext'
 import { useShellMetrics } from '@/lib/useShellMetrics'
 import { PROJECTS, type Project } from '@/data/projects'
@@ -210,21 +211,24 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
           minHeight: isMobile ? '200px' : 'clamp(280px, 40vw, 380px)',
         }}
       >
-        <img
-          src={project.image || 'https://placehold.co/800x600/141414/222222'}
-          alt={project.title}
-          loading="lazy"
-          decoding="async"
+        <div
           style={{
-            width: 'calc(100% - 24px)',
-            height: 'calc(100% - 24px)',
-            objectFit: 'cover',
-            display: 'block',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
+            position: 'absolute',
+            inset: '12px',
             borderRadius: '10px',
-            margin: '12px',
+            overflow: 'hidden',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
           }}
-        />
+        >
+          <Image
+            src={project.image || 'https://placehold.co/800x600/141414/222222'}
+            alt={project.title}
+            fill
+            loading="lazy"
+            sizes={isMobile ? '100vw' : '50vw'}
+            style={{ objectFit: 'cover' }}
+          />
+        </div>
       </div>
     </motion.div>
   )
@@ -256,6 +260,7 @@ function GridCard({ project }: { project: Project }) {
       {/* Image */}
       <div
         style={{
+          position: 'relative',
           width: 'calc(100% - 20px)',
           aspectRatio: '16 / 10',
           overflow: 'hidden',
@@ -266,17 +271,13 @@ function GridCard({ project }: { project: Project }) {
           border: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
-        <img
+        <Image
           src={project.image || 'https://placehold.co/800x500/141414/222222'}
           alt={project.title}
+          fill
           loading="lazy"
-          decoding="async"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-          }}
+          sizes="(max-width: 900px) 100vw, 33vw"
+          style={{ objectFit: 'cover' }}
         />
       </div>
 

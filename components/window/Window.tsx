@@ -184,14 +184,24 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
     const el = glassLayerRef.current;
     if (!el) return;
     let t: ReturnType<typeof setTimeout> | undefined;
+    let raf: number | undefined;
     const apply = () => applyLiquidGlass(el, { radius: 12, bezel: 12, strength: 0.55, blur: 8, brightness: 0.84, tint: 0.13 });
-    apply();
+    // Deferred one frame (matches lib/liquidGlass.ts's own useLiquidGlass
+    // hook) rather than run synchronously in this mount effect — opening
+    // several windows in quick succession previously ran ALL of their
+    // first-paint displacement-map builds (an O(width×height) pixel loop
+    // each) back-to-back in the same synchronous effect-flush, before
+    // the browser got to paint any of their open animations. Spreading
+    // them across animation frames instead is what actually smooths out
+    // a multi-window open burst.
+    raf = requestAnimationFrame(apply);
     const ro = new ResizeObserver(() => {
       if (t) clearTimeout(t);
       t = setTimeout(apply, 120);
     });
     ro.observe(el);
     return () => {
+      if (raf) cancelAnimationFrame(raf);
       if (t) clearTimeout(t);
       ro.disconnect();
       releaseLiquidGlass(el);
@@ -292,7 +302,23 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
   // itself updates x/y directly through Framer's own drag system, so
   // this effect re-firing after a drag-end commit just re-confirms the
   // same value it's already at — harmless, not a feedback loop.
+  //
+  // Skips its very first run: this effect ALSO fires on mount (any
+  // effect does, regardless of deps, the first time), landing right
+  // after the open effect above in the same commit — for a genie open,
+  // that meant this spring immediately hijacked x/y away from the
+  // genie's own GENIE_TWEEN mid-flight, competing with the clip-path
+  // funnel (still unfurling on the genie's timing) for the same
+  // position. That fight was the extra "sliding" motion after the
+  // genie's unfurl. The open effect already puts x/y/width/height
+  // exactly where they need to be for BOTH the genie and standard-open
+  // paths, so the very first run here has nothing to correct.
+  const mountedRef = useRef(false);
   useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
     animate(x, win.x, BOUNDS_SPRING);
     animate(y, win.y, BOUNDS_SPRING);
     animate(width, win.width, BOUNDS_SPRING);
