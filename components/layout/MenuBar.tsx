@@ -124,21 +124,28 @@ const SearchGlyph = () => (
   </svg>
 );
 
-export default function MenuBar() {
-  const { isMobileLayout, openSearch } = useLayout();
-  const { openWindow, windows } = useWindowManager();
+// Owns its own 15s tick — previously this state lived in MenuBar itself,
+// so every tick re-rendered the entire bar (menus array rebuilt, frontmost
+// recomputed, ControlCenter/NotificationCenter re-diffed) just to update
+// this one text node. Isolated here, only this span re-renders every 15s.
+function Clock() {
   const [clock, setClock] = useState("");
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [hoveredTitle, setHoveredTitle] = useState<string | null>(null);
-  const [ncOpen, setNcOpen] = useState(false);
-  const barRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const update = () => setClock(formatMenuClock(new Date()));
     update();
     const id = setInterval(update, 15_000);
     return () => clearInterval(id);
   }, []);
+  return <>{clock}</>;
+}
+
+export default function MenuBar() {
+  const { isMobileLayout, openSearch } = useLayout();
+  const { openWindow, windows } = useWindowManager();
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [hoveredTitle, setHoveredTitle] = useState<string | null>(null);
+  const [ncOpen, setNcOpen] = useState(false);
+  const barRef = useRef<HTMLDivElement>(null);
 
   // Liquid Glass on the bar itself (radius 0 — the refraction lives
   // along the top/bottom edges). barRef already exists for
@@ -356,7 +363,7 @@ export default function MenuBar() {
             cursor: "default",
           }}
         >
-          {clock}
+          <Clock />
         </button>
         <NotificationCenter open={ncOpen} onClose={() => setNcOpen(false)} />
       </div>

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
 import { useTheme } from "@/contexts/ThemeContext";
+
+const EMPTY_WINDOWS: never[] = [];
 
 // Mirror the icon mapping from Dock.tsx
 const ICON_FILE: Record<string, string> = {
@@ -29,9 +31,19 @@ export default function AppSwitcher() {
 
   // Open windows in RECENCY order (front-most first), like the real
   // switcher — index 0 is the current app, index 1 the previous one.
-  const openWindows = [...windows]
-    .filter((w) => !w.minimized)
-    .sort((a, b) => b.zIndex - a.zIndex);
+  // Only actually computed while the switcher is showing — AppSwitcher
+  // re-renders on every WindowManager change app-wide (any drag,
+  // resize commit, bringToFront, minimize), which is most of the time,
+  // and this component renders null for nearly all of them; there's no
+  // reason to filter+sort `windows` on every one of those unrelated
+  // renders just to immediately throw the result away.
+  const openWindows = useMemo(
+    () =>
+      isActive
+        ? [...windows].filter((w) => !w.minimized).sort((a, b) => b.zIndex - a.zIndex)
+        : EMPTY_WINDOWS,
+    [isActive, windows]
+  );
   const shouldRender = isActive && openWindows.length > 0;
 
   const handleKeyDown = useCallback(

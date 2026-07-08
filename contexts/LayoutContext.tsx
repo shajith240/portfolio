@@ -39,18 +39,32 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
       setIsTabletLayout(w >= 640 && w < 1024);
     };
     update();
-    // Debounced (150ms, same as WidgetLayoutContext's resize handler):
-    // "resize" fires continuously while a browser window edge is being
-    // dragged, not once at the end — reacting to every intermediate size
-    // meant 3 setState calls per event, app-wide, for the whole drag.
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    // Throttled to one update per animation frame (~16ms), NOT a flat
+    // debounce — "resize" fires continuously both while a browser window
+    // edge is being dragged AND for every frame of a windowed page's own
+    // maximize/restore spring (that page lives in an iframe whose box
+    // dimensions are animating, which fires native resize events on the
+    // iframe's own window the whole time). A flat 150ms debounce means
+    // the debounce timer keeps getting pushed back for the animation's
+    // entire ~300-400ms duration, so the page's own layout (columns,
+    // padding, breakpoint) stays stale at its PRE-resize size for the
+    // whole maximize, then pops to the correct one ~150ms after the box
+    // finishes moving — a smoothly resizing chrome around content that's
+    // frozen-then-snapping is exactly what read as a "wiggle" here.
+    // RAF-throttling still coalesces the flood of native events into one
+    // state update per frame (the original problem this solved), but
+    // tracks the resize in real time instead of lagging behind it.
+    let raf: number | undefined;
     const handleResize = () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(update, 150);
+      if (raf !== undefined) return;
+      raf = requestAnimationFrame(() => {
+        raf = undefined;
+        update();
+      });
     };
     window.addEventListener("resize", handleResize);
     return () => {
-      if (timer) clearTimeout(timer);
+      if (raf !== undefined) cancelAnimationFrame(raf);
       window.removeEventListener("resize", handleResize);
     };
   }, []);

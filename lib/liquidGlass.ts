@@ -225,7 +225,20 @@ export function useLiquidGlass<T extends HTMLElement = HTMLDivElement>(
     let ro: ResizeObserver | undefined;
     let onWinResize: (() => void) | undefined;
     if (observe) {
-      ro = new ResizeObserver(apply);
+      // Debounced (120ms after the box stops changing size), matching
+      // Window.tsx's own inline glass effect — NOT one rebuild per
+      // ResizeObserver tick. `apply`'s own rAF only coalesces multiple
+      // notifications landing in the SAME frame; it does nothing for a
+      // continuous resize spanning many frames (e.g. dragging a
+      // widget's resize handle for a second fires ~60 notifications
+      // across ~60 different frames), so every one of those still ran
+      // this hook's full O(width×height) displacement-map rebuild +
+      // canvas encode before this fix — the actual source of the
+      // "sticky" feeling during a widget resize-drag.
+      ro = new ResizeObserver(() => {
+        if (debounce) clearTimeout(debounce);
+        debounce = setTimeout(apply, 120);
+      });
       ro.observe(el);
     } else {
       onWinResize = () => {
