@@ -441,7 +441,7 @@ export default function ProjectsPage() {
             paddingRight: `${mr + (isMobileLayout ? 16 : 48)}px`,
           }}
           transition={{ type: 'spring', stiffness: 520, damping: 44, mass: 0.85 }}
-          style={{ padding: isMobileLayout ? '80px 16px 120px' : '80px 48px 120px' }}
+          style={{ paddingTop: '80px', paddingBottom: '120px' }}
         >
 
           {/* ── Header ──────────────────────────────────────────── */}

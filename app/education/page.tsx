@@ -53,7 +53,8 @@ export default function EducationPage() {
           style={{
             maxWidth: '760px',
             margin: '0 auto',
-            padding: `clamp(48px, 8vw, 100px) clamp(16px, 5vw, 60px) clamp(60px, 10vw, 120px)`,
+            paddingTop: 'clamp(48px, 8vw, 100px)',
+            paddingBottom: 'clamp(60px, 10vw, 120px)',
           }}
         >
           {/* Header */}
