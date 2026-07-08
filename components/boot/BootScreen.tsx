@@ -11,7 +11,9 @@ const TOTAL_DURATION_MS = BAR_DURATION_MS + FADE_DURATION_MS;
 
 /* Stage 1 — macOS boot screen exact replica:
    - Pure black background
-   - White monogram, ~90px tall, centered ~42% from top (slightly above center)
+   - White wordmark "Shajith" in Borel (personal script treatment),
+     sized to match the same ~90px visual footprint the old monogram
+     had, centered ~42% from top (slightly above center)
    - Progress bar below: width 220px, height 5px, borderRadius 2.5px
      track rgba(255,255,255,0.25), fill #fff
    - Bar fill pattern: 0→30% in 0.4s, 30→65% in 1.2s, pause 0.4s, 65→100% in 0.5s
@@ -46,17 +48,20 @@ export default function BootScreen({ onComplete }: { onComplete: () => void }) {
         ease: "easeOut",
       }}
     >
-      {/* Monogram container — positioned 42% from top (slightly above center) */}
+      {/* Wordmark container — positioned 42% from top (slightly above center) */}
       <div style={{ position: "absolute", top: "42%" }}>
-        {/* White monogram, ~90px tall */}
-        <svg width="90" height="90" viewBox="0 0 48 48" fill="none">
-          <path
-            d="M34 14C34 10 30 8 24 8C17 8 13 11 13 15.5C13 20 17 21.5 24 23C31 24.5 35 26.5 35 32C35 37 30 40 24 40C17 40 13 37 13 33"
-            stroke="#FFFFFF"
-            strokeWidth="4"
-            strokeLinecap="round"
-          />
-        </svg>
+        <span
+          style={{
+            display: "block",
+            fontFamily: "var(--font-borel)",
+            fontSize: "56px",
+            lineHeight: 1,
+            color: "#FFFFFF",
+            fontWeight: 400,
+          }}
+        >
+          Shajith
+        </span>
       </div>
 
       {/* Progress bar — positioned 12% of viewport below the mark */}

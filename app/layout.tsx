@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Inter_Tight, Caveat } from "next/font/google";
+import { Inter, Inter_Tight, Caveat, Borel } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
@@ -38,6 +38,14 @@ const caveat = Caveat({
   weight: ["600"],
 });
 
+// Personal wordmark treatment for "Shajith" — the boot-screen mark and
+// the MenuBar app-name slot. Borel only ships weight 400.
+const borel = Borel({
+  variable: "--font-borel",
+  subsets: ["latin"],
+  weight: ["400"],
+});
+
 export const metadata: Metadata = {
   title: "Portfolio",
   description: "Personal developer portfolio",
@@ -50,7 +58,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${interTight.variable} ${vg5000.variable} ${caveat.variable} antialiased`}>
+      <body className={`${inter.variable} ${interTight.variable} ${vg5000.variable} ${caveat.variable} ${borel.variable} antialiased`}>
         <AppShell>{children}</AppShell>
       </body>
     </html>

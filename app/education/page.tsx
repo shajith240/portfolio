@@ -4,66 +4,15 @@ import { motion } from 'framer-motion'
 import { useLayout } from '@/contexts/LayoutContext'
 import { useShellMetrics } from '@/lib/useShellMetrics'
 
-const USES = [
+// TODO: fill in year of study, GPA (only if you want it shown), and
+// key coursework — placeholders intentionally left out rather than
+// invented. See EDUCATION.items below.
+const EDUCATION = [
   {
-    category: 'Editors',
-    items: [
-      {
-        name: 'VS Code',
-        description: 'Primary editor for TypeScript, Python, and web work. Vim keybindings on.',
-      },
-      {
-        name: 'IntelliJ IDEA',
-        description: 'For Java projects and anything that needs serious refactoring support.',
-      },
-    ],
-  },
-  {
-    category: 'Operating System',
-    items: [
-      {
-        name: 'Ubuntu',
-        description: 'Main dev environment. Everything runs cleaner on Linux.',
-      },
-      {
-        name: 'Windows',
-        description: 'Secondary machine. Mostly for things that refuse to cooperate on Linux.',
-      },
-    ],
-  },
-  {
-    category: 'Apps & Tools',
-    items: [
-      {
-        name: 'Antigravity',
-        description: 'Productivity tool that keeps distractions in check while working.',
-      },
-      {
-        name: 'Git + GitHub',
-        description: 'Version control and open source home base. @shajith240.',
-      },
-      {
-        name: 'Terminal',
-        description: 'bash on Ubuntu. Most things live here.',
-      },
-    ],
-  },
-  {
-    category: 'Languages I reach for',
-    items: [
-      {
-        name: 'TypeScript',
-        description: 'Default for any web or full-stack project.',
-      },
-      {
-        name: 'Python',
-        description: 'For automation, scripting, and quick prototypes.',
-      },
-      {
-        name: 'Java',
-        description: 'Backend and systems work, mostly from coursework and personal projects.',
-      },
-    ],
+    institution: 'Indian Institute of Technology (ISM), Dhanbad',
+    degree: 'B.Tech, Computer Science',
+    period: '',
+    details: [] as string[],
   },
 ]
 
@@ -77,7 +26,7 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0, 0, 0.58, 1] as const } },
 }
 
-export default function UsesPage() {
+export default function EducationPage() {
   const { isMobileLayout, isTabletLayout } = useLayout()
   const metrics = useShellMetrics()
   const ml = metrics.contentLeft
@@ -122,7 +71,7 @@ export default function UsesPage() {
               lineHeight: 1.1,
               fontFamily: 'system-ui, -apple-system, sans-serif',
             }}>
-              Uses
+              Education
             </h1>
             <p style={{
               margin: 0,
@@ -131,68 +80,74 @@ export default function UsesPage() {
               fontFamily: 'system-ui, -apple-system, sans-serif',
               lineHeight: 1.5,
             }}>
-              Tools, software, and gear I reach for daily.
+              Where I studied, and what I studied.
             </p>
           </motion.div>
 
-          {/* Categories */}
+          {/* Institutions */}
           <motion.div
             variants={container}
             initial="hidden"
             animate="show"
-            style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}
           >
-            {USES.map((section) => (
-              <motion.div key={section.category} variants={item}>
-                <p style={{
-                  margin: '0 0 20px 0',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255, 255, 255, 0.54)',
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
+            {EDUCATION.map((entry) => (
+              <motion.div key={entry.institution} variants={item}>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: isPhone ? 'column' : 'row',
+                  alignItems: isPhone ? 'flex-start' : 'baseline',
+                  justifyContent: 'space-between',
+                  gap: isPhone ? '4px' : '20px',
+                  padding: '14px 0',
+                  borderBottom: '1px solid var(--border)',
                 }}>
-                  {section.category}
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                  {section.items.map((tool) => (
-                    <div
-                      key={tool.name}
-                      style={{
-                        display: 'flex',
-                        flexDirection: isPhone ? 'column' : 'row',
-                        alignItems: isPhone ? 'flex-start' : 'baseline',
-                        gap: isPhone ? '4px' : '20px',
-                        padding: '14px 0',
-                        borderBottom: '1px solid var(--border)',
-                      }}
-                    >
-                      <p style={{
-                        margin: 0,
-                        fontSize: isPhone ? '16px' : '14px',
-                        fontWeight: 600,
-                        color: 'var(--text-primary)',
-                        fontFamily: 'system-ui, -apple-system, sans-serif',
-                        minWidth: isPhone ? 'unset' : '160px',
-                        flexShrink: 0,
-                        transition: 'color 0.22s ease',
-                      }}>
-                        {tool.name}
-                      </p>
-                      <p style={{
-                        margin: 0,
-                        fontSize: isPhone ? '15px' : '13px',
+                  <div>
+                    <p style={{
+                      margin: '0 0 4px 0',
+                      fontSize: isPhone ? '17px' : '15px',
+                      fontWeight: 600,
+                      color: 'var(--text-primary)',
+                      fontFamily: 'system-ui, -apple-system, sans-serif',
+                    }}>
+                      {entry.institution}
+                    </p>
+                    <p style={{
+                      margin: 0,
+                      fontSize: isPhone ? '15px' : '13px',
+                      color: 'var(--text-muted)',
+                      fontFamily: 'system-ui, -apple-system, sans-serif',
+                      lineHeight: 1.5,
+                    }}>
+                      {entry.degree}
+                    </p>
+                  </div>
+                  {entry.period && (
+                    <p style={{
+                      margin: 0,
+                      fontSize: '13px',
+                      color: 'var(--text-dim)',
+                      fontFamily: 'system-ui, -apple-system, sans-serif',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {entry.period}
+                    </p>
+                  )}
+                </div>
+                {entry.details.length > 0 && (
+                  <ul style={{ margin: '12px 0 0 0', paddingLeft: '18px' }}>
+                    {entry.details.map((d) => (
+                      <li key={d} style={{
+                        fontSize: '13px',
                         color: 'var(--text-muted)',
                         fontFamily: 'system-ui, -apple-system, sans-serif',
-                        lineHeight: 1.5,
-                        transition: 'color 0.22s ease',
+                        lineHeight: 1.6,
                       }}>
-                        {tool.description}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                        {d}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </motion.div>
             ))}
           </motion.div>

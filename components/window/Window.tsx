@@ -6,6 +6,7 @@ import { useWindowManager, getPositionBounds, TOP_BOUND, type WindowState } from
 import { genieClipPath } from "@/lib/genieClipPath";
 import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
 import FinderApp from "@/components/window/FinderApp";
+import CreditsApp from "@/components/window/CreditsApp";
 
 /* macOS-authentic window chrome. Dragging uses Framer Motion's own
    drag system (dragListener={false} + useDragControls started only
@@ -588,6 +589,8 @@ export default function Window({ win, active }: { win: WindowState; active: bool
 
       {win.kind === "finder" ? (
         <FinderApp />
+      ) : win.kind === "credits" ? (
+        <CreditsApp />
       ) : (
         <iframe
           src={`${win.route}${win.route.includes("?") ? "&" : "?"}__window=1`}

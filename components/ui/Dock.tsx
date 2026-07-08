@@ -20,12 +20,14 @@ import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
 
 const ICON_FILE: Record<string, string> = {
   finder: "finder",
+  credits: "notes",
+  vscode: "vscode",
   "/about": "contact",
   "/projects": "projects",
   "/skills": "skills",
   "/dsa": "xcode",
-  "/notes": "notes",
-  "/uses": "settings",
+  "/achievements": "achievements",
+  "/education": "education",
   "external:github": "github",
   "external:linkedin": "linkedin",
   "external:leetcode": "leetcode",
@@ -56,9 +58,18 @@ const EXTERNAL_LINKS: { href: string; label: string; url: string }[] = [
    sit last, after a divider, matching where real macOS puts Trash/the
    Downloads stack — persistent utilities separated from the running
    apps rather than mixed in with them. */
-const DOCK_ITEMS: { href: string; label: string; isFinder: boolean; external?: string }[] = [
+const DOCK_ITEMS: { href: string; label: string; isFinder: boolean; isCredits?: boolean; external?: string }[] = [
   { href: "finder", label: "Finder", isFinder: true },
   ...NAV_ITEMS.filter((item) => item.href !== "/").map((item) => ({ href: item.href, label: item.label, isFinder: false })),
+  // Same sentinel-route treatment as Finder — "credits" is never a real
+  // page, it's the CreditsApp window kind (see WindowManagerContext).
+  { href: "credits", label: "Credits", isFinder: false, isCredits: true },
+  // Icon only, for now — the read-only VS Code source viewer this will
+  // open is spec'd in docs/superpowers/specs/2026-07-08-vscode-viewer-design.md
+  // but not yet implemented, so this deliberately has no click behavior
+  // wired up (isFinder/isCredits both false, no `external`) rather than
+  // opening a half-built window.
+  { href: "vscode", label: "VS Code", isFinder: false },
   ...EXTERNAL_LINKS.map((item) => ({ href: item.href, label: item.label, isFinder: false, external: item.url })),
 ];
 const FIRST_EXTERNAL_INDEX = DOCK_ITEMS.length - EXTERNAL_LINKS.length;
@@ -115,7 +126,7 @@ function positionsFromScales(scales: number[]) {
 export default function Dock() {
   const { isDarkTheme } = useTheme();
   const metrics = useShellMetrics();
-  const { windows, openWindow, openFinder, registerDockIconEl } = useWindowManager();
+  const { windows, openWindow, openFinder, openCredits, registerDockIconEl } = useWindowManager();
 
   const [scales, setScales] = useState<number[]>(() => DOCK_ITEMS.map(() => MIN_SCALE));
   const [positions, setPositions] = useState<number[]>(() => positionsFromScales(DOCK_ITEMS.map(() => MIN_SCALE)));
@@ -169,7 +180,7 @@ export default function Dock() {
   }, []);
 
   const handleClick = useCallback(
-    (href: string, label: string, index: number, isFinder: boolean, external?: string) => {
+    (href: string, label: string, index: number, isFinder: boolean, external?: string, isCredits?: boolean) => {
       // Check if window is already open
       const isOpen = windows.some((w) => w.route === href);
 
@@ -187,6 +198,18 @@ export default function Dock() {
         } else {
           openFinder();
         }
+      } else if (isCredits) {
+        if (!isOpen) {
+          setBounced(index);
+          setTimeout(() => setBounced(null), 700);
+        }
+        openCredits();
+      } else if (href === "vscode") {
+        // Icon-only for now (see the comment on this DOCK_ITEMS entry) —
+        // still bounces so the icon doesn't feel dead, but there's no
+        // window to open yet.
+        setBounced(index);
+        setTimeout(() => setBounced(null), 700);
       } else {
         // Regular app window
         if (!isOpen) {
@@ -199,7 +222,7 @@ export default function Dock() {
         }
       }
     },
-    [openWindow, openFinder, windows]
+    [openWindow, openFinder, openCredits, windows]
   );
 
   // Single source of truth for the pill's own width — derived from the
@@ -309,7 +332,7 @@ export default function Dock() {
               )}
               <div
               ref={(el) => registerDockIconEl(item.href, el)}
-              onClick={() => handleClick(item.href, item.label, i, item.isFinder, item.external)}
+              onClick={() => handleClick(item.href, item.label, i, item.isFinder, item.external, item.isCredits)}
               onMouseEnter={() => setHoveredIndex(i)}
               onMouseLeave={() => setHoveredIndex(null)}
               title={item.label}

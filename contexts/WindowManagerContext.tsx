@@ -6,7 +6,7 @@ export interface WindowState {
   id: string;
   route: string;
   title: string;
-  kind: "iframe" | "finder";
+  kind: "iframe" | "finder" | "credits";
   x: number;
   y: number;
   width: number;
@@ -21,6 +21,7 @@ interface WindowManagerContextValue {
   windows: WindowState[];
   openWindow: (route: string, title: string) => void;
   openFinder: () => void;
+  openCredits: () => void;
   closeWindow: (id: string) => void;
   minimizeWindow: (id: string) => void;
   toggleMaximize: (id: string) => void;
@@ -88,7 +89,7 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
     setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, zIndex: z } : w)));
   }, []);
 
-  const openWindowOfKind = useCallback((route: string, title: string, kind: "iframe" | "finder", size?: { width: number; height: number }) => {
+  const openWindowOfKind = useCallback((route: string, title: string, kind: "iframe" | "finder" | "credits", size?: { width: number; height: number }) => {
     setWindows((prev) => {
       const existing = prev.find((w) => w.route === route);
       topZIndexRef.current += 1;
@@ -141,6 +142,13 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
   // hence the explicit larger default here.
   const openFinder = useCallback(() => {
     openWindowOfKind("finder", "Finder", "finder", { width: 960, height: 620 });
+  }, [openWindowOfKind]);
+
+  // Credits isn't an iframe of a real route either — same reasoning as
+  // Finder above: it's its own React UI (components/window/CreditsApp.tsx),
+  // "credits" is a sentinel route, never requested over the network.
+  const openCredits = useCallback(() => {
+    openWindowOfKind("credits", "Credits", "credits");
   }, [openWindowOfKind]);
 
   const closeWindow = useCallback((id: string) => {
@@ -209,6 +217,7 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
         windows,
         openWindow,
         openFinder,
+        openCredits,
         closeWindow,
         minimizeWindow,
         toggleMaximize,

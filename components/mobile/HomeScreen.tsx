@@ -24,8 +24,8 @@ const GRID_APPS: HomeApp[] = [
   { label: "Projects", icon: "projects", href: "/projects" },
   { label: "Skills", icon: "skills", href: "/skills" },
   { label: "DSA", icon: "xcode", href: "/dsa" },
-  { label: "Notes", icon: "notes", href: "/notes" },
-  { label: "Uses", icon: "settings", href: "/uses" },
+  { label: "Achievements", icon: "achievements", href: "/achievements" },
+  { label: "Education", icon: "education", href: "/education" },
   { label: "GitHub", icon: "github", external: "https://github.com/shajith240" },
   { label: "LinkedIn", icon: "linkedin", external: "https://www.linkedin.com/in/shajith240" },
   { label: "LeetCode", icon: "leetcode", external: "https://leetcode.com/shajith240" },
@@ -36,7 +36,7 @@ const DOCK_APPS: HomeApp[] = [
   { label: "About", icon: "contact", href: "/about" },
   { label: "Projects", icon: "projects", href: "/projects" },
   { label: "Skills", icon: "skills", href: "/skills" },
-  { label: "Notes", icon: "notes", href: "/notes" },
+  { label: "Achievements", icon: "achievements", href: "/achievements" },
 ];
 
 /* Both pill and dock run the real refraction engine
