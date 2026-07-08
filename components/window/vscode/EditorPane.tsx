@@ -32,10 +32,12 @@ export default function EditorPane({
   path,
   content,
   onMonacoReady,
+  onCursorPositionChange,
 }: {
   path: string;
   content: string;
   onMonacoReady: (monaco: typeof import("monaco-editor")) => void;
+  onCursorPositionChange?: (line: number, column: number) => void;
 }) {
   return (
     <Editor
@@ -43,7 +45,10 @@ export default function EditorPane({
       language={languageForPath(path)}
       value={content}
       theme="vs-dark"
-      onMount={(_editor, monaco) => onMonacoReady(monaco)}
+      onMount={(editor, monaco) => {
+        onMonacoReady(monaco);
+        editor.onDidChangeCursorPosition((e) => onCursorPositionChange?.(e.position.lineNumber, e.position.column));
+      }}
       options={{
         readOnly: true,
         minimap: { enabled: true },

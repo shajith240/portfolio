@@ -1,6 +1,14 @@
 "use client";
 
-export default function StatusBar({ branch, language }: { branch: string | null; language: string | null }) {
+export default function StatusBar({
+  branch,
+  language,
+  cursorPosition,
+}: {
+  branch: string | null;
+  language: string | null;
+  cursorPosition: { line: number; column: number } | null;
+}) {
   return (
     <div
       style={{
@@ -20,6 +28,11 @@ export default function StatusBar({ branch, language }: { branch: string | null;
         <span>⎇ {branch ?? "main"}</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+        {cursorPosition && (
+          <span style={{ fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif", fontSize: "12px", color: "#ffffff" }}>
+            Ln {cursorPosition.line}, Col {cursorPosition.column}
+          </span>
+        )}
         <span>{language ?? ""}</span>
       </div>
     </div>
