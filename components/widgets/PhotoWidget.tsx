@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { WIDGET_RADIUS } from "@/lib/widgetGrid";
 import type { WidgetSize } from "@/lib/widgetLayoutSchema";
 
@@ -30,6 +31,7 @@ export default function PhotoWidget({ size }: { size: WidgetSize }) {
       animate={{ y: 0, opacity: 1 }}
       transition={ENTRANCE_SPRING}
       style={{
+        position: "relative",
         width: "100%",
         height: "100%",
         borderRadius: `${WIDGET_RADIUS}px`,
@@ -38,17 +40,12 @@ export default function PhotoWidget({ size }: { size: WidgetSize }) {
         boxShadow: "0 4px 12px rgba(0, 0, 0, 0.28)",
       }}
     >
-      <img
+      <Image
         src="/photos/my_photo.jpeg"
         alt="Shajith"
-        decoding="async"
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          objectPosition: "center 10%",
-          display: "block",
-        }}
+        fill
+        sizes="(max-width: 640px) 40vw, 360px"
+        style={{ objectFit: "cover", objectPosition: "center 10%" }}
       />
     </motion.div>
   );
