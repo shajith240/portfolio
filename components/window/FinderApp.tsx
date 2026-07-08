@@ -87,8 +87,9 @@ const ROOT: FinderNode = {
     SKILLS_FOLDER,
     WALLPAPERS_FOLDER,
     { kind: "app", name: "DSA.app", iconFile: "xcode", route: "/dsa", label: "DSA" },
-    { kind: "app", name: "Notes.app", iconFile: "notes", route: "/notes", label: "Notes" },
-    { kind: "app", name: "Uses.app", iconFile: "settings", route: "/uses", label: "Uses" },
+    { kind: "app", name: "Achievements.app", iconFile: "achievements", route: "/achievements", label: "Achievements" },
+    { kind: "app", name: "Education.app", iconFile: "education", route: "/education", label: "Education" },
+    { kind: "document", name: "Credits.rtf", iconFile: "notes", route: "credits", label: "Credits" },
   ],
 };
 
@@ -334,7 +335,7 @@ function initialPathFromPending(): FinderNode[] {
 }
 
 export default function FinderApp() {
-  const { openWindow } = useWindowManager();
+  const { openWindow, openCredits } = useWindowManager();
   const { setWallpaper } = useWallpaper();
   const [path, setPath] = useState<FinderNode[]>(initialPathFromPending);
   const [history, setHistory] = useState<FinderNode[][]>(() => [path]);
@@ -366,6 +367,11 @@ export default function FinderApp() {
   const openNode = (node: FinderNode) => {
     if (node.kind === "folder") {
       navigateTo([...path, node]);
+    } else if (node.kind === "document" && node.route === "credits") {
+      // Credits isn't a real page — it's its own window kind (see
+      // WindowManagerContext.openCredits), same treatment as Finder
+      // itself, so it never round-trips through an iframe.
+      openCredits();
     } else if (node.kind === "app" || node.kind === "document") {
       openWindow(node.route, node.label);
     } else if (node.kind === "wallpaper") {

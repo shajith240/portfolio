@@ -68,11 +68,11 @@ export const GENERATED_MOBILE_WALLPAPERS: string[] = [
 ];
 
 export const GENERATED_MOTIVATION_IMAGES: string[] = [
-  "/motivation_quotes/0%luck-100%hardwork.jpg",
   "/motivation_quotes/L E A R N E D.jpg",
   "/motivation_quotes/REASON_.jpg",
   "/motivation_quotes/experience.jpg",
   "/motivation_quotes/if not me then who.jpg",
+  "/motivation_quotes/luck-hardwork.jpg",
   "/motivation_quotes/remember_why_you_started.jpg",
   "/motivation_quotes/stayhumble.jpg",
   "/motivation_quotes/watch me become everytihng i said i would.jpg"

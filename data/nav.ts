@@ -8,6 +8,6 @@ export const NAV_ITEMS = [
   { label: 'Projects', num: '03', href: '/projects' },
   { label: 'Skills',   num: '04', href: '/skills' },
   { label: 'DSA',      num: '05', href: '/dsa' },
-  { label: 'Notes',    num: '06', href: '/notes' },
-  { label: 'Uses',     num: '07', href: '/uses' },
+  { label: 'Achievements', num: '06', href: '/achievements' },
+  { label: 'Education',    num: '07', href: '/education' },
 ]

@@ -210,8 +210,8 @@ export default function MenuBar() {
         { label: "Projects", action: () => openWindow("/projects", "Projects") },
         { label: "Skills", action: () => openWindow("/skills", "Skills") },
         { label: "DSA", action: () => openWindow("/dsa", "DSA") },
-        { label: "Notes", action: () => openWindow("/notes", "Notes") },
-        { label: "Uses", action: () => openWindow("/uses", "Uses") },
+        { label: "Achievements", action: () => openWindow("/achievements", "Achievements") },
+        { label: "Education", action: () => openWindow("/education", "Education") },
       ],
     },
     {
@@ -265,9 +265,35 @@ export default function MenuBar() {
                   padding: "0 10px",
                   border: "none",
                   borderRadius: "5px",
+                  // Flex-centering (rather than relying on line-height
+                  // alone) keeps every title's baseline anchored to the
+                  // bar's vertical center regardless of its font's own
+                  // ascender/descender metrics.
+                  display: "inline-flex",
+                  alignItems: "center",
+                  // The personal wordmark slot ("Shajith" on the bare
+                  // desktop, per menu.title's fallback above) gets the
+                  // Borel script treatment; every other app-name title
+                  // (About, Notes, DSA…) stays on the system font —
+                  // Borel is a brand mark, not a general title style.
+                  // BAR_HEIGHT is only 24px, and Borel's ascenders sit
+                  // much taller above its baseline than the system
+                  // font's do at the same nominal size — a normal
+                  // line-height (matching every other title, not 1)
+                  // is what keeps them from poking past the bar, and
+                  // the size has to come down from a "reads right on
+                  // its own" size to one that actually fits the box.
+                  fontFamily: menu.title === "Shajith" ? "var(--font-borel)" : "inherit",
                   fontSize: "13px",
-                  fontWeight: menu.bold ? 600 : 400,
+                  lineHeight: "18px",
+                  fontWeight: menu.title === "Shajith" ? 400 : menu.bold ? 600 : 400,
                   color: "rgba(255, 255, 255, 0.92)",
+                  // Borel's baseline sits visually higher within its
+                  // own line box than the system font's does, so
+                  // centering the box still reads slightly high —
+                  // nudged down a couple px to land where the other
+                  // titles' visual baseline actually sits.
+                  ...(menu.title === "Shajith" ? { transform: "translateY(2px)" } : {}),
                   // Closed titles still give hover feedback (a
                   // fainter pill than the open state) — without it
                   // the bar reads dead until the first click.
