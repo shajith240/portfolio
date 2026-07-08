@@ -10,6 +10,7 @@ import EditorPane, { languageForPath } from "./EditorPane";
 import SearchPanel from "./SearchPanel";
 import SourceControlPanel from "./SourceControlPanel";
 import QuickOpen from "./QuickOpen";
+import { ExplorerIcon, SearchIcon, SourceControlIcon } from "./activityIcons";
 
 type ActivityPanel = "explorer" | "search" | "scm";
 const ROW_FONT = "-apple-system, BlinkMacSystemFont, sans-serif";
@@ -137,10 +138,12 @@ export default function VSCodeShell() {
                 borderLeft: activePanel === panel ? "2px solid #ffffff" : "2px solid transparent",
                 color: activePanel === panel ? "#ffffff" : "#858585",
                 cursor: "pointer",
-                fontSize: "18px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              {panel === "explorer" ? "▤" : panel === "search" ? "⌕" : "⎇"}
+              {panel === "explorer" ? <ExplorerIcon /> : panel === "search" ? <SearchIcon /> : <SourceControlIcon />}
             </button>
           ))}
         </div>
