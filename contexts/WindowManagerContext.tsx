@@ -6,7 +6,7 @@ export interface WindowState {
   id: string;
   route: string;
   title: string;
-  kind: "iframe" | "finder" | "credits";
+  kind: "iframe" | "finder" | "credits" | "vscode";
   x: number;
   y: number;
   width: number;
@@ -22,6 +22,7 @@ interface WindowManagerContextValue {
   openWindow: (route: string, title: string) => void;
   openFinder: () => void;
   openCredits: () => void;
+  openVSCode: () => void;
   closeWindow: (id: string) => void;
   minimizeWindow: (id: string) => void;
   toggleMaximize: (id: string) => void;
@@ -89,7 +90,7 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
     setWindows((prev) => prev.map((w) => (w.id === id ? { ...w, zIndex: z } : w)));
   }, []);
 
-  const openWindowOfKind = useCallback((route: string, title: string, kind: "iframe" | "finder" | "credits", size?: { width: number; height: number }) => {
+  const openWindowOfKind = useCallback((route: string, title: string, kind: "iframe" | "finder" | "credits" | "vscode", size?: { width: number; height: number }) => {
     setWindows((prev) => {
       const existing = prev.find((w) => w.route === route);
       topZIndexRef.current += 1;
@@ -149,6 +150,13 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
   // "credits" is a sentinel route, never requested over the network.
   const openCredits = useCallback(() => {
     openWindowOfKind("credits", "Credits", "credits");
+  }, [openWindowOfKind]);
+
+  // Same sentinel-route treatment as Finder/Credits — "vscode" is never a
+  // real route, it's the VSCodeApp window kind. Sized larger than the
+  // default content window since a code viewer needs real room.
+  const openVSCode = useCallback(() => {
+    openWindowOfKind("vscode", "VS Code", "vscode", { width: 1040, height: 680 });
   }, [openWindowOfKind]);
 
   const closeWindow = useCallback((id: string) => {
@@ -218,6 +226,7 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
         openWindow,
         openFinder,
         openCredits,
+        openVSCode,
         closeWindow,
         minimizeWindow,
         toggleMaximize,

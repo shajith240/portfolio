@@ -7,6 +7,7 @@ import { genieClipPath } from "@/lib/genieClipPath";
 import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
 import FinderApp from "@/components/window/FinderApp";
 import CreditsApp from "@/components/window/CreditsApp";
+import VSCodeApp from "@/components/window/VSCodeApp";
 
 /* macOS-authentic window chrome. Dragging uses Framer Motion's own
    drag system (dragListener={false} + useDragControls started only
@@ -591,6 +592,8 @@ export default function Window({ win, active }: { win: WindowState; active: bool
         <FinderApp />
       ) : win.kind === "credits" ? (
         <CreditsApp />
+      ) : win.kind === "vscode" ? (
+        <VSCodeApp />
       ) : (
         <iframe
           src={`${win.route}${win.route.includes("?") ? "&" : "?"}__window=1`}
