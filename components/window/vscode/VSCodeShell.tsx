@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { buildFileTree } from "@/lib/vscodeSource";
+import { buildFileTree, isLikelyBinary } from "@/lib/vscodeSource";
 import { useGitHubTree, useGitHubFile, useGitHubCommit, usePrefetchAllFiles } from "./useGitHubSource";
 import Explorer from "./Explorer";
 import TabBar, { type OpenTab } from "./TabBar";
@@ -21,6 +21,7 @@ export default function VSCodeShell() {
   const [tabs, setTabs] = useState<OpenTab[]>([]);
   const [activePath, setActivePath] = useState<string | null>(null);
   const [quickOpenVisible, setQuickOpenVisible] = useState(false);
+  const [cursorPosition, setCursorPosition] = useState<{ line: number; column: number } | null>(null);
   const closedRef = useRef(false);
   // Set once EditorPane's <Editor onMount> fires (Task 5) — used to dispose
   // per-tab models on close and every remaining model on window close,
@@ -36,9 +37,14 @@ export default function VSCodeShell() {
     []
   );
 
-  usePrefetchAllFiles(paths, useCallback(() => closedRef.current, []));
+  const textPaths = paths ? paths.filter((p) => !isLikelyBinary(p)) : paths;
+  usePrefetchAllFiles(textPaths, useCallback(() => closedRef.current, []));
 
   const activeFile = useGitHubFile(activePath);
+
+  useEffect(() => {
+    setCursorPosition(null);
+  }, [activePath]);
 
   const openFile = useCallback((path: string) => {
     setTabs((prev) => {
@@ -53,7 +59,7 @@ export default function VSCodeShell() {
     (path: string) => {
       const monaco = monacoRef.current;
       if (monaco) {
-        monaco.editor.getModel(monaco.Uri.file(path))?.dispose();
+        monaco.editor.getModel(monaco.Uri.parse(path))?.dispose();
       }
       setTabs((prev) => {
         const next = prev.filter((t) => t.path !== path);
@@ -160,6 +166,7 @@ export default function VSCodeShell() {
                   onMonacoReady={(monaco) => {
                     monacoRef.current = monaco;
                   }}
+                  onCursorPositionChange={(line, column) => setCursorPosition({ line, column })}
                 />
               )
             ) : (
@@ -169,7 +176,11 @@ export default function VSCodeShell() {
         </div>
       </div>
 
-      <StatusBar branch={commit?.branch ?? null} language={activePath ? languageForPath(activePath) : null} />
+      <StatusBar
+        branch={commit?.branch ?? null}
+        language={activePath ? languageForPath(activePath) : null}
+        cursorPosition={cursorPosition}
+      />
 
       {quickOpenVisible && <QuickOpen paths={paths} onOpenFile={openFile} onClose={() => setQuickOpenVisible(false)} />}
     </div>
