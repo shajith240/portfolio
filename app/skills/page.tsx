@@ -149,6 +149,7 @@ export default function SkillsPage() {
         but still below the sidebar cards (z-40).
       */}
       <motion.div
+        initial={false}
         animate={{ left: `${ml}px`, right: `${mr}px` }}
         transition={{ type: 'spring', stiffness: 520, damping: 44, mass: 0.85 }}
         style={{
