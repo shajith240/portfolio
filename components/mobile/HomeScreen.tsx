@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useLiquidGlass } from "@/lib/liquidGlass";
@@ -79,9 +80,11 @@ function AppIcon({
           + box shadow drew a visible second edge around every one
           (the "double border" complaint). drop-shadow follows the
           icon's alpha instead. */}
-      <img
+      <Image
         src={`/icons/${app.icon}.png`}
         alt=""
+        width={120}
+        height={120}
         draggable={false}
         style={{
           width: `${size}px`,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
 import { PROJECTS, type Project } from "@/data/projects";
@@ -97,7 +98,7 @@ const ROOT: FinderNode = {
 // ic10 1024x1024 PNG chunk), replacing the earlier hand-drawn SVG
 // approximation.
 const FolderIcon = () => (
-  <img src="/icons/folder_commond.png" alt="" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+  <Image src="/icons/folder_commond.png" alt="" width={64} height={64} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
 );
 
 const DocumentIcon = () => (
@@ -180,17 +181,22 @@ function GridItem({ node, onOpen }: { node: FinderNode; onOpen: () => void }) {
         {node.kind === "wallpaper" ? (
           // The wallpaper IS its own thumbnail — a cropped preview
           // tile, like macOS shows image files in gallery view.
-          <img
+          // next/image with an explicit tiny size: these are 52px
+          // gallery tiles whose sources are the full multi-MB
+          // wallpapers — as raw <img> tags, opening the Wallpapers
+          // folder downloaded every original file at full size.
+          <Image
             src={`/wallpapers/${node.filename}`}
             alt={name}
+            width={104}
+            height={104}
             loading="lazy"
-            decoding="async"
             style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.12)" }}
           />
         ) : node.kind === "project" ? (
-          <img src={`/icons/${PROJECT_ICON_FILE}.png`} alt={name} style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "22%" }} />
+          <Image src={`/icons/${PROJECT_ICON_FILE}.png`} alt={name} width={64} height={64} style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "22%" }} />
         ) : iconFile ? (
-          <img src={`/icons/${iconFile}.png`} alt={name} style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "22%" }} />
+          <Image src={`/icons/${iconFile}.png`} alt={name} width={64} height={64} style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "22%" }} />
         ) : node.kind === "folder" ? (
           <FolderIcon />
         ) : (
@@ -244,10 +250,12 @@ function QuickLook({ node, onClose, onOpenProjects }: { node: FinderNode; onClos
         >
         {node.kind === "project" ? (
           <>
-            <img
+            <Image
               src={`/icons/${PROJECT_ICON_FILE}.png`}
               alt={node.project.title}
-              style={{ width: "56px", height: "56px", objectFit: "contain", borderRadius: "22%", marginBottom: "12px" }}
+              width={56}
+              height={56}
+              style={{ objectFit: "contain", borderRadius: "22%", marginBottom: "12px" }}
             />
             <p style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: 700, color: "var(--text-primary)" }}>
               {node.project.title}
@@ -311,7 +319,7 @@ function QuickLook({ node, onClose, onOpenProjects }: { node: FinderNode; onClos
           </>
         ) : node.kind === "skill" ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
-            <img src={`/icons/${node.iconFile}.png`} alt={node.name} style={{ width: "64px", height: "64px", objectFit: "contain", borderRadius: "22%" }} />
+            <Image src={`/icons/${node.iconFile}.png`} alt={node.name} width={64} height={64} style={{ objectFit: "contain", borderRadius: "22%" }} />
             <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>{node.name}</p>
           </div>
         ) : null}

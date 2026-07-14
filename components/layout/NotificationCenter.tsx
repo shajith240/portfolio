@@ -44,7 +44,7 @@ function NCCard({
   onClick?: () => void;
   style?: React.CSSProperties;
 }) {
-  const ref = useLiquidGlass<HTMLDivElement>({ radius: 16, bezel: 12, strength: 0.58, blur: 8, brightness: 0.78, tint: 0.24 });
+  const ref = useLiquidGlass<HTMLDivElement>({ radius: 16, bezel: 12, strength: 0.58, blur: 5, brightness: 0.88, tint: 0.24 });
   const shared = { ...CARD_STYLE, ...style };
   if (as === "button") {
     return (

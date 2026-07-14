@@ -138,7 +138,7 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
   const [inner, setInner] = useState<{ width: number; height: number } | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   // Card material: refraction engine + .liquid-glass rim class.
-  const lgRef = useLiquidGlass<HTMLDivElement>({ radius: WIDGET_RADIUS, bezel: 14, strength: 0.6, blur: 7, brightness: 0.8, tint: 0.18 });
+  const lgRef = useLiquidGlass<HTMLDivElement>({ radius: WIDGET_RADIUS, bezel: 14, strength: 0.6, blur: 5, brightness: 0.88, tint: 0.18 });
 
   useEffect(() => {
     (async () => {

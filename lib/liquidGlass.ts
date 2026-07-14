@@ -29,12 +29,17 @@ export interface LiquidGlassOptions {
   bezel?: number; // px — width of the refracting rim band
   strength?: number; // 0..1 — how hard the bezel pulls
   refraction?: number; // multiplier on the displacement scale
-  blur?: number; // px backdrop blur
+  blur?: number; // px backdrop blur — real Liquid Glass is 3-6px, NOT frosted-glass 12-20px
   saturate?: number;
   brightness?: number; // <1 darkens (dark-mode glass), >1 lightens
   contrast?: number;
   tint?: number; // fill alpha
   tintColor?: string; // "r,g,b"
+  // Adaptive color: Apple's material picks up the color of what's
+  // behind it. We approximate with the wallpaper's average color
+  // (--wallpaper-tint-rgb, live-updated on wallpaper change by
+  // useWallpaper), washed over the base tint at low alpha. 0 disables.
+  adaptive?: number;
 }
 
 const DEFAULTS: Required<LiquidGlassOptions> = {
@@ -42,12 +47,13 @@ const DEFAULTS: Required<LiquidGlassOptions> = {
   bezel: 14,
   strength: 0.6,
   refraction: 1,
-  blur: 6,
+  blur: 4,
   saturate: 1.5,
-  brightness: 0.82,
+  brightness: 0.9,
   contrast: 1.05,
   tint: 0.15,
   tintColor: "18,20,28",
+  adaptive: 0.1,
 };
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -171,7 +177,13 @@ export function applyLiquidGlass(element: HTMLElement, opts?: LiquidGlassOptions
   el.__lgFeImage!.setAttribute("height", String(rect.height));
   el.__lgFeDisp!.setAttribute("scale", String(map.maxShift * o.refraction));
 
-  el.style.background = `rgba(${o.tintColor},${o.tint})`;
+  // Base tint + adaptive wallpaper wash. The wash uses the live CSS
+  // variable, so every glass surface shifts color the instant the
+  // wallpaper changes — no JS re-application needed.
+  el.style.background =
+    o.adaptive > 0
+      ? `linear-gradient(rgba(var(--wallpaper-tint-rgb), ${o.adaptive}), rgba(var(--wallpaper-tint-rgb), ${o.adaptive})), rgba(${o.tintColor},${o.tint})`
+      : `rgba(${o.tintColor},${o.tint})`;
   const fx = `saturate(${o.saturate}) brightness(${o.brightness}) contrast(${o.contrast})`;
   const withRefraction = `url(#${id}) blur(${o.blur}px) ${fx}`;
   const fallback = `blur(${o.blur + 4}px) ${fx}`;

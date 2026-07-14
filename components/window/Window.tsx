@@ -184,24 +184,24 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
     const el = glassLayerRef.current;
     if (!el) return;
     let t: ReturnType<typeof setTimeout> | undefined;
-    let raf: number | undefined;
-    const apply = () => applyLiquidGlass(el, { radius: 12, bezel: 12, strength: 0.55, blur: 8, brightness: 0.84, tint: 0.13 });
-    // Deferred one frame (matches lib/liquidGlass.ts's own useLiquidGlass
-    // hook) rather than run synchronously in this mount effect — opening
-    // several windows in quick succession previously ran ALL of their
-    // first-paint displacement-map builds (an O(width×height) pixel loop
-    // each) back-to-back in the same synchronous effect-flush, before
-    // the browser got to paint any of their open animations. Spreading
-    // them across animation frames instead is what actually smooths out
-    // a multi-window open burst.
-    raf = requestAnimationFrame(apply);
+    const apply = () => applyLiquidGlass(el, { radius: 12, bezel: 12, strength: 0.55, blur: 5, brightness: 0.9, tint: 0.13 });
+    // Deferred until AFTER the genie open animation completes — the
+    // displacement-map build is an O(width×height) per-pixel loop plus
+    // a synchronous canvas encode. Running it during the genie's first
+    // frames (as the previous one-rAF deferral did) stole exactly the
+    // main-thread time the animation needed, which is what read as the
+    // genie being "sticky" on open. The window scales in from a tiny
+    // sliver, so the glass arriving ~80ms after the unfurl finishes is
+    // imperceptible; observer-driven rebuilds keep the existing 120ms
+    // settle debounce.
+    const initial = setTimeout(apply, GENIE_DURATION * 1000 + 80);
     const ro = new ResizeObserver(() => {
       if (t) clearTimeout(t);
       t = setTimeout(apply, 120);
     });
     ro.observe(el);
     return () => {
-      if (raf) cancelAnimationFrame(raf);
+      clearTimeout(initial);
       if (t) clearTimeout(t);
       ro.disconnect();
       releaseLiquidGlass(el);

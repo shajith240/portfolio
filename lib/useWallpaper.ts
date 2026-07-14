@@ -208,12 +208,17 @@ export function useWallpaper() {
     if (stored && list.includes(stored)) {
       setWallpaperState(stored);
       handleWallpaperChange(`/wallpapers/${stored}`);
-    } else if (phone && list.length > 0) {
-      // Phone with wallpapers available but nothing chosen yet:
-      // the first portrait file is live immediately — dropping one
-      // image into public/wallpapers/mobile is all it takes.
-      setWallpaperState(list[0]);
-      handleWallpaperChange(`/wallpapers/${list[0]}`);
+    } else if (list.length > 0) {
+      // Nothing chosen yet (first visit): a real default wallpaper,
+      // never a bare gradient — the desktop should look finished for
+      // a brand-new visitor. Prefers a macOS-flavored file when one
+      // exists (this is a macOS-style desktop, after all), otherwise
+      // the first file. Deliberately NOT persisted to localStorage:
+      // an explicit user pick persists via setWallpaper below, while
+      // the default stays free to evolve with the wallpaper folder.
+      const preferred = list.find((f) => /os-x|os_x|mac/i.test(f)) ?? list[0];
+      setWallpaperState(preferred);
+      handleWallpaperChange(`/wallpapers/${preferred}`);
     }
 
     // Cross-instance sync: multiple components call useWallpaper()

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { PLAYLIST, NOW_PLAYING } from "@/data/nowPlaying";
 import LyricsPanel from "@/components/widgets/LyricsPanel";
@@ -160,9 +161,9 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
   // wash (low tint/blur — the artwork wash already does the heavy
   // blur; this only adds the bending rim + specular read), or the
   // full material when there's no artwork to show at all.
-  const smallButtonRef = useLiquidGlass<HTMLButtonElement>({ radius: 16, bezel: 8, strength: 0.6, blur: 6, brightness: 0.85, tint: 0.2 });
+  const smallButtonRef = useLiquidGlass<HTMLButtonElement>({ radius: 16, bezel: 8, strength: 0.6, blur: 5, brightness: 0.9, tint: 0.2 });
   const artworkShellRef = useLiquidGlass<HTMLDivElement>({ radius: WIDGET_RADIUS, bezel: 16, strength: 0.45, blur: 3, brightness: 0.92, tint: 0.05 });
-  const noArtworkShellRef = useLiquidGlass<HTMLDivElement>({ radius: WIDGET_RADIUS, bezel: 16, strength: 0.6, blur: 8, brightness: 0.8, tint: 0.16 });
+  const noArtworkShellRef = useLiquidGlass<HTMLDivElement>({ radius: WIDGET_RADIUS, bezel: 16, strength: 0.6, blur: 5, brightness: 0.88, tint: 0.16 });
 
   if (size === "small") {
     return (
@@ -199,9 +200,11 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
           }}
         />
         {current.artwork ? (
-          <img
+          <Image
             src={current.artwork}
             alt={current.title}
+            width={340}
+            height={340}
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
         ) : (
@@ -266,10 +269,15 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
           darkened artwork fills the card. Fallback to glass when no artwork. */}
       {current.artwork ? (
         <>
-          <img
+          {/* Blurred 50px anyway — a tiny source variant is visually
+              identical to the full-res cover, at a fraction of the
+              bytes. */}
+          <Image
             src={current.artwork}
             alt=""
             aria-hidden
+            width={96}
+            height={96}
             style={{
               position: "absolute",
               top: 0,
@@ -365,9 +373,11 @@ export default function NowPlayingWidget({ size }: { size: WidgetSize }) {
           }}
         >
           {current.artwork ? (
-            <img
+            <Image
               src={current.artwork}
               alt={current.title}
+              width={128}
+              height={128}
               draggable={false}
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />

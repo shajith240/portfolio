@@ -147,7 +147,7 @@ function CCSlider({
    .liquid-glass rim class; motion owns only opacity so the blur
    never re-renders frame-by-frame. */
 function CCPanel({ children }: { children: React.ReactNode }) {
-  const ref = useLiquidGlass<HTMLDivElement>({ radius: 16, bezel: 12, strength: 0.58, blur: 9, brightness: 0.78, tint: 0.26 });
+  const ref = useLiquidGlass<HTMLDivElement>({ radius: 16, bezel: 12, strength: 0.58, blur: 5, brightness: 0.88, tint: 0.26 });
   return (
     <motion.div
       ref={ref}
