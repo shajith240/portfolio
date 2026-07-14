@@ -36,14 +36,34 @@ export const STORAGE_KEY = "portfolio-widget-layout-v5";
 // player (large). Every placement runs through resolveCellCollision
 // in sequence, so the result is collision-free by construction even
 // on narrow lattices where the naive spots would collide.
+//
+// The tall stack needs FOUR rows (heatmap 0, smalls 1, large 2-3).
+// A 27" monitor's lattice has 5-6; a typical laptop viewport
+// (768-864px tall minus MenuBar/Dock reserves) has only 3, where the
+// large widget could never legally sit below the stack — collision
+// resolution scattered it left/down, which is exactly the broken
+// laptop arrangement that was reported. Short lattices therefore get
+// their own curated arrangement: the same widgets laid out
+// HORIZONTALLY along the top-right (large at the right edge, heatmap
+// + smalls beside it), which needs only 2 rows. Same tier sizes,
+// same lattice invariants — only the default placement adapts.
 export function computeDefaultLayout(spec: GridSpec): WidgetLayout {
-  const placements: [WidgetId, WidgetSize, Cell][] = [
-    ["photo", "small", { col: 0, row: 0 }],
-    ["aiTools", "medium", { col: spec.cols - 2, row: 0 }],
-    ["location", "small", { col: spec.cols - 2, row: 1 }],
-    ["motivation", "small", { col: spec.cols - 1, row: 1 }],
-    ["nowPlaying", "large", { col: spec.cols - 2, row: 2 }],
-  ];
+  const placements: [WidgetId, WidgetSize, Cell][] =
+    spec.rows >= 4
+      ? [
+          ["photo", "small", { col: 0, row: 0 }],
+          ["aiTools", "medium", { col: spec.cols - 2, row: 0 }],
+          ["location", "small", { col: spec.cols - 2, row: 1 }],
+          ["motivation", "small", { col: spec.cols - 1, row: 1 }],
+          ["nowPlaying", "large", { col: spec.cols - 2, row: 2 }],
+        ]
+      : [
+          ["photo", "small", { col: 0, row: 0 }],
+          ["nowPlaying", "large", { col: Math.max(0, spec.cols - 2), row: 0 }],
+          ["aiTools", "medium", { col: Math.max(0, spec.cols - 4), row: 0 }],
+          ["location", "small", { col: Math.max(0, spec.cols - 4), row: 1 }],
+          ["motivation", "small", { col: Math.max(0, spec.cols - 3), row: 1 }],
+        ];
 
   const layout = {} as WidgetLayout;
   const occupied: Occupancy[] = [];

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { AnimatePresence } from "framer-motion";
 import { useWallpaper } from "@/lib/useWallpaper";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
@@ -67,13 +68,32 @@ export default function Wallpaper() {
           position: "fixed",
           inset: 0,
           zIndex: 0,
-          background: wallpaper
-            ? `url(/wallpapers/${wallpaper}) center / cover no-repeat`
-            : isPhone
-            ? IOS_PLACEHOLDER_BG
-            : PLACEHOLDER_BG,
+          // The gradient always paints instantly underneath; the image
+          // fades over it once loaded, so a slow connection sees a
+          // designed backdrop rather than a blank flash.
+          background: isPhone ? IOS_PLACEHOLDER_BG : PLACEHOLDER_BG,
         }}
-      />
+      >
+        {wallpaper && (
+          // next/image instead of a raw CSS background-image: the CSS
+          // url() served the ORIGINAL file (several of these are
+          // 4-5K-pixel multi-MB JPEGs) to every visitor — the single
+          // biggest slow-connection cost on the site. This serves a
+          // viewport-sized AVIF/WebP and preloads it (priority).
+          // pointerEvents none keeps the container the event target,
+          // so the desktop context menu and selection marquee behave
+          // exactly as before.
+          <Image
+            src={`/wallpapers/${wallpaper}`}
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            draggable={false}
+            style={{ objectFit: "cover", pointerEvents: "none" }}
+          />
+        )}
+      </div>
 
       <SelectionMarquee desktopRef={desktopRef} />
 

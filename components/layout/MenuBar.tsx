@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
@@ -50,28 +51,39 @@ const BatteryGlyph = () => (
   </svg>
 );
 
-function MenuDropdown({ entries, onClose }: { entries: MenuEntry[]; onClose: () => void }) {
+function MenuDropdown({ entries, onClose, anchorLeft }: { entries: MenuEntry[]; onClose: () => void; anchorLeft: number }) {
   // Menus are real Liquid Glass surfaces too — engine + rim class,
   // higher tint than panels so 13px text stays readable over busy
-  // wallpapers.
-  const lgRef = useLiquidGlass<HTMLDivElement>({ radius: 10, bezel: 8, strength: 0.55, blur: 9, brightness: 0.78, tint: 0.3 });
-  return (
+  // wallpapers. Blur is Apple's actual Liquid Glass range (3-6px),
+  // not frosted-glass territory.
+  const lgRef = useLiquidGlass<HTMLDivElement>({ radius: 10, bezel: 8, strength: 0.55, blur: 5, brightness: 0.88, tint: 0.3 });
+  // PORTALED to <body>, deliberately NOT rendered inside the bar: the
+  // bar has its own backdrop-filter, which per the filter-effects spec
+  // makes it a "backdrop root" — a descendant's backdrop-filter can
+  // only sample content INSIDE that root, and the dropdown hangs
+  // below the bar's painted area, so nested it sampled nothing and
+  // rendered as plain transparency (the reported bug). As a sibling
+  // of the bar it samples the real page behind it.
+  return createPortal(
     <motion.div
       ref={lgRef}
       className="liquid-glass"
+      data-menubar-popover
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.12, ease: [0, 0, 0.58, 1] }}
       style={{
-        position: "absolute",
-        top: "calc(100% + 5px)",
-        left: 0,
+        position: "fixed",
+        top: `${BAR_HEIGHT + 5}px`,
+        left: `${anchorLeft}px`,
         minWidth: "216px",
         padding: "5px",
         borderRadius: "10px",
         transformOrigin: "top left",
-        zIndex: 10,
+        // Above windows (z ~100+) and the Dock (90) — real macOS menus
+        // top everything on the desktop.
+        zIndex: 4000,
       }}
     >
       {entries.map((entry, i) =>
@@ -81,7 +93,8 @@ function MenuDropdown({ entries, onClose }: { entries: MenuEntry[]; onClose: () 
           <MenuRow key={i} entry={entry} onClose={onClose} />
         ),
       )}
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 }
 
@@ -142,7 +155,10 @@ function Clock() {
 export default function MenuBar() {
   const { isMobileLayout, openSearch } = useLayout();
   const { openWindow, windows } = useWindowManager();
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  // Carries the anchor's left edge alongside the title — the dropdown
+  // is portaled to <body> (see MenuDropdown), so it can't position
+  // itself relative to its button anymore; the opener measures for it.
+  const [openMenu, setOpenMenu] = useState<{ title: string; left: number } | null>(null);
   const [hoveredTitle, setHoveredTitle] = useState<string | null>(null);
   const [ncOpen, setNcOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
@@ -153,7 +169,7 @@ export default function MenuBar() {
   useEffect(() => {
     const el = barRef.current;
     if (!el) return;
-    const apply = () => applyLiquidGlass(el, { radius: 0, bezel: 8, strength: 0.5, blur: 8, brightness: 0.8, tint: 0.22 });
+    const apply = () => applyLiquidGlass(el, { radius: 0, bezel: 8, strength: 0.5, blur: 5, brightness: 0.88, tint: 0.22 });
     apply();
     let t: ReturnType<typeof setTimeout> | undefined;
     const onResize = () => {
@@ -175,6 +191,12 @@ export default function MenuBar() {
       if (e.key === "Escape") setOpenMenu(null);
     };
     const onPointer = (e: PointerEvent) => {
+      const target = e.target as Element | null;
+      // The dropdown itself is portaled to <body>, so it's no longer
+      // inside barRef — a press on one of its own rows must not count
+      // as "outside" (it would close the menu before the row's click
+      // could fire).
+      if (target?.closest?.("[data-menubar-popover]")) return;
       if (barRef.current && !barRef.current.contains(e.target as Node)) setOpenMenu(null);
     };
     window.addEventListener("keydown", onKey);
@@ -255,15 +277,18 @@ export default function MenuBar() {
     >
       <div style={{ display: "flex", alignItems: "center", height: "100%" }}>
         {menus.map((menu) => {
-          const isOpen = openMenu === menu.title;
+          const isOpen = openMenu?.title === menu.title;
           return (
             <div key={menu.title} style={{ position: "relative", height: "100%" }}>
               <button
-                onClick={() => setOpenMenu(isOpen ? null : menu.title)}
+                onClick={(e) =>
+                  setOpenMenu(isOpen ? null : { title: menu.title, left: e.currentTarget.getBoundingClientRect().left })
+                }
                 // Real macOS: once any menu is open, gliding across
                 // the titles switches menus without another click.
-                onMouseEnter={() => {
-                  if (openMenu && !isOpen) setOpenMenu(menu.title);
+                onMouseEnter={(e) => {
+                  if (openMenu && !isOpen)
+                    setOpenMenu({ title: menu.title, left: e.currentTarget.getBoundingClientRect().left });
                   setHoveredTitle(menu.title);
                 }}
                 onMouseLeave={() => setHoveredTitle(null)}
@@ -295,12 +320,6 @@ export default function MenuBar() {
                   lineHeight: "18px",
                   fontWeight: menu.title === "Shajith" ? 400 : menu.bold ? 600 : 400,
                   color: "rgba(255, 255, 255, 0.92)",
-                  // Borel's baseline sits visually higher within its
-                  // own line box than the system font's does, so
-                  // centering the box still reads slightly high —
-                  // nudged down a couple px to land where the other
-                  // titles' visual baseline actually sits.
-                  ...(menu.title === "Shajith" ? { transform: "translateY(2px)" } : {}),
                   // Closed titles still give hover feedback (a
                   // fainter pill than the open state) — without it
                   // the bar reads dead until the first click.
@@ -312,10 +331,26 @@ export default function MenuBar() {
                   cursor: "default",
                 }}
               >
-                {menu.title}
+                {/* Borel's baseline sits visually higher within its
+                    own line box than the system font's, so the label
+                    gets nudged down a couple px — on an inner span,
+                    NOT the button: transforming the button moved its
+                    highlight pill down with the text, which is why
+                    the pill sat visibly off-center (reported bug). */}
+                <span
+                  style={
+                    menu.title === "Shajith"
+                      ? { display: "inline-block", transform: "translateY(2px)" }
+                      : undefined
+                  }
+                >
+                  {menu.title}
+                </span>
               </button>
               <AnimatePresence>
-                {isOpen && <MenuDropdown entries={menu.entries} onClose={() => setOpenMenu(null)} />}
+                {isOpen && openMenu && (
+                  <MenuDropdown entries={menu.entries} onClose={() => setOpenMenu(null)} anchorLeft={openMenu.left} />
+                )}
               </AnimatePresence>
             </div>
           );

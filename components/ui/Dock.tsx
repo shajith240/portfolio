@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState, useRef, useCallback, useEffect } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useShellMetrics } from "@/lib/useShellMetrics";
@@ -284,7 +285,9 @@ export default function Dock() {
     const el = dockRef.current;
     if (!el) return;
     const radius = Math.round((BASE_ICON_SIZE + 20) * 0.22);
-    const apply = () => applyLiquidGlass(el, { radius, bezel: 13, strength: 0.66, blur: 5, brightness: 0.82, tint: 0.15 });
+    // "Clear" variant of the material — Apple uses the lighter recipe
+    // (2-3px blur, lower tint) for dock-style floating chrome.
+    const apply = () => applyLiquidGlass(el, { radius, bezel: 13, strength: 0.66, blur: 3, brightness: 0.9, tint: 0.12 });
     apply();
     let t: ReturnType<typeof setTimeout> | undefined;
     const onResize = () => {
@@ -393,16 +396,25 @@ export default function Dock() {
                   times: [0, 0.25, 0.5, 0.75, 1],
                 }}
                 style={{
+                  position: "relative",
                   width: "100%",
                   height: "100%",
                   filter: `drop-shadow(0 ${scale > 1.2 ? 3 : 2}px ${scale > 1.2 ? 6 : 4}px rgba(0, 0, 0, ${0.25 + (scale - 1) * 0.15}))`,
                 }}
               >
-                <img
+                {/* next/image, NOT a raw <img>: the source icons are the
+                    1024px .icns extractions (some >600KB each) but render
+                    at 50-85px — the raw tags shipped every visitor
+                    several MB of icons for the dock alone. sizes=96px
+                    covers max magnification (85px) at 1x; Next picks the
+                    2x variant on retina automatically. */}
+                <Image
                   src={`/icons/${ICON_FILE[item.href] ?? "react"}.png`}
                   alt={item.label}
+                  fill
+                  sizes="96px"
                   draggable={false}
-                  style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                  style={{ objectFit: "contain" }}
                 />
               </motion.div>
 

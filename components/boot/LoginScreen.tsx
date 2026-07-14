@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { useWallpaper } from "@/lib/useWallpaper";
 
@@ -119,9 +120,11 @@ export default function LoginScreen({ onUnlock }: { onUnlock: () => void }) {
             overflow: "hidden",
           }}
         >
-          <img
+          <Image
             src="/photos/my_photo.jpeg"
             alt="Shajith"
+            width={160}
+            height={160}
             style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 10%" }}
           />
         </motion.button>

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
+import { useWindowManager } from "@/contexts/WindowManagerContext";
 import { NAV_ITEMS } from "@/data/nav";
 import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
 
@@ -260,8 +261,10 @@ function Hairline() {
 /* ─── Main component ─────────────────────────────────────────────── */
 
 export default function CommandPalette() {
-  const { isSearchOpen, openSearch, closeSearch } = useLayout();
+  const { isSearchOpen, openSearch, closeSearch, isMobileLayout, isTabletLayout } = useLayout();
+  const { openWindow } = useWindowManager();
   const router = useRouter();
+  const isPhone = isMobileLayout && !isTabletLayout;
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -273,7 +276,7 @@ export default function CommandPalette() {
   const attachPanelGlass = (el: HTMLDivElement | null) => {
     if (el) {
       panelNode.current = el;
-      applyLiquidGlass(el, { radius: 24, bezel: 14, strength: 0.6, blur: 10, brightness: 0.78, tint: 0.3 });
+      applyLiquidGlass(el, { radius: 24, bezel: 14, strength: 0.6, blur: 5, brightness: 0.88, tint: 0.3 });
     } else if (panelNode.current) {
       releaseLiquidGlass(panelNode.current);
       panelNode.current = null;
@@ -353,8 +356,23 @@ export default function CommandPalette() {
   function handleSelect(item: AnyItem | undefined) {
     if (!item) return;
     closeSearch();
-    if (item.type === "nav") router.push(item.href);
-    else window.open(item.href, "_blank");
+    if (item.type === "nav") {
+      // Desktop: open the page as a WINDOW, exactly like the Dock and
+      // menu bar do. router.push here navigated the whole top-level
+      // page to /about, tearing down the entire desktop (wallpaper,
+      // widgets, dock) before AppShell's stray-route guard bounced it
+      // back to "/" and remounted everything — which read as the whole
+      // app reloading on every Spotlight navigation (reported bug).
+      // Home is the desktop itself, so it just closes the palette.
+      // Phones have no window system — real navigation stays correct.
+      if (isPhone) {
+        router.push(item.href);
+      } else if (item.href !== "/") {
+        openWindow(item.href, item.label);
+      }
+    } else {
+      window.open(item.href, "_blank");
+    }
   }
 
   let globalIdx = 0;

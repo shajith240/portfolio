@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -209,15 +210,12 @@ export default function AppSwitcher() {
                     zIndex: 1,
                   }}
                 >
-                  <img
+                  <Image
                     src={`/icons/${iconName}.png`}
                     alt={window.title}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "contain",
-                      display: "block",
-                    }}
+                    fill
+                    sizes="64px"
+                    style={{ objectFit: "contain" }}
                   />
                 </div>
 
