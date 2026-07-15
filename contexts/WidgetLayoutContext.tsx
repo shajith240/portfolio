@@ -1,7 +1,7 @@
 // contexts/WidgetLayoutContext.tsx
 "use client";
 
-import { createContext, useContext, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { TOP_BOUND, BOTTOM_RESERVE } from "@/contexts/WindowManagerContext";
 import {
   clampCell,
@@ -76,7 +76,12 @@ function clearStoredLayoutRaw() {
    switching monitors restores that screen's layout untouched, and a
    lattice seen for the first time gets one deterministic refit that
    is then remembered for it alone. */
-const GRID_LAYOUTS_KEY = `${STORAGE_KEY}:grids`;
+// "grids2", not "grids": the first-generation map was populated by the
+// index-preserving refit (see refitLayout) — lattices first visited
+// via a small window remembered the SQUEEZED arrangement forever.
+// Bumping the key drops those poisoned memories once; arrangements
+// re-seed through the proportional refit / defaults from here on.
+const GRID_LAYOUTS_KEY = `${STORAGE_KEY}:grids2`;
 
 function gridSignature(spec: GridSpec): string {
   return `${spec.cols}x${spec.rows}`;
@@ -105,10 +110,20 @@ function currentSpec(): GridSpec {
 }
 
 // Re-fit an existing layout onto a (possibly different) lattice —
-// used on window resize, where a shrinking column count can push
-// widgets off the lattice or into each other. Order is WIDGET_IDS
-// order, same as parseStoredLayout, so refits are deterministic.
-function refitLayout(layout: WidgetLayout, spec: GridSpec): WidgetLayout {
+// used on window resize. Order is WIDGET_IDS order, same as
+// parseStoredLayout, so refits are deterministic.
+//
+// PROPORTIONAL, not index-preserving: cells are remapped by their
+// fraction of the old lattice's placeable range before clamping.
+// The old index-preserving version only fixed violations — a widget
+// at col 11 of 13 (right edge) squeezed to col 6 of 8 on a laptop,
+// but growing back to 13 columns it stayed at col 6, because col 6
+// "fits" a 13-column lattice perfectly and nothing was violated.
+// The squeezed arrangement then got REMEMBERED for the big lattice
+// (the reported "widgets stick to the small-window layout" bug).
+// Proportional remap keeps position MEANING: 11/11 → 6/6 → 11/11 —
+// edge-anchored stays edge-anchored through any resize round trip.
+function refitLayout(layout: WidgetLayout, spec: GridSpec, prevSpec?: GridSpec | null): WidgetLayout {
   const next = {} as WidgetLayout;
   const occupied: Occupancy[] = [];
   let changed = false;
@@ -122,7 +137,18 @@ function refitLayout(layout: WidgetLayout, spec: GridSpec): WidgetLayout {
   for (const id of orderedIds) {
     const entry = layout[id];
     const span = spanForSize(entry.size);
-    const cell = resolveCellCollision(spec, clampCell(spec, entry, span), span, occupied);
+    let desired: Cell = entry;
+    if (prevSpec && (prevSpec.cols !== spec.cols || prevSpec.rows !== spec.rows)) {
+      const oldMaxCol = Math.max(0, prevSpec.cols - span.cols);
+      const oldMaxRow = Math.max(0, prevSpec.rows - span.rows);
+      const newMaxCol = Math.max(0, spec.cols - span.cols);
+      const newMaxRow = Math.max(0, spec.rows - span.rows);
+      desired = {
+        col: oldMaxCol === 0 ? 0 : Math.round((entry.col / oldMaxCol) * newMaxCol),
+        row: oldMaxRow === 0 ? 0 : Math.round((entry.row / oldMaxRow) * newMaxRow),
+      };
+    }
+    const cell = resolveCellCollision(spec, clampCell(spec, desired, span), span, occupied);
     next[id] = cell.col === entry.col && cell.row === entry.row ? entry : { ...entry, col: cell.col, row: cell.row };
     if (next[id] !== entry) changed = true;
     occupied.push({ cell, span });
@@ -134,6 +160,11 @@ export function WidgetLayoutProvider({ children }: { children: ReactNode }) {
   const [layout, setLayout] = useState<WidgetLayout | null>(null);
   const [spec, setSpec] = useState<GridSpec | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  // The lattice the CURRENT layout state was fitted against — what the
+  // proportional refit rescales FROM on the next lattice change. A ref
+  // (not the spec state) so the resize effect's []-dep closure always
+  // reads the latest value.
+  const fittedSpecRef = useRef<GridSpec | null>(null);
 
   // Load once on mount — SSR-safe "null until mounted" convention.
   // This lattice's own remembered layout wins; the legacy single
@@ -142,6 +173,7 @@ export function WidgetLayoutProvider({ children }: { children: ReactNode }) {
     const mountSpec = currentSpec();
     const defaults = computeDefaultLayout(mountSpec);
     setSpec(mountSpec);
+    fittedSpecRef.current = mountSpec;
     const remembered = readGridMap()[gridSignature(mountSpec)] ?? readStoredLayoutRaw();
     setLayout(parseStoredLayout(remembered, defaults, mountSpec));
   }, []);
@@ -159,7 +191,9 @@ export function WidgetLayoutProvider({ children }: { children: ReactNode }) {
 
     const applyCurrent = (): GridSpec => {
       const nextSpec = currentSpec();
+      const fromSpec = fittedSpecRef.current;
       setSpec(nextSpec);
+      fittedSpecRef.current = nextSpec;
       setLayout((prev) => {
         if (!prev) return prev;
         const sig = gridSignature(nextSpec);
@@ -167,7 +201,10 @@ export function WidgetLayoutProvider({ children }: { children: ReactNode }) {
         if (remembered) {
           return parseStoredLayout(remembered, computeDefaultLayout(nextSpec), nextSpec);
         }
-        const refit = refitLayout(prev, nextSpec);
+        // First time on this lattice: rescale the current arrangement
+        // proportionally FROM the lattice it was fitted against, so
+        // edge-anchored widgets stay edge-anchored (see refitLayout).
+        const refit = refitLayout(prev, nextSpec, fromSpec);
         const map = readGridMap();
         map[sig] = serializeLayout(refit);
         writeGridMap(map);
@@ -281,6 +318,7 @@ export function WidgetLayoutProvider({ children }: { children: ReactNode }) {
     clearStoredLayoutRaw();
     const nextSpec = currentSpec();
     setSpec(nextSpec);
+    fittedSpecRef.current = nextSpec;
     setLayout(computeDefaultLayout(nextSpec));
   }, []);
 

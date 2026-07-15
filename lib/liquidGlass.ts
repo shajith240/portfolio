@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 
 /* Liquid Glass refraction engine — TypeScript port of the reference
    implementation the user supplied (D:\msi\liquid-glass-dark.html),
@@ -141,10 +141,15 @@ function ensureDefs(): SVGDefsElement {
 export function applyLiquidGlass(element: HTMLElement, opts?: LiquidGlassOptions) {
   const el = element as LGElement;
   const o = { ...DEFAULTS, ...opts };
-  const rect = el.getBoundingClientRect();
-  if (rect.width < 2 || rect.height < 2) return;
+  // offsetWidth/Height, NOT getBoundingClientRect: the rect includes
+  // CSS transforms, and glass surfaces routinely apply while their
+  // entrance animation (scale 0.98, etc.) is mid-flight — the map
+  // must be built for the LAID-OUT size the element settles at.
+  const width = el.offsetWidth;
+  const height = el.offsetHeight;
+  if (width < 2 || height < 2) return;
 
-  const map = buildDisplacementMap(rect.width, rect.height, o.radius, o.bezel, o.strength);
+  const map = buildDisplacementMap(width, height, o.radius, o.bezel, o.strength);
   if (!map) return;
 
   const id = el.__lgId ?? (el.__lgId = `lg${++idCounter}`);
@@ -173,8 +178,8 @@ export function applyLiquidGlass(element: HTMLElement, opts?: LiquidGlassOptions
     el.__lgFeDisp = feDisp;
   }
   el.__lgFeImage!.setAttribute("href", map.url);
-  el.__lgFeImage!.setAttribute("width", String(rect.width));
-  el.__lgFeImage!.setAttribute("height", String(rect.height));
+  el.__lgFeImage!.setAttribute("width", String(width));
+  el.__lgFeImage!.setAttribute("height", String(height));
   el.__lgFeDisp!.setAttribute("scale", String(map.maxShift * o.refraction));
 
   // Base tint + adaptive wallpaper wash. The wash uses the live CSS
@@ -223,7 +228,16 @@ export function useLiquidGlass<T extends HTMLElement = HTMLDivElement>(
   const optsRef = useRef(opts);
   optsRef.current = opts;
 
-  useEffect(() => {
+  // useLayoutEffect + a SYNCHRONOUS first application — the material
+  // must exist on the element's first painted frame. The previous
+  // useEffect + requestAnimationFrame deferral let the surface paint
+  // un-glassed for a frame or two before the engine caught up, a
+  // small but visible "glass pops in" latency on every panel open
+  // (the .liquid-glass CSS base covers the sub-frame before even this
+  // runs; together they make the material appear latency-free).
+  // Observer/resize RE-applications stay rAF-coalesced + debounced —
+  // only the first paint is latency-critical.
+  useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     let raf = 0;
@@ -232,7 +246,7 @@ export function useLiquidGlass<T extends HTMLElement = HTMLDivElement>(
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => applyLiquidGlass(el, optsRef.current));
     };
-    apply();
+    applyLiquidGlass(el, optsRef.current);
     const observe = optsRef.current?.observe !== false;
     let ro: ResizeObserver | undefined;
     let onWinResize: (() => void) | undefined;
