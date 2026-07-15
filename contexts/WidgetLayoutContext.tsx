@@ -155,30 +155,59 @@ export function WidgetLayoutProvider({ children }: { children: ReactNode }) {
   // it from then on.
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let verify: ReturnType<typeof setTimeout> | undefined;
+
+    const applyCurrent = (): GridSpec => {
+      const nextSpec = currentSpec();
+      setSpec(nextSpec);
+      setLayout((prev) => {
+        if (!prev) return prev;
+        const sig = gridSignature(nextSpec);
+        const remembered = readGridMap()[sig];
+        if (remembered) {
+          return parseStoredLayout(remembered, computeDefaultLayout(nextSpec), nextSpec);
+        }
+        const refit = refitLayout(prev, nextSpec);
+        const map = readGridMap();
+        map[sig] = serializeLayout(refit);
+        writeGridMap(map);
+        return refit;
+      });
+      return nextSpec;
+    };
+
+    // Applies the current viewport's lattice, then VERIFIES it a beat
+    // later: fullscreen enter/exit animates the window, and the last
+    // resize event can fire while the dimensions are still
+    // mid-transition — the debounce then measures a size the window
+    // never actually settles at, applies a lattice for it, and no
+    // further resize event ever arrives to correct it (widgets
+    // stranded out of bounds; the reported fullscreen bug). The
+    // follow-up check re-measures after the transition has definitely
+    // finished and re-applies only if the lattice it applied no
+    // longer matches reality — zero cost in the common case.
+    const settle = () => {
+      const applied = applyCurrent();
+      if (verify) clearTimeout(verify);
+      verify = setTimeout(() => {
+        if (gridSignature(currentSpec()) !== gridSignature(applied)) settle();
+      }, 300);
+    };
+
     const handleResize = () => {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        const nextSpec = currentSpec();
-        setSpec(nextSpec);
-        setLayout((prev) => {
-          if (!prev) return prev;
-          const sig = gridSignature(nextSpec);
-          const remembered = readGridMap()[sig];
-          if (remembered) {
-            return parseStoredLayout(remembered, computeDefaultLayout(nextSpec), nextSpec);
-          }
-          const refit = refitLayout(prev, nextSpec);
-          const map = readGridMap();
-          map[sig] = serializeLayout(refit);
-          writeGridMap(map);
-          return refit;
-        });
-      }, 150);
+      timer = setTimeout(settle, 150);
     };
     window.addEventListener("resize", handleResize);
+    // Fullscreen toggles are the known producer of resize storms whose
+    // final event lies about the settled size — listen to the toggle
+    // itself as an extra trigger into the same settle path.
+    document.addEventListener("fullscreenchange", handleResize);
     return () => {
       if (timer) clearTimeout(timer);
+      if (verify) clearTimeout(verify);
       window.removeEventListener("resize", handleResize);
+      document.removeEventListener("fullscreenchange", handleResize);
     };
   }, []);
 

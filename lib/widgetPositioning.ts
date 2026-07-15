@@ -101,30 +101,30 @@ export function cellsOverlap(a: Cell, aSpan: Span, b: Cell, bSpan: Span): boolea
 }
 
 // Widgets never layer: if the desired cell region is occupied, the
-// nearest free cell (euclidean distance in cell space) wins. The
-// primary search stays within the lattice's official row/col count;
-// if that's genuinely full (a short/narrow viewport plus several
-// widgets can fill every official cell), the search continues into
-// rows below the lattice's bottom edge rather than ever returning an
-// occupied cell — a widget parked slightly past the nominal desktop
-// height is still a widget you can see and drag back up; an
-// overlapping widget is a broken layout. Column count never extends
-// (widening sideways isn't how macOS desktops grow), only rows.
+// nearest free cell (euclidean distance in cell space) wins.
+//
+// The search NEVER leaves the lattice. An earlier version deliberately
+// continued into rows below the lattice's bottom edge when the
+// official cells were full — the reasoning was "visible-but-misplaced
+// beats overlapping". In practice that escape hatch was exactly how
+// widgets ended up parked across the Dock's reserved strip after a
+// fullscreen enter/exit resize storm (the reported bug): once a refit
+// legally produced a below-lattice row, nothing ever pulled it back.
+// The Dock line (BOTTOM_RESERVE, baked into spec.rows) is a HARD
+// boundary now. If the lattice genuinely cannot hold every widget —
+// only possible in pathological viewports far smaller than any real
+// laptop, since all five widgets together need 9 cells — the clamped
+// target is returned as-is and widgets overlap INSIDE the desktop,
+// which degrades visibly but never breaches system chrome.
 export function resolveCellCollision(spec: GridSpec, desired: Cell, span: Span, occupied: Occupancy[]): Cell {
   const target = clampCell(spec, desired, span);
   const isFree = (cell: Cell) => occupied.every((o) => !cellsOverlap(cell, span, o.cell, o.span));
   if (isFree(target)) return target;
 
-  // Generous upper bound: every occupied widget's rows plus this
-  // widget's own span plus one full lattice height of slack — always
-  // enough rows to guarantee at least one free cell exists somewhere
-  // in [0, maxRow], however crowded the occupied list is.
-  const maxRow = spec.rows + occupied.length * 2 + span.rows;
-
   let best: Cell | null = null;
   let bestDist = Infinity;
   for (let col = 0; col <= Math.max(0, spec.cols - span.cols); col++) {
-    for (let row = 0; row <= maxRow; row++) {
+    for (let row = 0; row <= Math.max(0, spec.rows - span.rows); row++) {
       const cell = { col, row };
       if (!isFree(cell)) continue;
       const dist = Math.hypot(col - target.col, row - target.row);
@@ -134,8 +134,5 @@ export function resolveCellCollision(spec: GridSpec, desired: Cell, span: Span, 
       }
     }
   }
-  // best is guaranteed non-null: row = maxRow alone (with occupied.length
-  // entries, each spanning at most a few rows) always clears every
-  // occupied span for at least one column.
   return best ?? target;
 }
