@@ -12,15 +12,6 @@ import { PROJECTS, type Project } from '@/data/projects'
 
 const EASE_APPLE = [0.32, 0.72, 0, 1] as const
 
-// Hover lift — a quick, lightly-damped spring (Apple's card micro-lift).
-// Framer owns the card's transform, so this is GPU-composited and NEVER
-// re-renders the card subtree; border/shadow/image-zoom ride pure CSS
-// :hover (see .project-card in globals.css). The old hover was React
-// state read inline for the border, which re-rendered the whole card —
-// with a next/image inside — on every mouse enter/leave, and sweeping
-// the grid was the "very much lag" in this window.
-const HOVER_SPRING = { type: 'spring', stiffness: 380, damping: 26, mass: 0.6 } as const
-
 const stagger = {
   hidden: {},
   show: { transition: { staggerChildren: 0.07 } },
@@ -80,8 +71,6 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
     <motion.div
       variants={cardVariant}
       className="project-card"
-      whileHover={{ y: -4 }}
-      transition={HOVER_SPRING}
       style={{
         display: 'grid',
         gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
@@ -216,7 +205,6 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
         }}
       >
         <div
-          className="project-card__media"
           style={{
             position: 'absolute',
             inset: '12px',
@@ -248,8 +236,6 @@ function GridCard({ project }: { project: Project }) {
     <motion.div
       variants={cardVariant}
       className="project-card"
-      whileHover={{ y: -4 }}
-      transition={HOVER_SPRING}
       style={{
         background: '#2a2a2a',
         borderRadius: '18px',
@@ -260,7 +246,6 @@ function GridCard({ project }: { project: Project }) {
     >
       {/* Image */}
       <div
-        className="project-card__media"
         style={{
           position: 'relative',
           width: 'calc(100% - 20px)',
@@ -436,14 +421,19 @@ export default function ProjectsPage() {
           transition: 'background 0.22s ease',
         }}
       >
-        <motion.div
-          initial={false}
-          animate={{
+        {/* Static padding — NOT an animated motion value. paddingLeft/
+            paddingRight are LAYOUT properties; springing them meant the
+            entire content tree (header + every card + image) reflowed on
+            every frame of the spring during a window resize — the resize
+            lag. The inset now changes in a single reflow when the window
+            settles, which is what "smooth resize" needs. */}
+        <div
+          style={{
             paddingLeft: `${ml + (isMobileLayout ? 16 : 48)}px`,
             paddingRight: `${mr + (isMobileLayout ? 16 : 48)}px`,
+            paddingTop: '80px',
+            paddingBottom: '120px',
           }}
-          transition={{ type: 'spring', stiffness: 520, damping: 44, mass: 0.85 }}
-          style={{ paddingTop: '80px', paddingBottom: '120px' }}
         >
 
           {/* ── Header ──────────────────────────────────────────── */}
@@ -570,7 +560,7 @@ export default function ProjectsPage() {
             </a>
           </motion.div>
 
-        </motion.div>
+        </div>
       </div>
     </>
   )
