@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import { useLayout } from '@/contexts/LayoutContext'
@@ -12,6 +11,15 @@ import { PROJECTS, type Project } from '@/data/projects'
    ───────────────────────────────────────────────────────────────── */
 
 const EASE_APPLE = [0.32, 0.72, 0, 1] as const
+
+// Hover lift — a quick, lightly-damped spring (Apple's card micro-lift).
+// Framer owns the card's transform, so this is GPU-composited and NEVER
+// re-renders the card subtree; border/shadow/image-zoom ride pure CSS
+// :hover (see .project-card in globals.css). The old hover was React
+// state read inline for the border, which re-rendered the whole card —
+// with a next/image inside — on every mouse enter/leave, and sweeping
+// the grid was the "very much lag" in this window.
+const HOVER_SPRING = { type: 'spring', stiffness: 380, damping: 26, mass: 0.6 } as const
 
 const stagger = {
   hidden: {},
@@ -68,23 +76,19 @@ function TechChip({ label }: { label: string }) {
    ───────────────────────────────────────────────────────────────── */
 
 function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boolean }) {
-  const [hovered, setHovered] = useState(false)
-
   return (
     <motion.div
       variants={cardVariant}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      className="project-card"
+      whileHover={{ y: -4 }}
+      transition={HOVER_SPRING}
       style={{
         display: 'grid',
         gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
         background: '#2a2a2a',
-        border: `1px solid ${hovered ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.08)'}`,
         borderRadius: '18px',
         overflow: 'hidden',
         minHeight: 'clamp(280px, 40vw, 380px)',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
-        transition: 'border-color 0.15s ease-out',
       }}
     >
       {/* Left — content */}
@@ -212,6 +216,7 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
         }}
       >
         <div
+          className="project-card__media"
           style={{
             position: 'absolute',
             inset: '12px',
@@ -239,26 +244,23 @@ function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boole
    ───────────────────────────────────────────────────────────────── */
 
 function GridCard({ project }: { project: Project }) {
-  const [hovered, setHovered] = useState(false)
-
   return (
     <motion.div
       variants={cardVariant}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      className="project-card"
+      whileHover={{ y: -4 }}
+      transition={HOVER_SPRING}
       style={{
         background: '#2a2a2a',
-        border: `1px solid ${hovered ? 'rgba(255, 255, 255, 0.14)' : 'rgba(255, 255, 255, 0.08)'}`,
         borderRadius: '18px',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
-        transition: 'border-color 0.15s ease-out',
       }}
     >
       {/* Image */}
       <div
+        className="project-card__media"
         style={{
           position: 'relative',
           width: 'calc(100% - 20px)',
