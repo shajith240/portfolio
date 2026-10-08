@@ -8,13 +8,12 @@ import { WIDGET_RADIUS } from "@/lib/widgetGrid";
 import type { WidgetId, WidgetSize } from "@/lib/widgetLayoutSchema";
 import WidgetFrame from "@/components/widgets/WidgetFrame";
 import PhotoWidget from "@/components/widgets/PhotoWidget";
-import NowPlayingWidget from "@/components/widgets/NowPlayingWidget";
 import GitHubHeatmapWidget from "@/components/widgets/GitHubHeatmapWidget";
 // Keep widget id as "aiTools" to maintain stored layouts; render the new widget for it
 import LocationWidget from "@/components/widgets/LocationWidget";
 import MotivationWidget from "@/components/widgets/MotivationWidget";
 
-const WIDGET_IDS: WidgetId[] = ["photo", "nowPlaying", "aiTools", "location", "motivation"];
+const WIDGET_IDS: WidgetId[] = ["photo", "aiTools", "location", "motivation"];
 
 export default function WidgetCanvas() {
   const { layout, isEditing, exitEditMode, resetLayout } = useWidgetLayout();
@@ -36,8 +35,8 @@ export default function WidgetCanvas() {
   // re-renders this component via `snapPreview` state. Without this
   // memo, every widget's `others` array got a brand-new reference on
   // every one of those frames even though `layout` itself hadn't
-  // changed, which defeated WidgetFrame's own memoization for all 5
-  // widgets, not just the one being dragged.
+  // changed, which defeated WidgetFrame's own memoization for every
+  // widget, not just the one being dragged.
   const othersById = useMemo(() => {
     const result = {} as Record<WidgetId, Occupancy[]>;
     for (const id of WIDGET_IDS) {
@@ -55,7 +54,6 @@ export default function WidgetCanvas() {
   const renderById = useMemo<Record<WidgetId, (size: WidgetSize) => React.ReactNode>>(
     () => ({
       photo: (size) => <PhotoWidget size={size} />,
-      nowPlaying: (size) => <NowPlayingWidget size={size} />,
       aiTools: (size) => <GitHubHeatmapWidget size={size} />,
       location: (size) => <LocationWidget size={size} />,
       motivation: (size) => <MotivationWidget size={size} />,

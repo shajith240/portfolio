@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import IOSStatusBar from "@/components/mobile/IOSStatusBar";
 import LockScreen from "@/components/mobile/LockScreen";
 import HomeScreen, { type HomeApp } from "@/components/mobile/HomeScreen";
-import IOSControlCenter from "@/components/mobile/IOSControlCenter";
+import ShellMascot from "@/components/mascot/ShellMascot";
 
 /* The iPhone experience orchestrator (phones only — desktop keeps
    the macOS shell). State machine:
 
-     boot → LOCK SCREEN → HOME SCREEN ⇄ APP (route pages)
+     LOCK SCREEN → HOME SCREEN ⇄ APP (route pages)
 
    - Lock shows once per browser session (sessionStorage), exactly
      like a phone that stays unlocked until you put it away.
@@ -19,9 +19,7 @@ import IOSControlCenter from "@/components/mobile/IOSControlCenter";
      home page; any other route is an APP: it zooms out of the
      tapped icon's position (transform-origin trick — the honest web
      approximation of iOS's shared-element zoom) and zooms back on
-     close. The home indicator is the close control: tap or swipe up.
-   - Control Center: swipe DOWN from the top-right corner region,
-     same gesture as the real thing. */
+     close. The home indicator is the close control: tap or swipe up. */
 
 export default function IPhoneShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -31,10 +29,8 @@ export default function IPhoneShell({ children }: { children: ReactNode }) {
   // null = not yet known (SSR-safe); lock only on the session's
   // first visit.
   const [locked, setLocked] = useState<boolean | null>(null);
-  const [ccOpen, setCcOpen] = useState(false);
   // The tapped icon's viewport center — the app's zoom origin.
   const [appOrigin, setAppOrigin] = useState<{ x: number; y: number } | null>(null);
-  const ccTouchStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     setLocked(window.sessionStorage.getItem("ios-unlocked") !== "1");
@@ -60,40 +56,11 @@ export default function IPhoneShell({ children }: { children: ReactNode }) {
 
   return (
     <>
-      {/* Control Center gesture hotspot — top-right corner strip.
-          A downward swipe of 40px+ opens the panel. Only the corner
-          region, so it never fights page scrolling. */}
-      {!locked && (
-        <div
-          onPointerDown={(e) => {
-            ccTouchStart.current = { x: e.clientX, y: e.clientY };
-          }}
-          onPointerMove={(e) => {
-            const s = ccTouchStart.current;
-            if (s && e.clientY - s.y > 40) {
-              ccTouchStart.current = null;
-              setCcOpen(true);
-            }
-          }}
-          onPointerUp={() => {
-            ccTouchStart.current = null;
-          }}
-          style={{
-            position: "fixed",
-            top: 0,
-            right: 0,
-            width: "45%",
-            height: "34px",
-            zIndex: 950,
-            touchAction: "none",
-          }}
-        />
-      )}
-
       {!locked && <IOSStatusBar variant="default" />}
 
       {/* Home vs app: the shell owns this swap so the zoom plays. */}
       {!locked && isHome && <HomeScreen onOpenApp={openApp} />}
+      {!locked && isHome && <ShellMascot variant="phone" />}
 
       <AnimatePresence>
         {!locked && !isHome && (
@@ -167,8 +134,6 @@ export default function IPhoneShell({ children }: { children: ReactNode }) {
       )}
 
       <AnimatePresence>{locked && <LockScreen onUnlock={unlock} />}</AnimatePresence>
-
-      <IOSControlCenter open={ccOpen} onClose={() => setCcOpen(false)} />
     </>
   );
 }

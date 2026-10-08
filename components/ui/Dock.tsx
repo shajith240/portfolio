@@ -5,7 +5,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useShellMetrics } from "@/lib/useShellMetrics";
-import { useWindowManager } from "@/contexts/WindowManagerContext";
+import { useWindowManager, DOCK_RECT_KEY } from "@/contexts/WindowManagerContext";
 import { NAV_ITEMS } from "@/data/nav";
 import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
 
@@ -20,9 +20,6 @@ import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
    dsa.icns/dsa.png also exist but aren't used by any Dock slot. */
 
 const ICON_FILE: Record<string, string> = {
-  finder: "finder",
-  credits: "notes",
-  vscode: "vscode",
   "/about": "contact",
   "/projects": "projects",
   "/skills": "skills",
@@ -37,7 +34,7 @@ const ICON_FILE: Record<string, string> = {
 /* Real profile links (data/nav.ts and CommandPalette.tsx both already
    point here) — these open the actual external profile in a new tab,
    same as real macOS opening a web link from an app, not an internal
-   window. "external:*" is a sentinel href, like Finder's, that never
+   window. "external:*" is a sentinel href that never
    collides with a real window route so isActive/registerDockIconEl
    stay correct for free. LeetCode username matches the hardcoded
    fallback in app/api/leetcode/route.ts. */
@@ -47,26 +44,29 @@ const EXTERNAL_LINKS: { href: string; label: string; url: string }[] = [
   { href: "external:leetcode", label: "LeetCode", url: "https://leetcode.com/u/shajith240/" },
 ];
 
-/* Finder is a permanent Dock item, always leftmost, same as real macOS
-   — it isn't a NAV_ITEMS entry (those are real routed pages; Finder's
-   route is the "finder" sentinel handled by WindowManagerContext) but
-   it shares the exact same magnification physics, so it's folded into
-   one combined list below rather than rendered as a separate,
-   un-magnified icon. Home ("/") is deliberately excluded — the user
-   asked for it removed from the Dock; NAV_ITEMS itself (shared with
-   MobileTabBar/CommandPalette/MenuBar) is left untouched, so mobile
-   nav and the command palette still list Home. External profile links
-   sit last, after a divider, matching where real macOS puts Trash/the
-   Downloads stack — persistent utilities separated from the running
-   apps rather than mixed in with them. */
-const DOCK_ITEMS: { href: string; label: string; isFinder: boolean; isCredits?: boolean; isVSCode?: boolean; external?: string }[] = [
-  { href: "finder", label: "Finder", isFinder: true },
-  ...NAV_ITEMS.filter((item) => item.href !== "/").map((item) => ({ href: item.href, label: item.label, isFinder: false })),
-  // Same sentinel-route treatment as Finder — "credits" is never a real
-  // page, it's the CreditsApp window kind (see WindowManagerContext).
-  { href: "credits", label: "Credits", isFinder: false, isCredits: true },
-  { href: "vscode", label: "VS Code", isFinder: false, isVSCode: true },
-  ...EXTERNAL_LINKS.map((item) => ({ href: item.href, label: item.label, isFinder: false, external: item.url })),
+/* The Dock is deliberately slim — a recruiter skims for ~30s, so only
+   the content windows and the external profiles live here. Projects
+   leads (it's the thing most worth clicking), then the rest of the
+   routed pages in reading order. The order is spelled out here rather
+   than inherited from NAV_ITEMS, which keeps its own order for the
+   mobile tab bar / Spotlight / menu bar. Home ("/") is excluded — the
+   desktop itself is home.
+
+   Finder, Credits and VS Code are NOT in the Dock anymore; they're
+   easter eggs reachable from Spotlight (CommandPalette.tsx). Their
+   windows have no Dock icon to genie into — Window.tsx falls back to
+   the Dock pill itself (registered under DOCK_RECT_KEY below).
+
+   External profile links sit last, after a divider, matching where
+   real macOS puts Trash/the Downloads stack — persistent utilities
+   separated from the running apps rather than mixed in with them. */
+const DOCK_ORDER = ["/projects", "/about", "/skills", "/dsa", "/achievements", "/education"];
+const DOCK_ITEMS: { href: string; label: string; external?: string }[] = [
+  ...DOCK_ORDER.flatMap((href) => {
+    const nav = NAV_ITEMS.find((item) => item.href === href);
+    return nav ? [{ href: nav.href, label: nav.label }] : [];
+  }),
+  ...EXTERNAL_LINKS.map((item) => ({ href: item.href, label: item.label, external: item.url })),
 ];
 const FIRST_EXTERNAL_INDEX = DOCK_ITEMS.length - EXTERNAL_LINKS.length;
 
@@ -95,6 +95,13 @@ const MIN_SCALE = 1;
 const BASE_SPACING = 14;
 const PADDING = 14;
 
+// The pill's resting (un-magnified) footprint — exported so the
+// mascot can line itself up with the Dock's left end without
+// measuring a DOM node that animates its own width every frame.
+export const DOCK_REST_WIDTH = DOCK_ITEMS.length * (BASE_ICON_SIZE + BASE_SPACING) - BASE_SPACING + PADDING * 2;
+export const DOCK_REST_HEIGHT = BASE_ICON_SIZE + 20;
+export const DOCK_BOTTOM = 24;
+
 function targetScales(mouseX: number | null) {
   if (mouseX === null) return DOCK_ITEMS.map(() => MIN_SCALE);
   const minX = mouseX - EFFECT_WIDTH / 2;
@@ -122,7 +129,7 @@ function positionsFromScales(scales: number[]) {
 export default function Dock() {
   const { isDarkTheme } = useTheme();
   const metrics = useShellMetrics();
-  const { windows, openWindow, openFinder, openCredits, openVSCode, registerDockIconEl } = useWindowManager();
+  const { windows, openWindow, registerDockIconEl } = useWindowManager();
 
   const [scales, setScales] = useState<number[]>(() => DOCK_ITEMS.map(() => MIN_SCALE));
   const [positions, setPositions] = useState<number[]>(() => positionsFromScales(DOCK_ITEMS.map(() => MIN_SCALE)));
@@ -220,49 +227,21 @@ export default function Dock() {
   }, [startLoop]);
 
   const handleClick = useCallback(
-    (href: string, label: string, index: number, isFinder: boolean, external?: string, isCredits?: boolean, isVSCode?: boolean) => {
-      // Check if window is already open
-      const isOpen = windows.some((w) => w.route === href);
-
+    (href: string, label: string, index: number, external?: string) => {
       if (external) {
         // External links always open in new tab, no bounce
         window.open(external, "_blank", "noopener,noreferrer");
-      } else if (isFinder) {
-        // Check if Finder is already open
-        const finderOpen = windows.some((w) => w.route === "finder");
-        if (!finderOpen) {
-          // Trigger bounce animation
-          setBounced(index);
-          setTimeout(() => setBounced(null), 700);
-          openFinder();
-        } else {
-          openFinder();
-        }
-      } else if (isCredits) {
-        if (!isOpen) {
-          setBounced(index);
-          setTimeout(() => setBounced(null), 700);
-        }
-        openCredits();
-      } else if (isVSCode) {
-        if (!isOpen) {
-          setBounced(index);
-          setTimeout(() => setBounced(null), 700);
-        }
-        openVSCode();
-      } else {
-        // Regular app window
-        if (!isOpen) {
-          // Trigger bounce animation
-          setBounced(index);
-          setTimeout(() => setBounced(null), 700);
-          openWindow(href, label);
-        } else {
-          openWindow(href, label);
-        }
+        return;
       }
+      // Launch bounce only when the app isn't already running — a
+      // click on a running app just focuses/restores it.
+      if (!windows.some((w) => w.route === href)) {
+        setBounced(index);
+        setTimeout(() => setBounced(null), 700);
+      }
+      openWindow(href, label);
     },
-    [openWindow, openFinder, openCredits, openVSCode, windows]
+    [openWindow, windows]
   );
 
   // Single source of truth for the pill's own width — derived from the
@@ -275,19 +254,20 @@ export default function Dock() {
   const glassBg = isDarkTheme ? "rgba(28, 28, 30, 0.78)" : "rgba(255, 255, 255, 0.78)";
   const glassBorder = isDarkTheme ? "rgba(255, 255, 255, 0.10)" : "rgba(0, 0, 0, 0.06)";
 
-  // Liquid Glass refraction on the slab — applied ONCE at mount +
-  // window resize, deliberately NOT via ResizeObserver: the dock
-  // animates its own width on every magnification frame, and
-  // rebuilding the displacement canvas per frame would be jank. The
-  // percentage-based filter region stretches the map through the
-  // magnification instead.
+  // Liquid Glass on the slab — built ONCE at mount + window resize.
+  // The dock animates its own width on every magnification frame, so
+  // it uses the engine's `stretch: "x"` mode: the map is two end caps
+  // plus a 1px straight-edge column, re-laid-out per frame by
+  // attribute writes, so the lens stays exact at every width without
+  // ever rebuilding the canvas. Press = light only — the real Dock
+  // doesn't squash under a click; its icons do the reacting.
   useEffect(() => {
     const el = dockRef.current;
     if (!el) return;
     const radius = Math.round((BASE_ICON_SIZE + 20) * 0.22);
     // "Clear" variant of the material — Apple uses the lighter recipe
     // (2-3px blur, lower tint) for dock-style floating chrome.
-    const apply = () => applyLiquidGlass(el, { radius, bezel: 13, strength: 0.66, blur: 3, brightness: 0.9, tint: 0.12 });
+    const apply = () => applyLiquidGlass(el, { radius, bezel: 22, strength: 0.7, blur: 2, brightness: 0.95, tint: 0.1, press: "glow", stretch: "x" });
     apply();
     let t: ReturnType<typeof setTimeout> | undefined;
     const onResize = () => {
@@ -303,13 +283,21 @@ export default function Dock() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The pill itself is registered as the genie fallback target for
+  // windows that have no icon of their own here (Finder/Credits/VS
+  // Code, opened from Spotlight) — see Window.tsx's handleMinimize.
+  useEffect(() => {
+    registerDockIconEl(DOCK_RECT_KEY, dockRef.current);
+    return () => registerDockIconEl(DOCK_RECT_KEY, null);
+  }, [registerDockIconEl]);
+
   return (
     <motion.div
       animate={{ left: `${metrics.contentLeft}px`, right: `${metrics.inset}px` }}
       transition={{ type: "spring", stiffness: 520, damping: 44, mass: 0.85 }}
       style={{
         position: "fixed",
-        bottom: "24px",
+        bottom: `${DOCK_BOTTOM}px`,
         zIndex: 90,
         display: "flex",
         justifyContent: "center",
@@ -374,7 +362,7 @@ export default function Dock() {
               )}
               <div
               ref={(el) => registerDockIconEl(item.href, el)}
-              onClick={() => handleClick(item.href, item.label, i, item.isFinder, item.external, item.isCredits, item.isVSCode)}
+              onClick={() => handleClick(item.href, item.label, i, item.external)}
               onMouseEnter={() => setHoveredIndex(i)}
               onMouseLeave={() => setHoveredIndex(null)}
               title={item.label}

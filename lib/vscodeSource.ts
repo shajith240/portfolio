@@ -12,7 +12,6 @@ const EXCLUDED_EXACT_FILES = new Set([
 ]);
 const EXCLUDED_PATH_PREFIXES = [
   "public/icons/",
-  "public/songs/",
   "public/wallpapers/",
   "public/motivation_quotes/",
 ];

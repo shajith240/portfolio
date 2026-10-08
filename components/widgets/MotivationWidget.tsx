@@ -13,7 +13,7 @@ import type { WidgetSize } from "@/lib/widgetLayoutSchema";
    (public/motivation_quotes — drop a file in, it joins the cycle),
    advancing every 5 minutes with a crossfade. */
 
-// Shared entrance spring (same as NowPlayingWidget/LocationWidget) —
+// Shared entrance spring (same as LocationWidget) —
 // one motion signature across the widget family.
 const ENTRANCE_SPRING = { type: "spring", stiffness: 520, damping: 44, mass: 0.85, restDelta: 0.01 } as const;
 

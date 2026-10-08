@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { motion } from "framer-motion";
-import { SONGS, WALLPAPERS, MOTIVATION_IMAGES, ICON_CREDITS, FONT_CREDITS, WALLPAPER_NOTE } from "@/data/credits";
+import { WALLPAPERS, MOTIVATION_IMAGES, ICON_CREDITS, FONT_CREDITS, WALLPAPER_NOTE } from "@/data/credits";
 
 /* Rendered directly inside a Window body (see Window.tsx, kind
    "credits") — never an iframe of a real route, same treatment as
@@ -116,32 +116,13 @@ export default function CreditsApp() {
             lineHeight: 1.5,
           }}
         >
-          This is a personal, non-commercial portfolio. Music, artwork, wallpapers, and icons
+          This is a personal, non-commercial portfolio. Artwork, wallpapers, and icons
           used throughout the site remain the property of their original creators and rights
           holders, listed here in full.
         </p>
       </motion.div>
 
       <motion.div variants={container} initial="hidden" animate="show" style={{ display: "flex", flexDirection: "column", gap: "36px" }}>
-        {SONGS.length > 0 && (
-          <motion.div variants={item}>
-            <p style={sectionLabelStyle}>Music</p>
-            <p style={noteStyle}>
-              Every track playable from the Now Playing widget, with title, artist, cover art,
-              and lyrics credited to their original artists and labels. Used here for personal
-              expression only — no commercial use, all rights reserved by the respective owners.
-            </p>
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              {SONGS.map((s) => (
-                <div key={s.src} style={rowStyle}>
-                  <p style={nameStyle}>{s.title}</p>
-                  <p style={descStyle}>{s.artist || "Unknown artist"}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-
         {WALLPAPERS.length > 0 && (
           <motion.div variants={item}>
             <p style={sectionLabelStyle}>Wallpapers</p>

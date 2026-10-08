@@ -2,25 +2,23 @@
 // — a native window kind, not a routed page; see WindowManagerContext's
 // openCredits).
 //
-// Songs, wallpapers, and motivation-quote images are pulled straight
-// from data/generated/content.ts, which scripts/generate-content.mjs
-// regenerates on every dev/build by scanning public/songs,
-// public/wallpapers, and public/motivation_quotes. Add or remove a
-// file in those folders and the window updates itself automatically —
-// nothing here needs to change.
+// Wallpapers and motivation-quote images are pulled straight from
+// data/generated/content.ts, which scripts/generate-content.mjs
+// regenerates on every dev/build by scanning public/wallpapers and
+// public/motivation_quotes. Add or remove a file in those folders and
+// the window updates itself automatically — nothing here needs to
+// change.
 //
 // Icons and fonts are hand-maintained below since they aren't part of
 // that auto-discovery pipeline. Adding a new dock/tech icon later just
 // means appending one line to ICON_CREDITS.
 
 import {
-  GENERATED_SONGS,
   GENERATED_WALLPAPERS,
   GENERATED_MOBILE_WALLPAPERS,
   GENERATED_MOTIVATION_IMAGES,
 } from "./generated/content";
 
-export const SONGS = GENERATED_SONGS;
 export const WALLPAPERS = [...GENERATED_WALLPAPERS, ...GENERATED_MOBILE_WALLPAPERS];
 export const MOTIVATION_IMAGES = GENERATED_MOTIVATION_IMAGES;
 

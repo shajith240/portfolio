@@ -8,9 +8,13 @@ import { useTheme } from "@/contexts/ThemeContext";
 
 const EMPTY_WINDOWS: never[] = [];
 
-// Mirror the icon mapping from Dock.tsx
+// Mirror the icon mapping from Dock.tsx, plus the Spotlight-only apps
+// (Finder/Credits/VS Code) that no longer have a Dock slot but can
+// still be open and show up here.
 const ICON_FILE: Record<string, string> = {
   finder: "finder",
+  credits: "notes",
+  vscode: "vscode",
   "/about": "contact",
   "/projects": "projects",
   "/skills": "skills",

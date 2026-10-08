@@ -22,48 +22,37 @@ export interface WidgetLayoutEntry {
 
 export type WidgetLayout = Record<WidgetId, WidgetLayoutEntry>;
 
-export const WIDGET_IDS: WidgetId[] = ["photo", "nowPlaying", "aiTools", "location", "motivation"];
+export const WIDGET_IDS: WidgetId[] = ["photo", "aiTools", "location", "motivation"];
 
 // Versioned — a schema change bumps this suffix and simply falls
 // back to defaults for old keys, no migration needed. v4 → v5: the
 // clock widget was removed and replaced by the location widget.
-export const STORAGE_KEY = "portfolio-widget-layout-v5";
+// v5 → v6: the music player (large "nowPlaying" widget) was removed;
+// v5 arrangements were built around its 2×2 footprint and would keep
+// a hole where it sat, so everyone re-seeds from the new defaults.
+export const STORAGE_KEY = "portfolio-widget-layout-v6";
 
 // Default layout in cells — the owner's curated arrangement (made
 // default for every visitor per request): photo small at top-left;
 // a right-side column stack of GitHub heatmap (medium) over
-// location + motivation (two smalls side by side) over the music
-// player (large). Every placement runs through resolveCellCollision
-// in sequence, so the result is collision-free by construction even
-// on narrow lattices where the naive spots would collide.
+// location + motivation (two smalls side by side). Every placement
+// runs through resolveCellCollision in sequence, so the result is
+// collision-free by construction even on narrow lattices where the
+// naive spots would collide.
 //
-// The tall stack needs FOUR rows (heatmap 0, smalls 1, large 2-3).
-// A 27" monitor's lattice has 5-6; a typical laptop viewport
-// (768-864px tall minus MenuBar/Dock reserves) has only 3, where the
-// large widget could never legally sit below the stack — collision
-// resolution scattered it left/down, which is exactly the broken
-// laptop arrangement that was reported. Short lattices therefore get
-// their own curated arrangement: the same widgets laid out
-// HORIZONTALLY along the top-right (large at the right edge, heatmap
-// + smalls beside it), which needs only 2 rows. Same tier sizes,
-// same lattice invariants — only the default placement adapts.
+// The stack needs only TWO rows (heatmap 0, smalls 1), which every
+// realistic lattice has — a typical laptop viewport (768-864px tall
+// minus MenuBar/Dock reserves) has 3, a 27" monitor 5-6 — so one
+// arrangement serves every screen. (The short-lattice horizontal
+// variant only existed to make room for the old 2×2 music player.)
 export function computeDefaultLayout(spec: GridSpec): WidgetLayout {
-  const placements: [WidgetId, WidgetSize, Cell][] =
-    spec.rows >= 4
-      ? [
-          ["photo", "small", { col: 0, row: 0 }],
-          ["aiTools", "medium", { col: spec.cols - 2, row: 0 }],
-          ["location", "small", { col: spec.cols - 2, row: 1 }],
-          ["motivation", "small", { col: spec.cols - 1, row: 1 }],
-          ["nowPlaying", "large", { col: spec.cols - 2, row: 2 }],
-        ]
-      : [
-          ["photo", "small", { col: 0, row: 0 }],
-          ["nowPlaying", "large", { col: Math.max(0, spec.cols - 2), row: 0 }],
-          ["aiTools", "medium", { col: Math.max(0, spec.cols - 4), row: 0 }],
-          ["location", "small", { col: Math.max(0, spec.cols - 4), row: 1 }],
-          ["motivation", "small", { col: Math.max(0, spec.cols - 3), row: 1 }],
-        ];
+  const rightCol = Math.max(0, spec.cols - 2);
+  const placements: [WidgetId, WidgetSize, Cell][] = [
+    ["photo", "small", { col: 0, row: 0 }],
+    ["aiTools", "medium", { col: rightCol, row: 0 }],
+    ["location", "small", { col: rightCol, row: 1 }],
+    ["motivation", "small", { col: rightCol + 1, row: 1 }],
+  ];
 
   const layout = {} as WidgetLayout;
   const occupied: Occupancy[] = [];
@@ -95,7 +84,10 @@ function isValidEntry(value: unknown): value is WidgetLayoutEntry {
 
 // Pure — takes the raw localStorage string (or null), the defaults,
 // and the current lattice spec; returns a fully valid, non-overlapping
-// WidgetLayout. Any missing or malformed per-widget entry falls back
+// WidgetLayout. Only ids in WIDGET_IDS are read — entries for widgets
+// that no longer exist (e.g. "nowPlaying" from before the music
+// player was removed) are silently dropped, never a rejection of the
+// whole layout. Any missing or malformed per-widget entry falls back
 // to that widget's own default individually; every entry is clamped
 // to the lattice and collision-resolved (a layout saved on a wider
 // window may not fit the current column count).

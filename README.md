@@ -65,7 +65,6 @@ app/
 components/
   cards/
     InfoCard.tsx        Sidebar bento card
-    MusicCard.tsx       Now-playing card with progress bar
     ProjectCard.tsx     Full-bleed project image card
   layout/
     AppShell.tsx        Global shell, sidebar + nav + palette

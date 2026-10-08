@@ -8,7 +8,6 @@ import { WindowManagerProvider, useWindowManager } from "@/contexts/WindowManage
 import { usePerformance } from "@/lib/usePerformance";
 import { NAV_ITEMS } from "@/data/nav";
 import Wallpaper from "@/components/layout/Wallpaper";
-import BootSequence from "@/components/boot/BootSequence";
 import MenuBar from "@/components/layout/MenuBar";
 import { WidgetLayoutProvider } from "@/contexts/WidgetLayoutContext";
 import WidgetCanvas from "@/components/widgets/WidgetCanvas";
@@ -16,8 +15,8 @@ import CommandPalette from "@/components/ui/CommandPalette";
 import IPhoneShell from "@/components/mobile/IPhoneShell";
 import Dock from "@/components/ui/Dock";
 import WindowLayer from "@/components/window/WindowLayer";
-import LiquidGlassFilters from "@/components/ui/LiquidGlassFilters";
 import AppSwitcher from "@/components/layout/AppSwitcher";
+import ShellMascot from "@/components/mascot/ShellMascot";
 
 function Shell({ children }: { children: ReactNode }) {
   const { isMobileLayout, isTabletLayout } = useLayout();
@@ -58,13 +57,15 @@ function Shell({ children }: { children: ReactNode }) {
       style={{ color: "var(--text-primary)", background: "var(--bg-page)" }}
     >
       <Wallpaper />
-      <LiquidGlassFilters />
-      <BootSequence />
 
-      {/* Phone layout: the full iPhone experience — lock screen,
-          home-screen icon grid, apps zooming out of their icons,
-          Control Center. Real page navigation underneath (no window
-          system on phones), so it's excluded from the redirect above. */}
+      {/* No boot screen: the desktop (or phone shell) renders on the
+          first frame — recruiters skim in ~30s, so nothing stands
+          between them and the content.
+
+          Phone layout: the full iPhone experience — lock screen,
+          home-screen icon grid, apps zooming out of their icons.
+          Real page navigation underneath (no window system on
+          phones), so it's excluded from the redirect above. */}
       {isPhone ? (
         <>
           <IPhoneShell>{children}</IPhoneShell>
@@ -88,6 +89,7 @@ function Shell({ children }: { children: ReactNode }) {
           {!strayNavItem && children}
           <WindowLayer />
           <AppSwitcher />
+          <ShellMascot variant="desktop" />
           <Dock />
           <CommandPalette />
         </>

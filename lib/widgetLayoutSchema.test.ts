@@ -9,8 +9,11 @@ import {
 } from "./widgetLayoutSchema.ts";
 import { spanForSize, cellsOverlap, type GridSpec } from "./widgetPositioning.ts";
 
-// STORAGE_KEY is v5
-assert.equal(STORAGE_KEY, "portfolio-widget-layout-v5");
+// STORAGE_KEY is v6 (v5 → v6: music player removed)
+assert.equal(STORAGE_KEY, "portfolio-widget-layout-v6");
+
+// The removed music widget is no longer a widget id
+assert.deepEqual(WIDGET_IDS, ["photo", "aiTools", "location", "motivation"]);
 
 // computeDefaultLayout — 7×3 spec from the design doc
 // Verify the exact spec used in the test
@@ -22,30 +25,33 @@ for (const id of WIDGET_IDS) {
   assert.ok(defaultLayout[id], `missing default for ${id}`);
 }
 
-// Photo should be medium at {0, 0}
-assert.equal(defaultLayout.photo.size, "medium");
+// Photo should be small at {0, 0} (top-left)
+assert.equal(defaultLayout.photo.size, "small");
 assert.equal(defaultLayout.photo.col, 0);
 assert.equal(defaultLayout.photo.row, 0);
 
-// NowPlaying should be large at {0, 1}
-assert.equal(defaultLayout.nowPlaying.size, "large");
-assert.equal(defaultLayout.nowPlaying.col, 0);
-assert.equal(defaultLayout.nowPlaying.row, 1);
-
-// AITools should be medium at {5, 0} (cols - 2 = 7 - 2)
+// AITools (GitHub heatmap) should be medium at {5, 0} (cols - 2 = 7 - 2)
 assert.equal(defaultLayout.aiTools.size, "medium");
 assert.equal(defaultLayout.aiTools.col, 5);
 assert.equal(defaultLayout.aiTools.row, 0);
 
-// Location should be small at {6, 1} (cols - 1 = 7 - 1, and row 1)
+// Location should be small at {5, 1}, directly under the heatmap's left half
 assert.equal(defaultLayout.location.size, "small");
-assert.equal(defaultLayout.location.col, 6);
+assert.equal(defaultLayout.location.col, 5);
 assert.equal(defaultLayout.location.row, 1);
 
-// Motivation should be medium at {5, 2} (cols - 2, rows - 1)
-assert.equal(defaultLayout.motivation.size, "medium");
-assert.equal(defaultLayout.motivation.col, 5);
-assert.equal(defaultLayout.motivation.row, 2);
+// Motivation should be small at {6, 1}, beside location
+assert.equal(defaultLayout.motivation.size, "small");
+assert.equal(defaultLayout.motivation.col, 6);
+assert.equal(defaultLayout.motivation.row, 1);
+
+// No legacy entry leaks into the default layout
+assert.equal((defaultLayout as Record<string, unknown>).nowPlaying, undefined);
+
+// A tall lattice gets the very same arrangement (one layout for every
+// screen now that the 2×2 music player is gone)
+const tallSpec: GridSpec = { originX: 83, originY: 64, cols: 7, rows: 6 };
+assert.deepEqual(computeDefaultLayout(tallSpec), defaultLayout);
 
 // Verify no pair overlaps
 function checkNoOverlaps(layout: WidgetLayout) {
@@ -102,19 +108,17 @@ assert.deepEqual(nonJsonResult, defaultLayout);
 // parseStoredLayout — valid entry with negative col falls back to default for that widget
 const negativeCol = JSON.stringify({
   photo: { col: -1, row: 0, size: "medium" },
-  nowPlaying: defaultLayout.nowPlaying,
   aiTools: defaultLayout.aiTools,
   location: defaultLayout.location,
   motivation: defaultLayout.motivation,
 });
 const negColResult = parseStoredLayout(negativeCol, defaultLayout, spec);
 assert.deepEqual(negColResult.photo, defaultLayout.photo);
-assert.deepEqual(negColResult.nowPlaying, defaultLayout.nowPlaying); // other entries preserved
+assert.deepEqual(negColResult.aiTools, defaultLayout.aiTools); // other entries preserved
 
 // parseStoredLayout — valid entry with non-integer col falls back to default for that widget
 const nonIntCol = JSON.stringify({
   photo: { col: 1.5, row: 0, size: "medium" },
-  nowPlaying: defaultLayout.nowPlaying,
   aiTools: defaultLayout.aiTools,
   location: defaultLayout.location,
   motivation: defaultLayout.motivation,
@@ -125,7 +129,6 @@ assert.deepEqual(nonIntResult.photo, defaultLayout.photo);
 // parseStoredLayout — valid entry with bad size falls back to default for that widget
 const badSize = JSON.stringify({
   photo: { col: 0, row: 0, size: "not-a-tier" },
-  nowPlaying: defaultLayout.nowPlaying,
   aiTools: defaultLayout.aiTools,
   location: defaultLayout.location,
   motivation: defaultLayout.motivation,
@@ -136,7 +139,6 @@ assert.deepEqual(badSizeResult.photo, defaultLayout.photo);
 // parseStoredLayout — entry outside lattice gets clamped
 const outOfBounds = JSON.stringify({
   photo: { col: 100, row: 100, size: "medium" },
-  nowPlaying: defaultLayout.nowPlaying,
   aiTools: defaultLayout.aiTools,
   location: defaultLayout.location,
   motivation: defaultLayout.motivation,
@@ -146,10 +148,31 @@ const clampedResult = parseStoredLayout(outOfBounds, defaultLayout, spec);
 assert(clampedResult.photo.col <= spec.cols - spanForSize("medium").cols);
 assert(clampedResult.photo.row <= spec.rows - spanForSize("medium").rows);
 // Other entries should remain unchanged
-assert.deepEqual(clampedResult.nowPlaying, defaultLayout.nowPlaying);
+assert.deepEqual(clampedResult.aiTools, defaultLayout.aiTools);
 
 // parseStoredLayout — clamped entries never overlap with others
 const overlapLayout = parseStoredLayout(outOfBounds, defaultLayout, spec);
 checkNoOverlaps(overlapLayout);
+
+// parseStoredLayout — a layout saved before the music player was
+// removed (still carrying a "nowPlaying" entry) loads fine: the
+// unknown id is dropped, every surviving entry is kept as saved.
+const legacyCustom = {
+  photo: { col: 1, row: 0, size: "medium" },
+  nowPlaying: { col: 3, row: 1, size: "large" },
+  aiTools: { col: 5, row: 0, size: "medium" },
+  location: { col: 0, row: 2, size: "small" },
+  motivation: { col: 6, row: 2, size: "small" },
+};
+const legacyResult = parseStoredLayout(JSON.stringify(legacyCustom), defaultLayout, spec);
+assert.deepEqual(Object.keys(legacyResult).sort(), [...WIDGET_IDS].sort());
+assert.equal((legacyResult as Record<string, unknown>).nowPlaying, undefined);
+assert.deepEqual(legacyResult.photo, legacyCustom.photo);
+assert.deepEqual(legacyResult.aiTools, legacyCustom.aiTools);
+assert.deepEqual(legacyResult.location, legacyCustom.location);
+assert.deepEqual(legacyResult.motivation, legacyCustom.motivation);
+checkNoOverlaps(legacyResult);
+// ...and re-serializing it no longer writes the dead entry back
+assert.equal(JSON.parse(serializeLayout(legacyResult)).nowPlaying, undefined);
 
 console.log("widgetLayoutSchema: all assertions passed");

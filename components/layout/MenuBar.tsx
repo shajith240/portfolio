@@ -5,8 +5,6 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
-import ControlCenter from "@/components/layout/ControlCenter";
-import NotificationCenter from "@/components/layout/NotificationCenter";
 import { applyLiquidGlass, releaseLiquidGlass, useLiquidGlass } from "@/lib/liquidGlass";
 
 /* macOS menu bar — Tahoe dark mode, and every item WORKS. No fake
@@ -20,8 +18,10 @@ import { applyLiquidGlass, releaseLiquidGlass, useLiquidGlass } from "@/lib/liqu
    - Menu behavior is real macOS: click opens, hovering another title
      while one is open switches to it, Escape/outside click closes,
      menu rows highlight with the system-blue fill.
-   - Right: Wi-Fi + battery glyphs and the clock in Apple's exact
-     menu-bar format: "Sun Jul 5  12:10 PM" — one line, no comma. */
+   - Right: Wi-Fi + battery glyphs, the Spotlight trigger, and the
+     clock in Apple's exact menu-bar format: "Sun Jul 5  12:10 PM" —
+     one line, no comma. The clock is plain text, not a button: there
+     is no Notification Center (or Control Center) behind it. */
 
 const BAR_HEIGHT = 24;
 const ACCENT = "#0a84ff";
@@ -139,7 +139,7 @@ const SearchGlyph = () => (
 
 // Owns its own 15s tick — previously this state lived in MenuBar itself,
 // so every tick re-rendered the entire bar (menus array rebuilt, frontmost
-// recomputed, ControlCenter/NotificationCenter re-diffed) just to update
+// recomputed) just to update
 // this one text node. Isolated here, only this span re-renders every 15s.
 function Clock() {
   const [clock, setClock] = useState("");
@@ -160,7 +160,6 @@ export default function MenuBar() {
   // itself relative to its button anymore; the opener measures for it.
   const [openMenu, setOpenMenu] = useState<{ title: string; left: number } | null>(null);
   const [hoveredTitle, setHoveredTitle] = useState<string | null>(null);
-  const [ncOpen, setNcOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
 
   // Liquid Glass on the bar itself (radius 0 — the refraction lives
@@ -169,7 +168,7 @@ export default function MenuBar() {
   useEffect(() => {
     const el = barRef.current;
     if (!el) return;
-    const apply = () => applyLiquidGlass(el, { radius: 0, bezel: 8, strength: 0.5, blur: 5, brightness: 0.88, tint: 0.22 });
+    const apply = () => applyLiquidGlass(el, { radius: 0, bezel: 8, strength: 0.5, blur: 5, brightness: 0.88, tint: 0.22, press: false });
     apply();
     let t: ReturnType<typeof setTimeout> | undefined;
     const onResize = () => {
@@ -377,19 +376,10 @@ export default function MenuBar() {
         >
           <SearchGlyph />
         </button>
-        <ControlCenter />
-        {/* The clock is Notification Center's trigger — the real
-            macOS gesture since Big Sur. */}
-        <button
-          onClick={() => setNcOpen((o) => !o)}
-          // Without this, clicking the clock while the panel is open
-          // would fire the panel's outside-click close first and the
-          // toggle would immediately reopen it.
-          onPointerDown={(e) => e.stopPropagation()}
+        <span
           style={{
-            border: "none",
-            background: ncOpen ? "rgba(255, 255, 255, 0.18)" : "transparent",
-            borderRadius: "5px",
+            // Same box as the old clock button (2px 6px) so the right
+            // cluster keeps its spacing against the bar's 16px edge.
             padding: "2px 6px",
             fontSize: "13px",
             color: "rgba(255, 255, 255, 0.92)",
@@ -399,8 +389,7 @@ export default function MenuBar() {
           }}
         >
           <Clock />
-        </button>
-        <NotificationCenter open={ncOpen} onClose={() => setNcOpen(false)} />
+        </span>
       </div>
     </div>
   );

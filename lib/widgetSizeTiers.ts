@@ -1,7 +1,7 @@
 import { WIDGET_UNIT, WIDGET_MEDIUM_WIDTH } from "./widgetGrid.ts";
 
 export type WidgetSize = "small" | "medium" | "large";
-export type WidgetId = "photo" | "nowPlaying" | "aiTools" | "location" | "motivation";
+export type WidgetId = "photo" | "aiTools" | "location" | "motivation";
 
 export interface SizeDimensions {
   width: number;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
@@ -102,12 +102,46 @@ const GraduationCapIcon = () => (
   </svg>
 );
 
+const FinderIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="4" />
+    <path d="M12 3c-1.5 4-1.5 8 0 12" />
+    <path d="M8 9v1M16 9v1" />
+    <path d="M7.5 15.5c2.5 1.8 6.5 1.8 9 0" />
+  </svg>
+);
+
+const NoteIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14,2 14,8 20,8" />
+    <path d="M8 13h8M8 17h5" />
+  </svg>
+);
+
+const EditorIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <polyline points="7,10 10,13 7,16" />
+    <path d="M13 16h4" />
+  </svg>
+);
+
 /* ─── data ──────────────────────────────────────────────────────── */
 
 const QUICK_ACTIONS = [
   { id: "github",   label: "GitHub",   hint: "Open source profile",  icon: <GithubIcon />,   href: "https://github.com/shajith240" },
   { id: "linkedin", label: "LinkedIn", hint: "Professional profile",  icon: <LinkedinIcon />, href: "https://linkedin.com/in/shajith240" },
   { id: "email",    label: "Email",    hint: "Get in touch",          icon: <MailIcon />,     href: "mailto:shajith240@gmail.com" },
+];
+
+/* Apps that no longer have a Dock slot (the Dock was slimmed to the
+   content windows + profiles) but stay reachable here as easter eggs.
+   Desktop-only — phones have no window system to open them in. */
+const APP_ITEMS = [
+  { id: "app:finder",  label: "Finder",  hint: "Browse the file system", icon: <FinderIcon />, href: "finder" },
+  { id: "app:credits", label: "Credits", hint: "Who and what built this", icon: <NoteIcon />,   href: "credits" },
+  { id: "app:vscode",  label: "VS Code", hint: "Read the source",        icon: <EditorIcon />, href: "vscode" },
 ];
 
 const NAV_ICONS: Record<string, React.ReactNode> = {
@@ -130,8 +164,8 @@ type AnyItem = {
   hint?: string;
   icon: React.ReactNode;
   href: string;
-  section: "Quick Actions" | "Navigation";
-  type: "action" | "nav";
+  section: "Quick Actions" | "Navigation" | "Apps";
+  type: "action" | "nav" | "app";
 };
 
 /* ─── Section label — Spotlight style: 11px semibold sentence-case
@@ -262,7 +296,7 @@ function Hairline() {
 
 export default function CommandPalette() {
   const { isSearchOpen, openSearch, closeSearch, isMobileLayout, isTabletLayout } = useLayout();
-  const { openWindow } = useWindowManager();
+  const { openWindow, openFinder, openCredits, openVSCode } = useWindowManager();
   const router = useRouter();
   const isPhone = isMobileLayout && !isTabletLayout;
   const [query, setQuery] = useState("");
@@ -273,15 +307,20 @@ export default function CommandPalette() {
   // hook in this component would run before the node exists and
   // never apply (that was the fully-transparent-Spotlight bug).
   const panelNode = useRef<HTMLDivElement | null>(null);
-  const attachPanelGlass = (el: HTMLDivElement | null) => {
+  // Stable identity: a fresh callback per render would make React
+  // detach (null) and re-attach it on every keystroke, tearing the
+  // glass down and re-materializing it each time.
+  const attachPanelGlass = useCallback((el: HTMLDivElement | null) => {
     if (el) {
       panelNode.current = el;
-      applyLiquidGlass(el, { radius: 24, bezel: 14, strength: 0.6, blur: 5, brightness: 0.88, tint: 0.3 });
+      // autoResize: the panel's height follows its result list, and the
+      // lens has to follow the rim.
+      applyLiquidGlass(el, { radius: 24, bezel: 14, strength: 0.6, blur: 5, brightness: 0.88, tint: 0.3, autoResize: true });
     } else if (panelNode.current) {
       releaseLiquidGlass(panelNode.current);
       panelNode.current = null;
     }
-  };
+  }, []);
   const activeRef = useRef<HTMLDivElement>(null);
 
   const allItems: AnyItem[] = useMemo(() => [
@@ -295,7 +334,8 @@ export default function CommandPalette() {
       section: "Navigation" as const,
       type: "nav" as const,
     })),
-  ], []);
+    ...(isPhone ? [] : APP_ITEMS.map((a) => ({ ...a, section: "Apps" as const, type: "app" as const }))),
+  ], [isPhone]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -356,7 +396,11 @@ export default function CommandPalette() {
   function handleSelect(item: AnyItem | undefined) {
     if (!item) return;
     closeSearch();
-    if (item.type === "nav") {
+    if (item.type === "app") {
+      if (item.href === "finder") openFinder();
+      else if (item.href === "credits") openCredits();
+      else if (item.href === "vscode") openVSCode();
+    } else if (item.type === "nav") {
       // Desktop: open the page as a WINDOW, exactly like the Dock and
       // menu bar do. router.push here navigated the whole top-level
       // page to /about, tearing down the entire desktop (wallpaper,

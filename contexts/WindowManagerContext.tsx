@@ -78,6 +78,13 @@ function clampPosition(x: number, y: number, width: number) {
   };
 }
 
+// Key the Dock registers its own pill element under (via
+// registerDockIconEl) — a sentinel, like "finder"/"external:*", that
+// can never collide with a real window route. Windows whose app has no
+// Dock icon (Finder/Credits/VS Code are Spotlight-only easter eggs)
+// minimize toward this rect instead of collapsing in place.
+export const DOCK_RECT_KEY = "dock:pill";
+
 export function WindowManagerProvider({ children }: { children: ReactNode }) {
   const [windows, setWindows] = useState<WindowState[]>([]);
   const topZIndexRef = useRef(100);

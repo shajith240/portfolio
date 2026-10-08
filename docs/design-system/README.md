@@ -4,7 +4,7 @@ This directory replaces the old `MASTER.md`. It's the detailed reference for the
 
 | Doc | Read it when you're... |
 |---|---|
-| [`materials-glass.md`](./materials-glass.md) | touching any floating/glass surface — dock, modals, toolbars, overlays, card hover states |
+| [`materials-glass.md`](./materials-glass.md) | touching any floating/glass surface — the Liquid Glass engine (`lib/liquidGlass.ts`) and its options, press modes, browser tiers, accessibility, `--lg-*` variables, composition rules |
 | [`typography.md`](./typography.md) | setting any font-size, weight, or letter-spacing |
 | [`motion.md`](./motion.md) | writing a Framer Motion `transition` or `variants` block |
 | [`layout.md`](./layout.md) | setting spacing, breakpoints, corner radii, or working on responsive behavior |

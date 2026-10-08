@@ -2,7 +2,7 @@
 
 import { memo, useRef, useEffect, useState } from "react";
 import { motion, useMotionValue, useDragControls, animate } from "framer-motion";
-import { useWindowManager, getPositionBounds, TOP_BOUND, type WindowState } from "@/contexts/WindowManagerContext";
+import { useWindowManager, getPositionBounds, TOP_BOUND, DOCK_RECT_KEY, type WindowState } from "@/contexts/WindowManagerContext";
 import { genieClipPath } from "@/lib/genieClipPath";
 import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
 import FinderApp from "@/components/window/FinderApp";
@@ -184,7 +184,18 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
     const el = glassLayerRef.current;
     if (!el) return;
     let t: ReturnType<typeof setTimeout> | undefined;
-    const apply = () => applyLiquidGlass(el, { radius: 12, bezel: 12, strength: 0.55, blur: 5, brightness: 0.9, tint: 0.13 });
+    const apply = () => applyLiquidGlass(el, {
+        radius: 12,
+        bezel: 12,
+        strength: 0.55,
+        blur: 5,
+        brightness: 0.9,
+        tint: 0.13,
+        press: false,
+        // The visible rim is the sibling .lg-rim overlay — light
+        // variables go on the shared window root so it inherits them.
+        lightHost: "parent",
+      });
     // Deferred until AFTER the genie open animation completes — the
     // displacement-map build is an O(width×height) per-pixel loop plus
     // a synchronous canvas encode. Running it during the genie's first
@@ -195,7 +206,15 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
     // imperceptible; observer-driven rebuilds keep the existing 120ms
     // settle debounce.
     const initial = setTimeout(apply, GENIE_DURATION * 1000 + 80);
+    // The observer's initial notification fires right away — skip it,
+    // or it schedules the heavy first build mid-genie, defeating the
+    // deferral above.
+    let seen = false;
     const ro = new ResizeObserver(() => {
+      if (!seen) {
+        seen = true;
+        return;
+      }
       if (t) clearTimeout(t);
       t = setTimeout(apply, 120);
     });
@@ -290,6 +309,10 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
       const OPEN_TWEEN = { duration: 0.32, ease: [0.32, 0.72, 0, 1] } as const;
       scale.set(0.92);
       opacity.set(0);
+      // No genie here, so the funnel must start (and stay) unfurled —
+      // the next minimize animates genieProgress from this value.
+      genieProgress.set(0);
+      clipPathStr.set(genieClipPath(0));
       animate(scale, 1, OPEN_TWEEN);
       animate(opacity, 1, OPEN_TWEEN);
       setClipActive(false);
@@ -328,7 +351,13 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
 
   const handleMinimize = () => {
     setClipActive(true);
-    const iconRect = getDockIconRect(win.route);
+    // Apps without a Dock icon (Finder/Credits/VS Code — Spotlight-only
+    // easter eggs) genie into the Dock pill's center instead. Only if
+    // the Dock isn't mounted at all does genieTarget's null branch
+    // collapse the window in place. The OPEN path deliberately keeps
+    // using the icon-only lookup: a Spotlight launch should play the
+    // standard open, not unfurl out of the middle of the Dock.
+    const iconRect = getDockIconRect(win.route) ?? getDockIconRect(DOCK_RECT_KEY);
     const target = genieTarget(iconRect);
     animate(x, target.x, GENIE_TWEEN);
     animate(y, target.y, GENIE_TWEEN);
@@ -533,7 +562,15 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
         scale,
         transformOrigin: "50% 100%",
         opacity,
-        ...(clipActive ? { clipPath: clipPathStr, WebkitClipPath: clipPathStr } : {}),
+        // Explicit "none" when inactive, not an omitted key: Framer
+        // writes motion values straight to the DOM and does NOT clear
+        // them when the key later disappears from `style`, so omitting
+        // it left whatever polygon was last written stuck on the node —
+        // for a window opened without a Dock icon (standard open, no
+        // genie) that was genieClipPath(1), the fully collapsed funnel.
+        ...(clipActive
+          ? { clipPath: clipPathStr, WebkitClipPath: clipPathStr }
+          : { clipPath: "none", WebkitClipPath: "none" }),
         zIndex: win.zIndex,
         borderRadius: "12px",
         overflow: "hidden",

@@ -24,12 +24,11 @@ assert.deepEqual(ALL_SIZES, ["small", "medium", "large"]);
 assert.deepEqual(getSizeDimensions("photo", "small"), { width: 170, height: 170 });
 assert.deepEqual(getSizeDimensions("photo", "medium"), { width: 354, height: 170 });
 assert.deepEqual(getSizeDimensions("photo", "large"), { width: 354, height: 354 });
-assert.deepEqual(getSizeDimensions("nowPlaying", "large"), { width: 354, height: 354 });
+assert.deepEqual(getSizeDimensions("aiTools", "large"), { width: 354, height: 354 });
 assert.deepEqual(getSizeDimensions("motivation", "small"), { width: 170, height: 170 });
 
 // supportedSizes — every widget supports all three sizes
 assert.deepEqual(supportedSizes("photo"), ["small", "medium", "large"]);
-assert.deepEqual(supportedSizes("nowPlaying"), ["small", "medium", "large"]);
 assert.deepEqual(supportedSizes("aiTools"), ["small", "medium", "large"]);
 assert.deepEqual(supportedSizes("location"), ["small", "medium", "large"]);
 assert.deepEqual(supportedSizes("motivation"), ["small", "medium", "large"]);

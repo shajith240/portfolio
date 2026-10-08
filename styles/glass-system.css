@@ -1,7 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
-   GLASS SYSTEM — themeable glassmorphism for kalyp.so portfolio.
-   All color values reference CSS variables from globals-tokens.css.
-   Light/dark switching happens automatically via data-theme on <html>.
+   LIQUID GLASS — the CSS half of the material (lib/liquidGlass.ts is
+   the other half). Imported from app/layout.tsx.
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
@@ -9,66 +8,98 @@
 }
 
 /* ── LIQUID GLASS finishing layers ──
-   Pairs with lib/liquidGlass.ts (which owns the backdrop refraction,
-   tint and blur inline). These pseudo-elements add what a filter
-   can't: the DIRECTIONAL rim light — bright top-left, fading, faint
-   return at the bottom (against dark wallpapers this rim is what
-   separates glass from background) — and a soft gloss sweep of
-   light entering the top surface. Adapted from the reference
-   implementation the material was cross-checked against. */
+   Pairs with lib/liquidGlass.ts, which owns the backdrop (refraction,
+   colour rim, blur, tint) inline, and drives the press variables on
+   every glass surface (.lg-surface) — no React renders involved:
+
+     --lg-glow   0..1, press illumination strength
+     --lg-gx/gy  where the press landed;  --lg-gr  how far the glow spread
+
+   The light itself is FIXED, up and to the left (--lg-angle, -60deg,
+   the same key light the engine bakes into its colour rim). It does
+   not follow a hovering cursor: Apple's lights move on interaction,
+   and on macOS a widget's edge never shimmers as the pointer passes.
+   Kept in CSS (not only the SVG filter) so Safari/Firefox, which
+   can't refract, still get the glint. */
+.lg-surface {
+  --lg-angle: -60deg;
+  --lg-glow: 0;
+  --lg-gr: 0;
+  --lg-gx: 50%;
+  --lg-gy: 50%;
+}
 .liquid-glass {
   position: relative;
   isolation: isolate;
-  /* BASE MATERIAL IN PURE CSS — the refraction engine
-     (lib/liquidGlass.ts) overrides these two properties inline once
-     it runs, but that happens an effect + displacement-map build
-     after the element first paints. Without this base, that gap
-     painted the surface fully transparent and the glass visibly
-     "popped in" (the reported latency). With it, frame one already
-     carries the same blur/tint family the engine will refine, so the
-     upgrade to real refraction is imperceptible. */
+  /* BASE MATERIAL IN PURE CSS — the engine overrides these two
+     properties inline once it runs (a layout effect + map build after
+     first paint). This base means frame one already carries the same
+     material family, so the upgrade is imperceptible. */
   background: linear-gradient(rgba(var(--wallpaper-tint-rgb), 0.1), rgba(var(--wallpaper-tint-rgb), 0.1)), rgba(18, 20, 28, 0.18);
-  backdrop-filter: blur(4px) saturate(1.5) brightness(0.9) contrast(1.05);
-  -webkit-backdrop-filter: blur(4px) saturate(1.5) brightness(0.9) contrast(1.05);
-  /* Dark-mode Liquid Glass rims are subtle — a bright hard rim is one
-     of the classic frosted-glass giveaways. Sharp hairline + tight
-     shadows, not glow. */
+  backdrop-filter: blur(8px) saturate(1.5) brightness(0.9) contrast(1.05);
+  -webkit-backdrop-filter: blur(8px) saturate(1.5) brightness(0.9) contrast(1.05);
+  /* Inner light: a crisp top lip where the slab catches light, and a
+     soft shade pooling at the bottom of its thickness. */
   box-shadow:
-    inset 0 1px 0.5px rgba(255, 255, 255, 0.22),
-    inset 0 -1px 0.5px rgba(255, 255, 255, 0.06),
-    0 12px 32px rgba(0, 0, 0, 0.45),
-    0 2px 8px rgba(0, 0, 0, 0.32),
-    0 0 0 0.5px rgba(255, 255, 255, 0.05);
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -10px 24px rgba(0, 0, 0, 0.1),
+    0 12px 32px rgba(0, 0, 0, 0.42),
+    0 2px 8px rgba(0, 0, 0, 0.28);
 }
-.liquid-glass::before {
+.liquid-glass::before,
+.lg-rim::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
   padding: 1px;
   pointer-events: none;
-  background: linear-gradient(
-    150deg,
-    rgba(255, 255, 255, 0.42) 0%,
-    rgba(255, 255, 255, 0.1) 24%,
-    rgba(255, 255, 255, 0.02) 50%,
-    rgba(255, 255, 255, 0) 70%,
-    rgba(255, 255, 255, 0.13) 100%
+  /* A glint, not a stroke. Apple's edge is light catching a curved
+     rim: a short bright arc where it faces the (fixed, top-left) light, a
+     fainter return where light exits opposite, and almost
+     nothing along the flanks. The previous version kept ~0.5 white
+     around the whole ring, which read as a drawn white line.
+     plus-lighter ADDS light to what's under it (the refracted
+     backdrop) instead of painting white over it, so the glint takes
+     the colour of the wallpaper behind — on Chromium the filter's
+     own colour rim (lib/liquidGlass.ts) does the heavy lifting and
+     this only adds a faint glint. */
+  background: conic-gradient(
+    from var(--lg-angle, -60deg),
+    rgba(255, 255, 255, 0.2) 0deg,
+    rgba(255, 255, 255, 0.05) 32deg,
+    rgba(255, 255, 255, 0) 70deg,
+    rgba(255, 255, 255, 0) 140deg,
+    rgba(255, 255, 255, 0.06) 180deg,
+    rgba(255, 255, 255, 0) 220deg,
+    rgba(255, 255, 255, 0) 290deg,
+    rgba(255, 255, 255, 0.05) 328deg,
+    rgba(255, 255, 255, 0.2) 360deg
   );
+  mix-blend-mode: plus-lighter;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   z-index: 1;
 }
-.liquid-glass::after {
+/* Gloss on the top surface + the press glow radiating from the touch
+   point. `screen` keeps both additive light, never a grey wash. */
+.liquid-glass::after,
+.lg-rim::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 38%);
+  background:
+    radial-gradient(
+      circle at var(--lg-gx, 50%) var(--lg-gy, 50%),
+      rgba(255, 255, 255, calc(0.3 * var(--lg-glow, 0))) 0%,
+      rgba(255, 255, 255, calc(0.12 * var(--lg-glow, 0))) calc(var(--lg-gr, 0) * 55%),
+      rgba(255, 255, 255, 0) calc(var(--lg-gr, 0) * 100%)
+    ),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0) 36%);
   mix-blend-mode: screen;
-  opacity: 0.9;
   z-index: 1;
 }
 .liquid-glass > * {
@@ -79,192 +110,31 @@
 /* ── LIQUID GLASS RIM OVERLAY ──
    For surfaces whose CONTENT covers the .liquid-glass pseudo-elements
    (windows, Finder — an opaque titlebar + body sits over the backdrop
-   layer, hiding its rim/gloss). Drop this as a sibling ABOVE the
-   content, pointer-events none: it carries ONLY the directional rim
-   light + top gloss (no box-shadow — the window already owns its
-   float shadow), so the glass edge reads as real Liquid Glass instead
-   of a flat translucent pane. Set border-radius to match the host. */
+   layer). Drop this as a sibling ABOVE the content, pointer-events
+   none: it carries only the rim light and gloss/glow (sharing the
+   rules above), reading the --lg-* variables it inherits from the
+   glass surface it sits in. Set border-radius to match the host. */
 .lg-rim {
   position: absolute;
   inset: 0;
   pointer-events: none;
   border-radius: inherit;
 }
-.lg-rim::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1.25px;
-  background: linear-gradient(
-    150deg,
-    rgba(255, 255, 255, 0.46) 0%,
-    rgba(255, 255, 255, 0.13) 22%,
-    rgba(255, 255, 255, 0.03) 48%,
-    rgba(255, 255, 255, 0) 68%,
-    rgba(255, 255, 255, 0.16) 100%
-  );
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-}
-.lg-rim::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.11) 0%, rgba(255, 255, 255, 0) 34%);
-  mix-blend-mode: screen;
-  opacity: 0.85;
-}
 
-/* ── PAGE BACKGROUND ── */
-.glass-page {
-  min-height: 100%;
-  width: 100%;
-  position: relative;
-  overflow-y: auto;
-  scrollbar-width: none;
-  background: var(--glass-page-bg);
-}
-
-.glass-page::-webkit-scrollbar {
-  display: none;
-}
-
-/* ── GLASS CARD ── */
-/* Apple material — adapts: dark glass / light frosted card */
-.glass-card {
-  background: linear-gradient(rgba(var(--wallpaper-tint-rgb), 0.07), rgba(var(--wallpaper-tint-rgb), 0.07)), var(--glass-card-bg);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-radius: 18px;
-  border: 1px solid var(--glass-card-border);
-  box-shadow: var(--glass-card-shadow);
-}
-
-/* ── GLASS CARD — ELEVATED (hero/featured cards) ── */
-.glass-card-elevated {
-  background: linear-gradient(rgba(var(--wallpaper-tint-rgb), 0.07), rgba(var(--wallpaper-tint-rgb), 0.07)), var(--glass-elevated-bg);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
-  border-radius: 20px;
-  border: 1px solid var(--glass-elevated-border);
-  box-shadow: var(--glass-elevated-shadow);
-}
-
-/* ── GLASS CARD — ACCENT (orange-tinted) ── */
-.glass-card-accent {
-  background: linear-gradient(rgba(var(--wallpaper-tint-rgb), 0.07), rgba(var(--wallpaper-tint-rgb), 0.07)), var(--glass-accent-bg);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-radius: 18px;
-  border: 1px solid var(--glass-accent-border);
-  box-shadow: var(--glass-accent-shadow);
-}
-
-/* ── GLASS SEPARATOR ── */
-.glass-divider {
-  height: 1px;
-  background: var(--glass-divider-gradient);
-  border: none;
-  margin: 0;
-}
-
-/* ── TAB BAR ── */
-.glass-tabs {
-  background: linear-gradient(rgba(var(--wallpaper-tint-rgb), 0.07), rgba(var(--wallpaper-tint-rgb), 0.07)), var(--glass-tabs-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-tabs-border);
-  border-radius: 999px;
-  padding: 4px;
-  display: inline-flex;
-  gap: 2px;
-  box-shadow: var(--glass-tabs-shadow);
-}
-
-.glass-tab-active {
-  background: #0a84ff; /* macOS systemBlue (dark) — accent, no orange anywhere */
-  color: white;
-  border-radius: 999px;
-  padding: 7px 20px;
-  font-size: 13px;
-  font-weight: 500;
-  border: none;
-  outline: none;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(10, 132, 255, 0.4);
-  font-family: system-ui, -apple-system, 'Helvetica Neue', sans-serif;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.glass-tab-inactive {
-  background: transparent;
-  color: var(--glass-tab-text);
-  border-radius: 999px;
-  padding: 7px 20px;
-  font-size: 13px;
-  font-weight: 400;
-  border: none;
-  outline: none;
-  cursor: pointer;
-  transition: color 150ms ease;
-  font-family: system-ui, -apple-system, 'Helvetica Neue', sans-serif;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.glass-tab-inactive:hover {
-  color: var(--glass-tab-text-hover);
-}
-
-/* ── PERFORMANCE: disable expensive blur on low-end / reduced-motion ── */
-@media (prefers-reduced-motion: reduce) {
-  .glass-card,
-  .glass-card-elevated,
-  .glass-card-accent,
-  .glass-tabs {
+/* Accessibility: "Reduce transparency" (Chromium honours the media
+   query) — glass becomes a near-opaque slab, as Apple's setting does. */
+@media (prefers-reduced-transparency: reduce) {
+  .lg-surface,
+  .liquid-glass {
+    background: rgba(28, 28, 32, 0.92) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
 }
-
-html.perf-reduced .glass-card,
-html.perf-reduced .glass-card-elevated,
-html.perf-reduced .glass-card-accent,
-html.perf-reduced .glass-tabs {
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
-}
-
-html.perf-minimal .glass-card,
-html.perf-minimal .glass-card-elevated,
-html.perf-minimal .glass-card-accent,
-html.perf-minimal .glass-tabs {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-/* ── TYPOGRAPHY ON GLASS ── */
-.glass-value {
-  color: var(--glass-value-color);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
-
-.glass-label {
-  color: var(--glass-label-color);
-  font-size: 10px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.10em;
-}
-
-.glass-secondary {
-  color: var(--glass-secondary-color);
-  font-size: 13px;
+@media (prefers-contrast: more) {
+  .liquid-glass::before,
+  .lg-rim::before {
+    padding: 1.5px;
+    background: rgba(255, 255, 255, 0.6);
+  }
 }

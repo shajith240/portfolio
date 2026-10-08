@@ -119,7 +119,7 @@ export default function HomeScreen({
   onOpenApp: (app: HomeApp, center: { x: number; y: number }) => void;
 }) {
   const { openSearch } = useLayout();
-  const pillRef = useLiquidGlass<HTMLButtonElement>({ radius: 18, bezel: 9, strength: 0.7, blur: 4, brightness: 0.85, tint: 0.18 });
+  const pillRef = useLiquidGlass<HTMLButtonElement>({ radius: 18, bezel: 9, strength: 0.7, blur: 4, brightness: 0.85, tint: 0.18, press: "squish" });
   const dockRef = useLiquidGlass<HTMLDivElement>({ radius: 34, bezel: 13, strength: 0.66, blur: 5, brightness: 0.82, tint: 0.15 });
 
   return (
@@ -152,7 +152,6 @@ export default function HomeScreen({
         <motion.button
           ref={pillRef}
           className="liquid-glass"
-          whileTap={{ scale: 0.95 }}
           onClick={openSearch}
           style={{
             height: "36px",

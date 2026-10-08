@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Inter, Inter_Tight, Caveat, Borel } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
+// The CSS half of the Liquid Glass material (rim light, gloss, press
+// glow) — pairs with lib/liquidGlass.ts.
+import "../styles/glass-system.css";
 import AppShell from "@/components/layout/AppShell";
 
 // SF Pro Text stand-in on Windows browsers — Inter is closest in
@@ -38,8 +41,8 @@ const caveat = Caveat({
   weight: ["600"],
 });
 
-// Personal wordmark treatment for "Shajith" — the boot-screen mark and
-// the MenuBar app-name slot. Borel only ships weight 400.
+// Personal wordmark treatment for "Shajith" in the MenuBar app-name
+// slot. Borel only ships weight 400.
 const borel = Borel({
   variable: "--font-borel",
   subsets: ["latin"],

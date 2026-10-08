@@ -46,8 +46,8 @@ export function useLongPress(onLongPress: () => void) {
   const onPointerLeave = useCallback(() => clear(), [clear]);
 
   // Suppresses the click that follows a completed long-press, so
-  // holding an interactive child (e.g. NowPlayingWidget's play
-  // button) enters edit mode instead of also firing that child's own
+  // holding an interactive child (e.g. a widget's button or link)
+  // enters edit mode instead of also firing that child's own
   // click action — matches real iOS: a hold enters jiggle mode, only
   // a short tap activates the element.
   const onClickCapture = useCallback((e: React.MouseEvent) => {

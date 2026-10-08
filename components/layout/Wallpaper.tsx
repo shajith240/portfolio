@@ -38,7 +38,6 @@ export default function Wallpaper() {
       // Exclude clicks inside the menu itself — otherwise this
       // mousedown handler closes the menu before the clicked item's
       // own onClick (which fires after mousedown) gets a chance to run.
-      // Same class of bug as the Control Center toggle fix in MenuBar.
       const target = e.target as Element;
       if (target.closest?.("[data-desktop-menu]")) return;
       setMenu(null);

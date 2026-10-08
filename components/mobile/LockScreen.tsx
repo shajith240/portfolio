@@ -32,9 +32,9 @@ const GLASS_BUTTON: React.CSSProperties = {
 };
 
 function LockGlassButton({ children, label }: { children: React.ReactNode; label: string }) {
-  const ref = useLiquidGlass<HTMLButtonElement>({ radius: 26, bezel: 10, strength: 0.7, blur: 5, brightness: 0.8, tint: 0.2 });
+  const ref = useLiquidGlass<HTMLButtonElement>({ radius: 26, bezel: 10, strength: 0.7, blur: 5, brightness: 0.8, tint: 0.2, press: "squish" });
   return (
-    <motion.button ref={ref} className="liquid-glass" whileTap={{ scale: 0.88 }} style={GLASS_BUTTON} aria-label={label}>
+    <motion.button ref={ref} className="liquid-glass" style={GLASS_BUTTON} aria-label={label}>
       {children}
     </motion.button>
   );
