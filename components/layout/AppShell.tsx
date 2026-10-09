@@ -18,6 +18,8 @@ import Dock from "@/components/ui/Dock";
 import WindowLayer from "@/components/window/WindowLayer";
 import AppSwitcher from "@/components/layout/AppSwitcher";
 import ShellMascot from "@/components/mascot/ShellMascot";
+import ExternalLinkSheet from "@/components/ui/ExternalLinkSheet";
+import { interceptExternalAnchors } from "@/lib/externalLink";
 
 // Plain-link route map for screen-reader, keyboard and text-only users, so
 // nothing depends on the desktop metaphor (Dock, windows, Spotlight).
@@ -190,6 +192,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
     setIsEmbedded(window.location.search.includes("__window"));
   }, []);
 
+  // Every external link, in the shell and inside each window's iframe,
+  // goes through the "Open <site>?" sheet (lib/externalLink.ts).
+  useEffect(() => interceptExternalAnchors(document), []);
+
   // The accessible nav renders from the first (server) pass so it's in the
   // HTML crawlers and text browsers get; never inside window iframes.
   if (isEmbedded === null) {
@@ -212,6 +218,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <WindowManagerProvider>
             <Shell>{children}</Shell>
           </WindowManagerProvider>
+          {/* Top level only: requests from window iframes are
+              dispatched up to this window. */}
+          <ExternalLinkSheet />
         </LayoutProvider>
       </ThemeProvider>
     </>

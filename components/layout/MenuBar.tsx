@@ -7,6 +7,7 @@ import { useLayout } from "@/contexts/LayoutContext";
 import { useWindowManager, MENU_BAR_HEIGHT } from "@/contexts/WindowManagerContext";
 import { VISIBLE_NAV_ITEMS } from "@/data/nav";
 import { applyLiquidGlass, releaseLiquidGlass, useLiquidGlass } from "@/lib/liquidGlass";
+import { openExternal } from "@/lib/externalLink";
 
 /* macOS menu bar — Tahoe dark mode, and every item WORKS. No fake
    File/Edit menus, no decorative glyphs: the bar is real navigation
@@ -216,7 +217,7 @@ export default function MenuBar() {
 
   if (isMobileLayout) return null;
 
-  const external = (url: string) => () => window.open(url, "_blank", "noopener,noreferrer");
+  const external = (url: string) => () => openExternal(url);
 
   // Real macOS swaps the bold app-name slot to the frontmost app.
   // Here: the highest-z window's title while any window is open,

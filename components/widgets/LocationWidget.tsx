@@ -6,6 +6,7 @@ import { WIDGET_RADIUS } from "@/lib/widgetGrid";
 import type { WidgetSize } from "@/lib/widgetLayoutSchema";
 import { RAJAHMUNDRY_MAP as MAP } from "@/lib/mapData/rajahmundry";
 import { LOCATION } from "@/data/profile";
+import { openExternal } from "@/lib/externalLink";
 
 /* Location widget — a real, full-bleed dark map of Rajahmundry with
    a location dot on it, in the language of Apple's Maps widget: the
@@ -149,7 +150,7 @@ export default function LocationWidget({ size }: { size: WidgetSize }) {
   const open = (e: React.MouseEvent) => {
     const d = downAt.current;
     if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6) return;
-    window.open(MAPS_URL, "_blank", "noopener,noreferrer");
+    openExternal(MAPS_URL);
   };
 
   return (

@@ -758,3 +758,40 @@ body {
     align-items: start;
   }
 }
+
+/* ── External-link alert (components/ui/ExternalLinkSheet.tsx) ──
+   macOS alert buttons: two equal capsules, grey and accent blue. */
+.ext-btn {
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.18s ease, transform 0.12s ease;
+}
+.ext-btn:active {
+  transform: scale(0.97);
+}
+.ext-btn:focus-visible {
+  outline: 3px solid rgba(10, 132, 255, 0.5);
+  outline-offset: 2px;
+}
+.ext-btn-secondary {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.92);
+}
+.ext-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+.ext-btn-primary {
+  background: #0a84ff;
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.ext-btn-primary:hover {
+  background: #2b95ff;
+}

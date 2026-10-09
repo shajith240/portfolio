@@ -17,6 +17,7 @@ import WidgetViewToggle, {
   WidgetHeader,
   CodeforcesMark,
 } from "@/components/widgets/WidgetViewToggle";
+import { openExternal } from "@/lib/externalLink";
 
 const PROFILE_URL = "https://codeforces.com/profile/shajith240";
 
@@ -334,7 +335,7 @@ export default function CodeforcesWidget({ size }: { size: WidgetSize }) {
   const openProfile = (e: React.MouseEvent) => {
     const d = downAt.current;
     if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6) return;
-    window.open(PROFILE_URL, "_blank", "noopener,noreferrer");
+    openExternal(PROFILE_URL);
   };
 
   const swap = reduceMotion

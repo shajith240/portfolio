@@ -7,6 +7,7 @@ import IOSStatusBar from "@/components/mobile/IOSStatusBar";
 import LockScreen from "@/components/mobile/LockScreen";
 import HomeScreen, { type HomeApp } from "@/components/mobile/HomeScreen";
 import ShellMascot from "@/components/mascot/ShellMascot";
+import { openExternal } from "@/lib/externalLink";
 
 /* The iPhone experience orchestrator (phones only — desktop keeps
    the macOS shell). State machine:
@@ -43,7 +44,7 @@ export default function IPhoneShell({ children }: { children: ReactNode }) {
 
   const openApp = (app: HomeApp, center: { x: number; y: number }) => {
     if (app.external) {
-      window.open(app.external, "_blank", "noopener,noreferrer");
+      openExternal(app.external);
       return;
     }
     if (app.href) {

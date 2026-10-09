@@ -8,6 +8,7 @@ import { useWindowManager } from "@/contexts/WindowManagerContext";
 import { VISIBLE_NAV_ITEMS } from "@/data/nav";
 import { RESUME_URL } from "@/data/profile";
 import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
+import { openExternal } from "@/lib/externalLink";
 
 /* macOS Spotlight (Tahoe, dark mode) — restyled to match the real
    thing, not a generic web command palette. The load-bearing
@@ -419,7 +420,7 @@ export default function CommandPalette() {
         openWindow(item.href, item.label);
       }
     } else {
-      window.open(item.href, "_blank");
+      openExternal(item.href);
     }
   }
 

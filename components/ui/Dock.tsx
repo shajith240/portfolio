@@ -10,6 +10,7 @@ import { NAV_ITEMS, isNavItemVisible } from "@/data/nav";
 import { RESUME_URL } from "@/data/profile";
 import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
 import { mascotTarget } from "@/lib/mascotTargets";
+import { openExternal } from "@/lib/externalLink";
 
 /* ── Icon art — plain /icons/*.png, no clip mask or box-shadow "chip"
    imposed on top (that was the "invisible border" bug — a rectangular
@@ -268,8 +269,8 @@ export default function Dock() {
   const handleClick = useCallback(
     (href: string, label: string, index: number, external?: string) => {
       if (external) {
-        // External links always open in new tab, no bounce
-        window.open(external, "_blank", "noopener,noreferrer");
+        // External links: via the "Open <site>?" sheet, no bounce
+        openExternal(external);
         return;
       }
       // Launch bounce only when the app isn't already running — a
