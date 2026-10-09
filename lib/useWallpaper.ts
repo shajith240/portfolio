@@ -22,7 +22,6 @@ const PHONE_MAX_WIDTH = 640;
 // is centred, the same files crop cleanly to a phone's portrait screen
 // — one list serves both (the phone still remembers its own pick).
 export const WALLPAPERS = GENERATED_WALLPAPERS;
-export const MOBILE_WALLPAPERS = GENERATED_WALLPAPERS;
 
 /* The site wallpaper — the owner's pick, the same for every visitor.
    It lives in data/wallpaper.json (committed). In development, choosing
@@ -225,7 +224,7 @@ export function useWallpaper() {
     // keeping its desktop wallpaper is correct behavior).
     const phone = window.innerWidth < PHONE_MAX_WIDTH;
     setIsPhone(phone);
-    const list = phone ? MOBILE_WALLPAPERS : WALLPAPERS;
+    const list = WALLPAPERS;
     const key = phone ? MOBILE_STORAGE_KEY : STORAGE_KEY;
     // A personal pick only stands while the wallpaper it was made over
     // is still the published one (see PUBLISHED_WALLPAPER above).

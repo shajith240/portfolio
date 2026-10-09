@@ -27,8 +27,7 @@ export function openFinderAtFolder(name: string) {
    double-clicking an app/document opens the exact same window a Dock
    click would. The existing full-page galleries (/projects, /skills,
    etc.) are untouched; this is a second, additive way to browse
-   toward the same content. See
-   docs/superpowers/specs/2026-07-01-genie-effect-and-finder-design.md */
+   toward the same content. */
 
 type FinderNode =
   | { kind: "folder"; name: string; children: FinderNode[]; iconFile?: string }

@@ -14,7 +14,7 @@ import { EDUCATION } from "../data/profile.ts";
 
 export type TargetKind = "project" | "skills" | "education" | "about" | "widget" | "dock";
 
-export const slug = (s: string) =>
+const slug = (s: string) =>
   s
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")

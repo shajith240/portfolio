@@ -22,8 +22,7 @@ import VSCodeApp from "@/components/window/VSCodeApp";
    from the titlebar) — NOT a hand-rolled pointer-tracking loop. The
    Dock's own bug history this session (stuck-open magnification,
    desynced width) came specifically from re-implementing continuous
-   drag/position tracking by hand; Framer already owns this correctly.
-   See docs/superpowers/specs/2026-07-01-window-manager-design.md. */
+   drag/position tracking by hand; Framer already owns this correctly. */
 
 const BOUNDS_SPRING = { type: "spring", stiffness: 340, damping: 32, mass: 0.9 } as const;
 const ZOOM_SPRING = { type: "spring", stiffness: 380, damping: 36 } as const;

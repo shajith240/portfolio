@@ -3,7 +3,6 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { LayoutProvider, useLayout } from "@/contexts/LayoutContext";
-import { ThemeProvider } from "@/contexts/ThemeContext";
 import { WindowManagerProvider, useWindowManager } from "@/contexts/WindowManagerContext";
 import { usePerformance } from "@/lib/usePerformance";
 import { NAV_ITEMS, PHONE_ONLY_ROUTES } from "@/data/nav";
@@ -206,25 +205,21 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   if (isEmbedded) {
     return (
-      <ThemeProvider>
-        <LayoutProvider>{children}</LayoutProvider>
-      </ThemeProvider>
+      <LayoutProvider>{children}</LayoutProvider>
     );
   }
 
   return (
     <>
       <AccessibleNav />
-      <ThemeProvider>
-        <LayoutProvider>
-          <WindowManagerProvider>
-            <Shell>{children}</Shell>
-          </WindowManagerProvider>
-          {/* Top level only: requests from window iframes are
-              dispatched up to this window. */}
-          <ExternalLinkSheet />
-        </LayoutProvider>
-      </ThemeProvider>
+      <LayoutProvider>
+        <WindowManagerProvider>
+          <Shell>{children}</Shell>
+        </WindowManagerProvider>
+        {/* Top level only: requests from window iframes are
+            dispatched up to this window. */}
+        <ExternalLinkSheet />
+      </LayoutProvider>
     </>
   );
 }

@@ -3,7 +3,7 @@ import { GENERATED_MOTIVATION_IMAGES } from './generated/content'
 // Auto-discovered from public/motivation_quotes by
 // scripts/generate-content.mjs — drop an image in that folder and it
 // enters the rotation on the next dev start / deploy, no code changes.
-export const MOTIVATION_IMAGES: string[] = GENERATED_MOTIVATION_IMAGES
+const MOTIVATION_IMAGES: string[] = GENERATED_MOTIVATION_IMAGES
 
 // Rotation window — one image per 5 minutes (was daily; the user
 // wants the quotes to actually cycle while someone browses).
@@ -18,6 +18,3 @@ export function motivationImageForNow(): string | null {
   const slot = Math.floor(Date.now() / MOTIVATION_ROTATION_MS)
   return MOTIVATION_IMAGES[slot % MOTIVATION_IMAGES.length]
 }
-
-// Back-compat alias (previous daily API name).
-export const motivationImageForToday = motivationImageForNow

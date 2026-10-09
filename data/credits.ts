@@ -24,19 +24,15 @@ export interface IconCredit {
   owner: string;
 }
 
-// One entry per brand/tech logo used as a dock/app/skill icon under
-// public/icons. Purely descriptive — trademarks stay with their owners.
+// One entry per brand/tech logo used on the site (public/icons and
+// public/logos). Purely descriptive — trademarks stay with their owners.
 export const ICON_CREDITS: IconCredit[] = [
-  { name: "ChatGPT", owner: "OpenAI" },
   { name: "Claude", owner: "Anthropic" },
-  { name: "Codex", owner: "OpenAI" },
-  { name: "Cursor", owner: "Anysphere" },
+  { name: "Codeforces", owner: "Codeforces (Mike Mirzayanov)" },
   { name: "Docker", owner: "Docker, Inc." },
-  { name: "Gemini", owner: "Google" },
   { name: "Git", owner: "Software Freedom Conservancy" },
   { name: "GitHub", owner: "GitHub, Inc. (Microsoft)" },
   { name: "HTML5", owner: "W3C / WHATWG" },
-  { name: "Instagram", owner: "Meta Platforms, Inc." },
   { name: "Java", owner: "Oracle Corporation" },
   { name: "JavaScript", owner: "Ecma International" },
   { name: "LeetCode", owner: "LeetCode LLC" },
@@ -44,14 +40,15 @@ export const ICON_CREDITS: IconCredit[] = [
   { name: "LinkedIn", owner: "Microsoft Corporation" },
   { name: "MongoDB", owner: "MongoDB, Inc." },
   { name: "n8n", owner: "n8n GmbH" },
+  { name: "Next.js", owner: "Vercel, Inc." },
   { name: "Node.js", owner: "OpenJS Foundation" },
   { name: "PostgreSQL", owner: "The PostgreSQL Global Development Group" },
   { name: "Python", owner: "Python Software Foundation" },
   { name: "React", owner: "Meta Platforms, Inc." },
-  { name: "Spotify", owner: "Spotify AB" },
+  { name: "Supabase", owner: "Supabase, Inc." },
+  { name: "Tailwind CSS", owner: "Tailwind Labs, Inc." },
   { name: "TypeScript", owner: "Microsoft Corporation" },
   { name: "Visual Studio Code", owner: "Microsoft Corporation" },
-  { name: "X (Twitter)", owner: "X Corp." },
   { name: "Xcode", owner: "Apple Inc." },
 ];
 
@@ -62,7 +59,7 @@ export interface FontCredit {
 }
 
 export const FONT_CREDITS: FontCredit[] = [
-  { name: "VG5000", owner: "velvetyne.fr", license: "See vg5000-master/LICENSE.txt in the repository" },
+  { name: "VG5000", owner: "velvetyne.fr", license: "SIL Open Font License 1.1 (public/fonts/VG5000-LICENSE.txt)" },
 ];
 
 export const WALLPAPER_NOTE =

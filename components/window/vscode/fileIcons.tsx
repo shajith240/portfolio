@@ -17,7 +17,7 @@ const EXT_COLORS: Record<string, string> = {
   yaml: "#cb171e",
 };
 
-export function getFileIconColor(name: string): string {
+function getFileIconColor(name: string): string {
   const ext = name.includes(".") ? name.split(".").pop()!.toLowerCase() : name.toLowerCase();
   return EXT_COLORS[ext] ?? "#8a9ba8";
 }

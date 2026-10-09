@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
-import { useTheme } from "@/contexts/ThemeContext";
 
 const EMPTY_WINDOWS: never[] = [];
 
@@ -27,7 +26,6 @@ const ICON_FILE: Record<string, string> = {
 
 export default function AppSwitcher() {
   const { windows, bringToFront } = useWindowManager();
-  const { isDarkTheme } = useTheme();
 
   const [isActive, setIsActive] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -126,10 +124,8 @@ export default function AppSwitcher() {
 
   if (!shouldRender) return null;
 
-  const panelBg = isDarkTheme ? "rgba(30,30,32,0.6)" : "rgba(240,240,242,0.6)";
-  const panelBorder = isDarkTheme
-    ? "rgba(255,255,255,0.1)"
-    : "rgba(0,0,0,0.08)";
+  const panelBg = "rgba(30,30,32,0.6)";
+  const panelBorder = "rgba(255,255,255,0.1)";
   const highlightBg = "rgba(255,255,255,0.16)";
   const labelColor = "rgba(255,255,255,0.85)";
 

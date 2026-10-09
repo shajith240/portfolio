@@ -62,7 +62,7 @@ export const BOTTOM_RESERVE = 120;
 // ShellMascot.tsx): its 160px box minus 16px of transparent foot
 // space, below the 26px menu bar, plus a few px of air. Height shrinks
 // to fit instead of the window pushing down into the Dock's reserve.
-export const WINDOW_TOP_CLEARANCE = 176;
+const WINDOW_TOP_CLEARANCE = 176;
 
 // Shared with Window.tsx (as Framer Motion `dragConstraints`) so a drag
 // can never produce a position this same clamp would then have to fix.

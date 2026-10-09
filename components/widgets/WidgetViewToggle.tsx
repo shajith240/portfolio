@@ -28,7 +28,7 @@ const PAD = 2;
 // Same as motion.md's indicatorSlide preset.
 const INDICATOR_SLIDE = { type: "spring", stiffness: 350, damping: 30, mass: 0.8 } as const;
 
-export const TOGGLE_HEIGHT = SEGMENT_H + PAD * 2; // 20
+const TOGGLE_HEIGHT = SEGMENT_H + PAD * 2; // 20
 export const TOGGLE_WIDTH = SEGMENT_W * 2 + PAD * 2; // 52
 
 export default function WidgetViewToggle<T extends string>({

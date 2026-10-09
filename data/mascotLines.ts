@@ -48,7 +48,7 @@ export const SECTION_LINES: Record<string, MascotLine> = {
 // (instant, free, always true) for everything except project cards and
 // skill groups, whose lines the AI writes from the real data.
 // Keep each line short and true — a recruiter reads it in passing.
-export const REMARK_POOLS: Record<string, string[]> = {
+const REMARK_POOLS: Record<string, string[]> = {
   // Desktop widgets
   "widget:github": [
     "That's my GitHub heatmap, live. Every green square is a day I pushed code.",

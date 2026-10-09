@@ -5,7 +5,7 @@ import { useLayout } from "@/contexts/LayoutContext";
 const clamp = (min: number, preferred: number, max: number) =>
   Math.min(max, Math.max(min, preferred));
 
-export function calculateShellMetrics(viewportWidth = 1440, viewportHeight = 900) {
+function calculateShellMetrics(viewportWidth = 1440, viewportHeight = 900) {
   const width = Math.max(320, viewportWidth || 1440);
   const height = Math.max(320, viewportHeight || 900);
   const inset = clamp(12, width * 0.0108, 20);

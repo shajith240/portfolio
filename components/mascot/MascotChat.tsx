@@ -24,7 +24,7 @@ export interface ChatAnchor {
   size: number;
 }
 
-export const CONTACT_EMAIL = "shajith240@gmail.com";
+const CONTACT_EMAIL = "shajith240@gmail.com";
 
 const SUGGESTIONS = [
   "What are you building right now?",

@@ -1,7 +1,6 @@
 /* Procedural clip-path for the genie-effect minimize/restore animation.
  *
- * Real macOS behavior (documented, not guessed — see
- * docs/superpowers/specs/2026-07-01-genie-effect-and-finder-design.md):
+ * Real macOS behavior:
  * the top edge stays fixed while the bottom edge shears and narrows,
  * and the sides curve inward like a funnel/neck rather than straight
  * trapezoid sides.

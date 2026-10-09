@@ -23,7 +23,6 @@
 export const WIDGET_UNIT = 170;
 export const WIDGET_GAP = 14;
 export const WIDGET_MEDIUM_WIDTH = WIDGET_UNIT * 2 + WIDGET_GAP; // 354
-export const WIDGET_PADDING = 16;
 export const WIDGET_RADIUS = 22;
 
 // Minimum clearance between any widget and the usable desktop's

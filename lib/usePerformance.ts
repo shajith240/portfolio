@@ -45,17 +45,3 @@ export function usePerformance(): PerformanceTier {
 
   return { reducedMotion, isLowEnd, tier };
 }
-
-/** Spring configs adapted per tier — use these instead of raw spring objects */
-export function getTransition(tier: PerformanceTier["tier"], spring: Record<string, unknown>) {
-  if (tier === "minimal") return { duration: 0 };
-  if (tier === "reduced") return { duration: 0.2, ease: [0, 0, 0.58, 1] as const };
-  return spring;
-}
-
-/** Returns blur CSS value adapted per tier */
-export function getBlur(tier: PerformanceTier["tier"], fullBlur: number): string {
-  if (tier === "minimal") return "none";
-  if (tier === "reduced") return `blur(${Math.round(fullBlur * 0.4)}px)`;
-  return `blur(${fullBlur}px)`;
-}

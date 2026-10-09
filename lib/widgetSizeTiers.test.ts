@@ -2,9 +2,7 @@ import assert from "node:assert/strict";
 import {
   TIER_DIMENSIONS,
   ALL_SIZES,
-  getSizeDimensions,
   nearestSizeTier,
-  supportedSizes,
   type WidgetSize,
 } from "./widgetSizeTiers.ts";
 import { WIDGET_UNIT, WIDGET_MEDIUM_WIDTH } from "./widgetGrid.ts";
@@ -19,25 +17,6 @@ assert.equal(TIER_DIMENSIONS.large.height, WIDGET_MEDIUM_WIDTH); // 354
 
 // ALL_SIZES includes all three tiers
 assert.deepEqual(ALL_SIZES, ["small", "medium", "large"]);
-
-// getSizeDimensions returns the universal tier dims for any widget
-assert.deepEqual(getSizeDimensions("location", "small"), { width: 170, height: 170 });
-assert.deepEqual(getSizeDimensions("location", "medium"), { width: 354, height: 170 });
-assert.deepEqual(getSizeDimensions("location", "large"), { width: 354, height: 354 });
-assert.deepEqual(getSizeDimensions("aiTools", "large"), { width: 354, height: 354 });
-assert.deepEqual(getSizeDimensions("motivation", "small"), { width: 170, height: 170 });
-
-// supportedSizes — every widget supports all three sizes
-assert.deepEqual(supportedSizes("aiTools"), ["small", "medium", "large"]);
-assert.deepEqual(supportedSizes("location"), ["small", "medium", "large"]);
-assert.deepEqual(supportedSizes("motivation"), ["small", "medium", "large"]);
-assert.deepEqual(supportedSizes("leetcode"), ["small", "medium", "large"]);
-assert.deepEqual(supportedSizes("codeforces"), ["small", "medium", "large"]);
-
-// The LeetCode and Codeforces widgets use the same universal medium
-// frame as the GitHub heatmap (354×170)
-assert.deepEqual(getSizeDimensions("leetcode", "medium"), { width: 354, height: 170 });
-assert.deepEqual(getSizeDimensions("codeforces", "medium"), { width: 354, height: 170 });
 
 // nearestSizeTier(width, height) finds the tier with minimum Euclidean distance
 // Exact match: small

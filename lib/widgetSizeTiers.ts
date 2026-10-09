@@ -24,15 +24,6 @@ export const TIER_DIMENSIONS: Record<WidgetSize, SizeDimensions> = {
 
 export const ALL_SIZES: WidgetSize[] = ["small", "medium", "large"];
 
-// Every widget supports every tier — the "purest form" of the widget
-// mechanism, no per-widget restrictions.
-export function supportedSizes(_id: WidgetId): WidgetSize[] {
-  return ALL_SIZES;
-}
-
-export function getSizeDimensions(_id: WidgetId, size: WidgetSize): SizeDimensions {
-  return TIER_DIMENSIONS[size];
-}
 
 // Given a live width/height mid resize-drag, finds the tier whose
 // frame is numerically closest — the tier the widget springs to on

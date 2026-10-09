@@ -11,7 +11,6 @@
 // itself; BIO stays plain text.)
 //
 // STILL A MIRROR (kept in sync by hand) for widgets that render inline:
-//   components/widgets/AboutWidget.tsx tagline + short about line
 //   components/widgets/LocationWidget  city, region, time zone
 //
 // Extracted, not invented: empty fields stay empty. Don't fill gaps here
@@ -103,11 +102,8 @@ export const HANDLE = 'shajith240'
 /** About page, under the name. */
 export const HEADLINE = 'CS Student at IIT(ISM) Dhanbad'
 
-/** AboutWidget headline. */
+/** One-line pitch (the mascot's knowledge pack). */
 export const TAGLINE = "Hey, I'm Shajith. I build things people want to use."
-
-/** AboutWidget "About me" line. */
-export const SHORT_ABOUT = 'CS student at IIT(ISM) Dhanbad. I learn by building.'
 
 /** My degree. lib/studyYear.ts works out the current year and semester
  *  from these and IIT (ISM)'s academic calendar, so nothing on the site

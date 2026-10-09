@@ -274,11 +274,6 @@ function LeetCodeGrid({ counts, width, height, header, onRange }: {
   );
 }
 
-// Height of the LeetCode grid block at 1:1 — exported so widgets can
-// budget their layout.
-export const LEETCODE_HEATMAP_HEIGHT = LC_VIEW_H;
-export const LEETCODE_GRID_HEIGHT = LC_GRID_H;
-
 /* ── GitHub variant ───────────────────────────────────────────────── */
 
 // Identical to GitHubHeatmapWidget's grid (cells, gaps, labels, greens).

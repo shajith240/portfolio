@@ -13,7 +13,7 @@
 export const EXTERNAL_LINK_EVENT = "portfolio:external-link";
 
 /** An http(s) URL on another origin. */
-export function isExternalUrl(url: string): boolean {
+function isExternalUrl(url: string): boolean {
   try {
     const u = new URL(url, window.location.href);
     return (u.protocol === "http:" || u.protocol === "https:") && u.origin !== window.location.origin;

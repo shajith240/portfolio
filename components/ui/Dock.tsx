@@ -3,7 +3,6 @@
 import { Fragment, useState, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTheme } from "@/contexts/ThemeContext";
 import { useShellMetrics } from "@/lib/useShellMetrics";
 import { useWindowManager, DOCK_RECT_KEY } from "@/contexts/WindowManagerContext";
 import { NAV_ITEMS, isNavItemVisible } from "@/data/nav";
@@ -90,7 +89,7 @@ function ResumeIcon() {
    separated from the running apps rather than mixed in with them. */
 const DOCK_ORDER = ["/projects", "/about", "/skills", "/achievements", "/education"];
 // Sections with no content yet (data/nav.ts isNavItemVisible) are left
-// out, so DOCK_ITEMS, and DOCK_REST_WIDTH below, follow the data.
+// out, so DOCK_ITEMS follows the data.
 const DOCK_ITEMS: { href: string; label: string; external?: string }[] = [
   ...DOCK_ORDER.filter(isNavItemVisible).flatMap((href) => {
     const nav = NAV_ITEMS.find((item) => item.href === href);
@@ -135,10 +134,8 @@ const DOCK_HEIGHT = BASE_ICON_SIZE + PADDING_Y * 2;
 // icons share one curve family — what makes Apple's Dock read as calm.
 const DOCK_RADIUS = Math.round(BASE_ICON_SIZE * 0.8 * 0.225 + PADDING_Y + BASE_ICON_SIZE * 0.1);
 
-// The pill's resting (un-magnified) footprint — exported so the
-// mascot can line itself up with the Dock's left end without
-// measuring a DOM node that animates its own width every frame.
-export const DOCK_REST_WIDTH = DOCK_ITEMS.length * (BASE_ICON_SIZE + BASE_SPACING) - BASE_SPACING + PADDING * 2;
+// The pill's resting height and bottom offset — exported so the
+// mascot's bubbles can stay clear of the Dock.
 export const DOCK_REST_HEIGHT = DOCK_HEIGHT;
 export const DOCK_BOTTOM = 24;
 
@@ -167,7 +164,6 @@ function positionsFromScales(scales: number[]) {
 }
 
 export default function Dock() {
-  const { isDarkTheme } = useTheme();
   const metrics = useShellMetrics();
   const { windows, openWindow, registerDockIconEl } = useWindowManager();
 
@@ -291,8 +287,7 @@ export default function Dock() {
     ? Math.max(...positions.map((pos, i) => pos + (BASE_ICON_SIZE * scales[i]) / 2))
     : DOCK_ITEMS.length * (BASE_ICON_SIZE + BASE_SPACING) - BASE_SPACING;
 
-  const glassBg = isDarkTheme ? "rgba(28, 28, 30, 0.78)" : "rgba(255, 255, 255, 0.78)";
-  const glassBorder = isDarkTheme ? "rgba(255, 255, 255, 0.10)" : "rgba(0, 0, 0, 0.06)";
+  const glassBorder = "rgba(255, 255, 255, 0.10)";
 
   // Liquid Glass on the slab — built ONCE at mount + window resize.
   // The dock animates its own width on every magnification frame, so
