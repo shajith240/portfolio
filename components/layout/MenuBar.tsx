@@ -4,14 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
-import { useWindowManager } from "@/contexts/WindowManagerContext";
+import { useWindowManager, MENU_BAR_HEIGHT } from "@/contexts/WindowManagerContext";
+import { VISIBLE_NAV_ITEMS } from "@/data/nav";
 import { applyLiquidGlass, releaseLiquidGlass, useLiquidGlass } from "@/lib/liquidGlass";
 
 /* macOS menu bar — Tahoe dark mode, and every item WORKS. No fake
    File/Edit menus, no decorative glyphs: the bar is real navigation
    for the portfolio, in real macOS anatomy.
 
-   - 24px bar, glass material, hairline bottom border.
+   - 34px bar (the roomier height of Apple's notched MacBooks, not the
+     cramped 24px of old displays), glass material, hairline border.
+   - Titles highlight with Tahoe's floating capsule (inset from the
+     bar's edges), not a full-height block.
    - Left: "Shajith" (bold app-name slot) with a dropdown (About,
      GitHub/LinkedIn/LeetCode, source), then "Go" (opens each page as
      a window — Finder's own Go menu is the model) and "Contact".
@@ -23,7 +27,10 @@ import { applyLiquidGlass, releaseLiquidGlass, useLiquidGlass } from "@/lib/liqu
      one line, no comma. The clock is plain text, not a button: there
      is no Notification Center (or Control Center) behind it. */
 
-const BAR_HEIGHT = 24;
+const BAR_HEIGHT = MENU_BAR_HEIGHT;
+// The capsule behind a hovered/open title, and the side gutters.
+const PILL_HEIGHT = 26;
+const EDGE = 18;
 const ACCENT = "#0a84ff";
 
 type MenuEntry = { label: string; action: () => void } | "separator";
@@ -56,7 +63,7 @@ function MenuDropdown({ entries, onClose, anchorLeft }: { entries: MenuEntry[]; 
   // higher tint than panels so 13px text stays readable over busy
   // wallpapers. Blur is Apple's actual Liquid Glass range (3-6px),
   // not frosted-glass territory.
-  const lgRef = useLiquidGlass<HTMLDivElement>({ radius: 10, bezel: 8, strength: 0.55, blur: 5, brightness: 0.88, tint: 0.3 });
+  const lgRef = useLiquidGlass<HTMLDivElement>({ radius: 14, bezel: 10, strength: 0.55, blur: 5, brightness: 0.88, tint: 0.3 });
   // PORTALED to <body>, deliberately NOT rendered inside the bar: the
   // bar has its own backdrop-filter, which per the filter-effects spec
   // makes it a "backdrop root" — a descendant's backdrop-filter can
@@ -75,11 +82,12 @@ function MenuDropdown({ entries, onClose, anchorLeft }: { entries: MenuEntry[]; 
       transition={{ duration: 0.12, ease: [0, 0, 0.58, 1] }}
       style={{
         position: "fixed",
-        top: `${BAR_HEIGHT + 5}px`,
+        top: `${BAR_HEIGHT + 4}px`,
         left: `${anchorLeft}px`,
-        minWidth: "216px",
-        padding: "5px",
-        borderRadius: "10px",
+        minWidth: "232px",
+        padding: "6px",
+        // Concentric with the rows: row radius (8) + padding (6).
+        borderRadius: "14px",
         transformOrigin: "top left",
         // Above windows (z ~100+) and the Dock (90) — real macOS menus
         // top everything on the desktop.
@@ -88,7 +96,7 @@ function MenuDropdown({ entries, onClose, anchorLeft }: { entries: MenuEntry[]; 
     >
       {entries.map((entry, i) =>
         entry === "separator" ? (
-          <div key={i} style={{ height: "1px", background: "rgba(255, 255, 255, 0.12)", margin: "5px 10px" }} />
+          <div key={i} style={{ height: "1px", background: "rgba(255, 255, 255, 0.12)", margin: "6px 12px" }} />
         ) : (
           <MenuRow key={i} entry={entry} onClose={onClose} />
         ),
@@ -112,12 +120,12 @@ function MenuRow({ entry, onClose }: { entry: Exclude<MenuEntry, "separator">; o
         display: "block",
         width: "100%",
         textAlign: "left",
-        padding: "4px 10px",
-        borderRadius: "6px",
+        padding: "5px 12px",
+        borderRadius: "8px",
         border: "none",
-        fontSize: "13px",
+        fontSize: "13.5px",
         fontWeight: 400,
-        lineHeight: "18px",
+        lineHeight: "20px",
         color: "rgba(255, 255, 255, 0.92)",
         // Translucent accent wash, not a solid block — macOS menu
         // highlights are vibrancy-tinted, so the glass shows through.
@@ -233,14 +241,12 @@ export default function MenuBar() {
     },
     {
       title: "Go",
-      entries: [
-        { label: "About", action: () => openWindow("/about", "About") },
-        { label: "Projects", action: () => openWindow("/projects", "Projects") },
-        { label: "Skills", action: () => openWindow("/skills", "Skills") },
-        { label: "DSA", action: () => openWindow("/dsa", "DSA") },
-        { label: "Achievements", action: () => openWindow("/achievements", "Achievements") },
-        { label: "Education", action: () => openWindow("/education", "Education") },
-      ],
+      // Every section window except Home (the desktop itself), minus any
+      // section that has no content yet (data/nav.ts).
+      entries: VISIBLE_NAV_ITEMS.filter((item) => item.href !== "/").map((item) => ({
+        label: item.label,
+        action: () => openWindow(item.href, item.label),
+      })),
     },
     {
       title: "Contact",
@@ -266,19 +272,21 @@ export default function MenuBar() {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 16px 0 10px",
+        // Titles carry their own 12px side padding, so the wordmark's
+        // text lands EDGE px from the left, matching the clock's right.
+        padding: `0 ${EDGE}px 0 ${EDGE - 12}px`,
         // Material from the refraction engine (effect above).
         borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
-        fontSize: "13px",
+        fontSize: "13.5px",
         color: "rgba(255, 255, 255, 0.92)",
         userSelect: "none",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", height: "100%" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "2px", height: "100%" }}>
         {menus.map((menu) => {
           const isOpen = openMenu?.title === menu.title;
           return (
-            <div key={menu.title} style={{ position: "relative", height: "100%" }}>
+            <div key={menu.title} style={{ position: "relative", height: "100%", display: "flex", alignItems: "center" }}>
               <button
                 onClick={(e) =>
                   setOpenMenu(isOpen ? null : { title: menu.title, left: e.currentTarget.getBoundingClientRect().left })
@@ -292,10 +300,10 @@ export default function MenuBar() {
                 }}
                 onMouseLeave={() => setHoveredTitle(null)}
                 style={{
-                  height: "100%",
-                  padding: "0 10px",
+                  height: `${PILL_HEIGHT}px`,
+                  padding: "0 12px",
                   border: "none",
-                  borderRadius: "5px",
+                  borderRadius: "999px",
                   // Flex-centering (rather than relying on line-height
                   // alone) keeps every title's baseline anchored to the
                   // bar's vertical center regardless of its font's own
@@ -305,9 +313,9 @@ export default function MenuBar() {
                   // The personal wordmark slot ("Shajith" on the bare
                   // desktop, per menu.title's fallback above) gets the
                   // Borel script treatment; every other app-name title
-                  // (About, Notes, DSA…) stays on the system font —
+                  // (About, Skills, Education…) stays on the system font —
                   // Borel is a brand mark, not a general title style.
-                  // BAR_HEIGHT is only 24px, and Borel's ascenders sit
+                  // Borel's ascenders sit
                   // much taller above its baseline than the system
                   // font's do at the same nominal size — a normal
                   // line-height (matching every other title, not 1)
@@ -315,9 +323,9 @@ export default function MenuBar() {
                   // the size has to come down from a "reads right on
                   // its own" size to one that actually fits the box.
                   fontFamily: menu.title === "Shajith" ? "var(--font-borel)" : "inherit",
-                  fontSize: "13px",
-                  lineHeight: "18px",
-                  fontWeight: menu.title === "Shajith" ? 400 : menu.bold ? 600 : 400,
+                  fontSize: menu.title === "Shajith" ? "15px" : "13.5px",
+                  lineHeight: "20px",
+                  fontWeight: menu.title === "Shajith" ? 400 : menu.bold ? 600 : 500,
                   color: "rgba(255, 255, 255, 0.92)",
                   // Closed titles still give hover feedback (a
                   // fainter pill than the open state) — without it
@@ -339,7 +347,7 @@ export default function MenuBar() {
                 <span
                   style={
                     menu.title === "Shajith"
-                      ? { display: "inline-block", transform: "translateY(2px)" }
+                      ? { display: "inline-block", transform: "translateY(4px)" }
                       : undefined
                   }
                 >
@@ -356,7 +364,7 @@ export default function MenuBar() {
         })}
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
         <WifiGlyph />
         <BatteryGlyph />
         {/* Spotlight lives in the status cluster, left of the clock —
@@ -370,7 +378,13 @@ export default function MenuBar() {
             alignItems: "center",
             border: "none",
             background: "transparent",
-            padding: "2px",
+            // A capsule-sized hit area, so it's not a 14px target.
+            width: "28px",
+            height: `${PILL_HEIGHT}px`,
+            justifyContent: "center",
+            margin: "0 -7px",
+            borderRadius: "999px",
+            padding: 0,
             cursor: "default",
           }}
         >
@@ -378,10 +392,8 @@ export default function MenuBar() {
         </button>
         <span
           style={{
-            // Same box as the old clock button (2px 6px) so the right
-            // cluster keeps its spacing against the bar's 16px edge.
-            padding: "2px 6px",
-            fontSize: "13px",
+            fontSize: "13.5px",
+            fontWeight: 500,
             color: "rgba(255, 255, 255, 0.92)",
             whiteSpace: "nowrap",
             fontVariantNumeric: "tabular-nums",

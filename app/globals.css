@@ -146,14 +146,615 @@ body {
   border-radius: 4px;
 }
 
-/* ── Project cards — static (no hover animation, per request) ──
-   Border + shadow live here rather than inline. `will-change: transform`
-   promotes each card to its own compositor layer, so its blurred
-   box-shadow rasterizes ONCE and the card just composites as the list
-   scrolls, instead of the shadow repainting every frame the card moves
-   — that repaint was the scroll frame-drop in this window. */
-.project-card {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  will-change: transform;
+/* ── Projects page (app/projects/page.tsx) ──────────────────────
+   All responsive behaviour is CSS, not useLayout(): on the desktop the
+   page lives in a window iframe, so these media queries resolve
+   against the window's own width. A maximize/restore then costs one
+   layout per frame and zero React renders (the old JS breakpoints
+   re-rendered the whole page on every frame of the resize spring).
+   No shadows, no will-change, no blur: hairlines and tone only, so
+   scrolling is pure compositing. Tiers match docs/design-system/
+   layout.md: phone < 640, tablet 640–1023, desktop ≥ 1024. */
+.pj-scroll {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  background: var(--bg-page);
+  /* Phone: keep the last row clear of the gesture area. */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pj-scroll::-webkit-scrollbar {
+  display: none;
+}
+.pj-page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 56px clamp(28px, 5vw, 56px) 88px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* Header */
+.pj-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 24px;
+  flex-wrap: wrap;
+  margin-bottom: 36px;
+}
+.pj-title {
+  margin: 0;
+  font-size: clamp(2rem, 1.55rem + 1.6vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: rgba(255, 255, 255, 0.96);
+}
+.pj-lede {
+  margin: 10px 0 0;
+  font-size: 1.0625rem;
+  line-height: 1.45;
+  color: rgba(235, 235, 245, 0.6);
+}
+.pj-all {
+  font-size: 0.9375rem;
+  color: #2997ff;
+  text-decoration: none;
+  white-space: nowrap;
+  padding-bottom: 3px;
+  transition: color 0.18s ease;
+}
+.pj-all:hover {
+  color: #5cb0ff;
+}
+
+/* Shared text */
+.pj-eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  color: rgba(235, 235, 245, 0.55);
+}
+.pj-eyebrow-accent {
+  color: #2997ff;
+}
+.pj-desc {
+  margin: 0;
+  color: rgba(235, 235, 245, 0.66);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pj-stack {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: rgba(235, 235, 245, 0.4);
+  letter-spacing: 0.01em;
+}
+.pj-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.pj-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.pj-btn-primary {
+  background: #f5f5f7;
+  color: #1d1d1f;
+}
+.pj-btn-primary:hover {
+  background: #ffffff;
+}
+.pj-btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+}
+.pj-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.pj-btn-lg {
+  font-size: 0.9375rem;
+  padding: 9px 18px;
+}
+.pj-btn-sm {
+  font-size: 0.8125rem;
+  padding: 6px 14px;
+}
+
+/* Covers: a cover's corner radius is concentric with its container
+   (outer radius − inset), and the hairline sits inside the image. */
+.pj-cover {
+  position: relative;
+  overflow: hidden;
+  background: #141415;
+}
+.pj-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+}
+
+/* Featured project */
+.pj-featured {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 8px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 0.5px solid rgba(255, 255, 255, 0.09);
+}
+.pj-featured .pj-cover {
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+}
+.pj-featured-body {
+  display: flex;
+  flex-direction: column;
+  padding: 24px 22px 28px;
+}
+.pj-featured-title {
+  margin: 0 0 12px;
+  font-size: clamp(1.625rem, 1.4rem + 0.9vw, 2.125rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  color: rgba(255, 255, 255, 0.96);
+}
+.pj-featured .pj-desc {
+  font-size: 1.0625rem;
+  line-height: 1.5;
+  -webkit-line-clamp: 4;
+  max-width: 60ch;
+}
+.pj-featured .pj-stack {
+  margin-top: 16px;
+}
+.pj-featured .pj-actions {
+  margin-top: 24px;
+}
+
+/* More projects */
+.pj-section-title {
+  margin: 64px 0 4px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: rgba(255, 255, 255, 0.92);
+}
+.pj-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pj-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  padding: 28px 0;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.1);
+}
+.pj-row:last-child {
+  border-bottom: none;
+}
+.pj-row .pj-cover {
+  aspect-ratio: 16 / 10;
+  border-radius: 14px;
+}
+.pj-row-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.pj-row-title {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.94);
+  overflow-wrap: anywhere;
+}
+.pj-row .pj-desc {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  -webkit-line-clamp: 3;
+  max-width: 62ch;
+}
+.pj-row-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin-top: 16px;
+}
+
+/* Phone */
+@media (max-width: 639px) {
+  .pj-page {
+    /* Clears the iPhone status bar overlay at the top and the home
+       indicator strip at the bottom. */
+    padding: 84px 20px 72px;
+  }
+  .pj-header {
+    margin-bottom: 28px;
+  }
+  .pj-featured-body {
+    padding: 18px 14px 24px;
+  }
+  .pj-section-title {
+    margin-top: 48px;
+  }
+  .pj-row-foot {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Tablet + desktop: rows go side by side */
+@media (min-width: 640px) {
+  .pj-row {
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 28px;
+    align-items: center;
+  }
+  .pj-row .pj-desc {
+    -webkit-line-clamp: 2;
+  }
+}
+
+/* Desktop: the featured project splits into cover + copy */
+@media (min-width: 1024px) {
+  .pj-featured {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr);
+    align-items: center;
+  }
+  .pj-featured-body {
+    padding: 28px 36px 28px 32px;
+  }
+  .pj-row {
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 36px;
+  }
+}
+
+/* ── Skills page (app/skills/page.tsx) ──────────────────────────
+   Reuses the Projects page's scroll container, page padding, header and
+   title (.pj-scroll/.pj-page/.pj-header/.pj-title/.pj-lede) so the two
+   read as one family. CSS breakpoints only; the selector dims tiles
+   with opacity/filter transitions (no keyframes). */
+.sk-page {
+  max-width: 1060px;
+}
+.sk-section-title {
+  margin: 0 0 16px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: rgba(255, 255, 255, 0.92);
+}
+.sk-logo {
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+  user-select: none;
+}
+
+/* Core stack: a 6-column bento — the first two tiles span 3, the rest
+   2, so five tiles fill two rows with no hole. Each tile is lit from
+   its top-left corner by its brand colour (--sk-tint), very faintly. */
+.sk-bento {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+.sk-bento-tile {
+  position: relative;
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 210px;
+  padding: 22px;
+  border-radius: 24px;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--sk-tint) 22%, transparent) 0%, transparent 60%),
+    linear-gradient(160deg, #232326 0%, #1b1b1d 100%);
+  border: 0.5px solid rgba(255, 255, 255, 0.09);
+}
+.sk-bento-tile.is-wide {
+  grid-column: span 3;
+  min-height: 230px;
+}
+.sk-bento-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sk-bento-head .sk-logo {
+  filter: drop-shadow(0 6px 18px color-mix(in srgb, var(--sk-tint) 35%, transparent));
+}
+.sk-bento-count {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: rgba(235, 235, 245, 0.5);
+  white-space: nowrap;
+}
+.sk-bento-name {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: rgba(255, 255, 255, 0.97);
+}
+.is-wide .sk-bento-name {
+  font-size: 1.625rem;
+}
+.sk-bento-cat {
+  margin: 3px 0 0;
+  font-size: 0.8125rem;
+  color: rgba(235, 235, 245, 0.5);
+}
+.sk-bento-proof {
+  list-style: none;
+  margin: auto 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sk-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.86);
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.07);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.sk-pill:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+/* Toolkit */
+.sk-toolkit {
+  margin-top: 64px;
+}
+.sk-toolkit-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+.sk-hint {
+  margin: 0 0 16px;
+  font-size: 0.8125rem;
+  color: rgba(235, 235, 245, 0.5);
+}
+
+/* Project selector: an Apple segmented control. Scrolls sideways on
+   narrow windows instead of wrapping into a second row. */
+.sk-selector {
+  display: flex;
+  gap: 2px;
+  width: max-content;
+  max-width: 100%;
+  padding: 3px;
+  margin-bottom: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 0.5px solid rgba(255, 255, 255, 0.07);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.sk-selector::-webkit-scrollbar {
+  display: none;
+}
+.sk-seg {
+  position: relative;
+  flex-shrink: 0;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgba(235, 235, 245, 0.62);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+.sk-seg:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+.sk-seg.is-active {
+  color: #fff;
+}
+.sk-seg-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.18), 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+.sk-seg-label {
+  position: relative;
+}
+
+/* Category rows: label on the left, a grid of identical tiles. */
+.sk-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  padding: 24px 0;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
+}
+.sk-group:last-child {
+  border-bottom: none;
+}
+.sk-group-name {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+.sk-group-blurb {
+  margin: 3px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: rgba(235, 235, 245, 0.45);
+}
+.sk-tiles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 16px 8px;
+}
+.sk-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  cursor: default;
+  transition: opacity 0.28s ease, filter 0.28s ease;
+}
+/* Every logo sits on the same squircle, so marks drawn for light pages
+   and dark ones read as one set. */
+.sk-tile-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(160deg, #303034 0%, #252528 100%);
+  box-shadow:
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 4px 12px rgba(0, 0, 0, 0.25);
+  transition: box-shadow 0.28s ease;
+}
+.sk-tile-name {
+  max-width: 100%;
+  font-size: 0.78125rem;
+  line-height: 1.25;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.82);
+  overflow-wrap: anywhere;
+}
+.sk-tile.is-on .sk-tile-icon {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.sk-tile.is-on .sk-tile-name {
+  color: #fff;
+}
+.sk-tile.is-off {
+  opacity: 0.28;
+  filter: grayscale(1);
+}
+
+/* AI assistants: one quiet line. */
+.sk-ai {
+  margin: 36px 0 0;
+  padding-top: 20px;
+  border-top: 0.5px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: rgba(235, 235, 245, 0.6);
+}
+.sk-ai-label {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 500;
+  color: rgba(235, 235, 245, 0.42);
+}
+
+@media (max-width: 639px) {
+  /* Phone: the two wide tiles stack, then the rest in pairs... except
+     there are three, so the last one spans the row. */
+  .sk-bento {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+  }
+  .sk-bento-tile,
+  .sk-bento-tile.is-wide {
+    grid-column: span 1;
+    min-height: 0;
+    padding: 18px;
+    gap: 14px;
+  }
+  .sk-bento-tile.is-wide,
+  .sk-bento-tile:last-child {
+    grid-column: span 2;
+  }
+  .sk-toolkit {
+    margin-top: 48px;
+  }
+  /* The selector scrolls sideways here; a fade on the right edge says
+     there's more. */
+  .sk-selector {
+    width: auto;
+    mask-image: linear-gradient(90deg, #000 85%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+  }
+  /* Five to a row, so no group leaves a lone tile on its last line. */
+  .sk-tiles {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px 4px;
+  }
+  .sk-tile-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 14px;
+  }
+  .sk-tile-icon .sk-logo {
+    width: 28px;
+    height: 28px;
+  }
+  .sk-tile-name {
+    font-size: 0.71875rem;
+  }
+}
+
+@media (min-width: 760px) {
+  .sk-group {
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+  }
 }

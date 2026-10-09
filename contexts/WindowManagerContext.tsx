@@ -47,12 +47,22 @@ const CASCADE_WRAP = 6; // after this many cascades, restart near the top-left
 const MIN_VISIBLE_X = 120;
 // Exported alongside BOTTOM_RESERVE — WidgetLayoutContext reuses both
 // rather than picking its own MenuBar/Dock clearance values.
-export const TOP_BOUND = 26;
+// The menu bar's height (components/layout/MenuBar.tsx) — the one
+// number every "stay below the menu bar" offset derives from.
+export const MENU_BAR_HEIGHT = 34;
+export const TOP_BOUND = MENU_BAR_HEIGHT + 2;
 // Exported — this is the single source of truth for "how much space to
 // leave clear above the Dock" on this desktop. Any fixed-position
 // element that needs to stay clear of the Dock (desktop widgets, not
 // just windows) should reuse this instead of picking its own offset.
-export const BOTTOM_RESERVE = 110;
+// = Dock bottom offset (24) + its resting height (80) + 16px of air.
+export const BOTTOM_RESERVE = 120;
+// New windows open at least this far down, leaving headroom above
+// their titlebar for the mascot to sit on (components/mascot/
+// ShellMascot.tsx): its 160px box minus 16px of transparent foot
+// space, below the 26px menu bar, plus a few px of air. Height shrinks
+// to fit instead of the window pushing down into the Dock's reserve.
+export const WINDOW_TOP_CLEARANCE = 176;
 
 // Shared with Window.tsx (as Framer Motion `dragConstraints`) so a drag
 // can never produce a position this same clamp would then have to fix.
@@ -114,12 +124,21 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
       const viewportW = typeof window !== "undefined" ? window.innerWidth : 1440;
       const viewportH = typeof window !== "undefined" ? window.innerHeight : 900;
       const width = size ? size.width : Math.min(DEFAULT_WIDTH, viewportW * 0.7);
-      const height = size ? size.height : Math.min(DEFAULT_HEIGHT, viewportH * 0.75);
+      const wantedHeight = size ? size.height : Math.min(DEFAULT_HEIGHT, viewportH * 0.75);
 
       const cascadeIndex = cascadeCountRef.current % CASCADE_WRAP;
       cascadeCountRef.current += 1;
       const baseX = (viewportW - width) / 2 - (CASCADE_STEP * CASCADE_WRAP) / 2;
-      const baseY = (viewportH - height) / 2 - (CASCADE_STEP * CASCADE_WRAP) / 2;
+      // Cascade from the mascot-clearance line down. The height leaves
+      // room for a couple of cascade steps; deeper steps are pulled back
+      // up (below) rather than every window being shrunk for all six.
+      const cascadeSpan = CASCADE_STEP * (CASCADE_WRAP - 1);
+      const height = Math.max(
+        320,
+        Math.min(wantedHeight, viewportH - WINDOW_TOP_CLEARANCE - CASCADE_STEP * 2 - BOTTOM_RESERVE),
+      );
+      const baseY = Math.max(WINDOW_TOP_CLEARANCE, (viewportH - height) / 2 - cascadeSpan / 2);
+      const maxY = Math.max(WINDOW_TOP_CLEARANCE, viewportH - BOTTOM_RESERVE - height);
 
       const newWindow: WindowState = {
         id: route,
@@ -127,7 +146,7 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
         title,
         kind,
         x: Math.max(40, baseX + cascadeIndex * CASCADE_STEP),
-        y: Math.max(50, baseY + cascadeIndex * CASCADE_STEP),
+        y: Math.min(baseY + cascadeIndex * CASCADE_STEP, maxY),
         width,
         height,
         zIndex: z,

@@ -6,6 +6,8 @@ import "./globals.css";
 // glow) — pairs with lib/liquidGlass.ts.
 import "../styles/glass-system.css";
 import AppShell from "@/components/layout/AppShell";
+import { NAME, HANDLE, HEADLINE, LOCATION, SITE_URL } from "@/data/profile";
+import { CATEGORIES } from "@/data/skills";
 
 // SF Pro Text stand-in on Windows browsers — Inter is closest in
 // metrics and rendering to Apple's system font; loaded as the base
@@ -49,9 +51,37 @@ const borel = Borel({
   weight: ["400"],
 });
 
+// Built only from data/profile.ts and data/skills.ts, so link previews
+// and search snippets never say anything the site itself doesn't.
+const DESCRIPTION = `${NAME} — ${HEADLINE}, based in ${LOCATION.city}, ${LOCATION.region}. Projects, skills, coding stats and education.`;
+
+const SKILL_KEYWORDS = CATEGORIES.flatMap((c) => c.icons.map((i) => i.name));
+
 export const metadata: Metadata = {
-  title: "Portfolio",
-  description: "Personal developer portfolio",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${NAME} — Developer Portfolio`,
+    template: `%s · ${NAME}`,
+  },
+  description: DESCRIPTION,
+  applicationName: `${NAME} — Portfolio`,
+  authors: [{ name: NAME, url: `https://github.com/${HANDLE}` }],
+  creator: NAME,
+  // Each section's layout.tsx overrides this with its own path.
+  alternates: { canonical: "/" },
+  keywords: [NAME, HANDLE, "developer portfolio", "IIT(ISM) Dhanbad", "computer science", ...SKILL_KEYWORDS],
+  openGraph: {
+    type: "website",
+    siteName: `${NAME} — Portfolio`,
+    title: `${NAME} — Developer Portfolio`,
+    description: DESCRIPTION,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${NAME} — Developer Portfolio`,
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({

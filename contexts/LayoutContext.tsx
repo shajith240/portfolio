@@ -6,6 +6,10 @@ interface LayoutContextValue {
   isSearchOpen: boolean;
   isMobileLayout: boolean;
   isTabletLayout: boolean;
+  // False until the real viewport has been measured. Before that, the
+  // flags above are SSR-safe desktop defaults — anything that acts on
+  // "desktop vs phone" (redirects, not just styling) must wait for this.
+  isLayoutReady: boolean;
   viewportWidth: number;
   viewportHeight: number;
   openSearch: () => void;
@@ -16,6 +20,7 @@ const LayoutContext = createContext<LayoutContextValue>({
   isSearchOpen: false,
   isMobileLayout: false,
   isTabletLayout: false,
+  isLayoutReady: false,
   viewportWidth: 1440,
   viewportHeight: 900,
   openSearch: () => {},
@@ -29,6 +34,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   // isTabletLayout: 640px–1023px (iPad-size range)
   const [isTabletLayout, setIsTabletLayout] = useState(false);
   const [viewport, setViewport] = useState({ width: 1440, height: 900 });
+  const [isLayoutReady, setIsLayoutReady] = useState(false);
 
   useEffect(() => {
     const update = () => {
@@ -39,6 +45,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
       setIsTabletLayout(w >= 640 && w < 1024);
     };
     update();
+    setIsLayoutReady(true);
     // Throttled to one update per animation frame (~16ms), NOT a flat
     // debounce — "resize" fires continuously both while a browser window
     // edge is being dragged AND for every frame of a windowed page's own
@@ -82,12 +89,13 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
       isSearchOpen,
       isMobileLayout,
       isTabletLayout,
+      isLayoutReady,
       viewportWidth: viewport.width,
       viewportHeight: viewport.height,
       openSearch,
       closeSearch,
     }),
-    [isSearchOpen, isMobileLayout, isTabletLayout, viewport.width, viewport.height, openSearch, closeSearch]
+    [isSearchOpen, isMobileLayout, isTabletLayout, isLayoutReady, viewport.width, viewport.height, openSearch, closeSearch]
   );
 
   return <LayoutContext.Provider value={value}>{children}</LayoutContext.Provider>;

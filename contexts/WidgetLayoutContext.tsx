@@ -14,6 +14,7 @@ import {
 } from "@/lib/widgetPositioning";
 import {
   WIDGET_IDS,
+  RESERVED_OCCUPANCY,
   STORAGE_KEY,
   computeDefaultLayout,
   parseStoredLayout,
@@ -125,7 +126,10 @@ function currentSpec(): GridSpec {
 // edge-anchored stays edge-anchored through any resize round trip.
 function refitLayout(layout: WidgetLayout, spec: GridSpec, prevSpec?: GridSpec | null): WidgetLayout {
   const next = {} as WidgetLayout;
-  const occupied: Occupancy[] = [];
+  // Seeded with the mascot's reserved cell — the proportional remap
+  // maps (0,0) to (0,0), so without this a top-left widget would land
+  // right on the mascot.
+  const occupied: Occupancy[] = [...RESERVED_OCCUPANCY];
   let changed = false;
   // Reading order (top-left first), not registry order: widgets that
   // were visually first claim their cells first, so a squeeze keeps
@@ -154,6 +158,19 @@ function refitLayout(layout: WidgetLayout, spec: GridSpec, prevSpec?: GridSpec |
     occupied.push({ cell, span });
   }
   return changed ? next : layout;
+}
+
+// Everything a moving/resizing widget must avoid: every OTHER widget's
+// committed cells plus the reserved (mascot) cell. Shared by
+// moveWidget and resizeWidget so the two can't drift apart.
+function occupancyExcept(layout: WidgetLayout, id: WidgetId): Occupancy[] {
+  return [
+    ...RESERVED_OCCUPANCY,
+    ...WIDGET_IDS.filter((other) => other !== id).map((other) => ({
+      cell: { col: layout[other].col, row: layout[other].row },
+      span: spanForSize(layout[other].size),
+    })),
+  ];
 }
 
 export function WidgetLayoutProvider({ children }: { children: ReactNode }) {
@@ -283,10 +300,7 @@ export function WidgetLayoutProvider({ children }: { children: ReactNode }) {
       setLayout((prev) => {
         if (!prev || !spec) return prev;
         const span = spanForSize(prev[id].size);
-        const occupied: Occupancy[] = WIDGET_IDS.filter((other) => other !== id).map((other) => ({
-          cell: { col: prev[other].col, row: prev[other].row },
-          span: spanForSize(prev[other].size),
-        }));
+        const occupied = occupancyExcept(prev, id);
         const cell = resolveCellCollision(spec, clampCell(spec, desired, span), span, occupied);
         const next = { ...prev, [id]: { ...prev[id], col: cell.col, row: cell.row } };
         persist(next);
@@ -301,10 +315,7 @@ export function WidgetLayoutProvider({ children }: { children: ReactNode }) {
       setLayout((prev) => {
         if (!prev || !spec) return prev;
         const span = spanForSize(size);
-        const occupied: Occupancy[] = WIDGET_IDS.filter((other) => other !== id).map((other) => ({
-          cell: { col: prev[other].col, row: prev[other].row },
-          span: spanForSize(prev[other].size),
-        }));
+        const occupied = occupancyExcept(prev, id);
         const cell = resolveCellCollision(spec, clampCell(spec, desired, span), span, occupied);
         const next = { ...prev, [id]: { col: cell.col, row: cell.row, size } };
         persist(next);
@@ -322,9 +333,9 @@ export function WidgetLayoutProvider({ children }: { children: ReactNode }) {
     setLayout(computeDefaultLayout(nextSpec));
   }, []);
 
-  // Memoized — 5 WidgetFrame consumers mount off this one provider,
+  // Memoized — the WidgetFrame consumers mount off this one provider,
   // and a drag/resize updates layout frequently; without this, every
-  // update recreates the value object and re-renders all 5 frames
+  // update recreates the value object and re-renders every frame
   // regardless of which single widget actually changed.
   // Must be called before the null early return below (rules of
   // hooks); the type assertion is safe because the value is only

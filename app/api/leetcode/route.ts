@@ -1,101 +1,114 @@
+// LeetCode's own GraphQL endpoint, queried directly — one round trip
+// (~1s) instead of the slow free alfa-leetcode-api proxy. Returns only
+// what the desktop LeetCode widget draws.
+//
+// NOTE: don't add `userCalendar` to matchedUser — LeetCode answers it
+// with "no permission" and nulls out the WHOLE matchedUser object.
+
+const USERNAME = 'shajith240'
+
+const QUERY = `
+query widget($username: String!) {
+  allQuestionsCount { difficulty count }
+  matchedUser(username: $username) {
+    submitStatsGlobal {
+      acSubmissionNum { difficulty count submissions }
+      totalSubmissionNum { difficulty count submissions }
+    }
+    submissionCalendar
+  }
+  userProfileUserQuestionProgressV2(userSlug: $username) {
+    numFailedQuestions { difficulty count }
+    userSessionBeatsPercentage { difficulty percentage }
+  }
+}
+`
+
+interface DifficultyCount {
+  difficulty: string
+  count?: number
+  submissions?: number
+  percentage?: number
+}
+
+type Difficulty = 'easy' | 'medium' | 'hard'
+const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard']
+
+// LeetCode spells difficulties "Easy" in some objects and "EASY" in
+// others — compare case-insensitively.
+function pick(list: DifficultyCount[] | undefined, difficulty: string) {
+  return list?.find((d) => d.difficulty.toLowerCase() === difficulty.toLowerCase())
+}
+
 export async function GET() {
   try {
-    const [
-      userRes,
-      profileRes,
-      solvedRes,
-      contestRes,
-      badgesRes,
-      languageRes,
-      skillRes,
-    ] = await Promise.all([
-      fetch('https://alfa-leetcode-api.onrender.com/shajith240', {
-        next: { revalidate: 3600 },
-      }),
-      fetch('https://alfa-leetcode-api.onrender.com/shajith240/profile', {
-        next: { revalidate: 3600 },
-      }),
-      fetch('https://alfa-leetcode-api.onrender.com/shajith240/solved', {
-        next: { revalidate: 3600 },
-      }),
-      fetch('https://alfa-leetcode-api.onrender.com/shajith240/contest', {
-        next: { revalidate: 3600 },
-      }),
-      fetch('https://alfa-leetcode-api.onrender.com/shajith240/badges', {
-        next: { revalidate: 3600 },
-      }),
-      fetch('https://alfa-leetcode-api.onrender.com/shajith240/language', {
-        next: { revalidate: 3600 },
-      }),
-      fetch('https://alfa-leetcode-api.onrender.com/shajith240/skill', {
-        next: { revalidate: 3600 },
-      }),
-    ])
+    const res = await fetch('https://leetcode.com/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Referer: 'https://leetcode.com',
+      },
+      body: JSON.stringify({ query: QUERY, variables: { username: USERNAME } }),
+      next: { revalidate: 3600 },
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const { data } = await res.json()
+    const user = data?.matchedUser
+    if (!user) throw new Error('matchedUser is null')
 
-    const [user, profile, solved, contest, badges, language, skill] =
-      await Promise.all([
-        userRes.json(),
-        profileRes.json(),
-        solvedRes.json(),
-        contestRes.json(),
-        badgesRes.json(),
-        languageRes.json(),
-        skillRes.json(),
-      ])
+    const totals: DifficultyCount[] = data.allQuestionsCount ?? []
+    const ac: DifficultyCount[] = user.submitStatsGlobal?.acSubmissionNum ?? []
+    const all: DifficultyCount[] = user.submitStatsGlobal?.totalSubmissionNum ?? []
+    const progress = data.userProfileUserQuestionProgressV2
 
-    const totalSubmissions =
-      solved?.totalSubmissionNum?.find((d: any) => d.difficulty === 'All')
-        ?.submissions ?? 0
-    const acceptedSubmissions =
-      solved?.acSubmissionNum?.find((d: any) => d.difficulty === 'All')
-        ?.submissions ?? 0
-    const acceptanceRate =
-      totalSubmissions > 0
-        ? ((acceptedSubmissions / totalSubmissions) * 100).toFixed(1)
-        : '0.0'
+    // Acceptance = accepted submissions / all submissions — the number
+    // LeetCode's ring shows on hover (315 / 440 → 71.59%).
+    const acceptedSubmissionCount = pick(ac, 'All')?.submissions ?? 0
+    const submissionCount = pick(all, 'All')?.submissions ?? 0
+    const acceptance =
+      submissionCount > 0
+        ? Math.round((acceptedSubmissionCount / submissionCount) * 10000) / 100
+        : 0
+
+    // "Attempting" = questions touched but never accepted. Prefer the
+    // progress query's numFailedQuestions; fall back to
+    // (questions submitted − questions accepted).
+    const attempting = {} as Record<Difficulty, number>
+    const beats = {} as Record<Difficulty, number | null>
+    for (const d of DIFFICULTIES) {
+      attempting[d] =
+        pick(progress?.numFailedQuestions, d)?.count ??
+        Math.max(0, (pick(all, d)?.count ?? 0) - (pick(ac, d)?.count ?? 0))
+      beats[d] = pick(progress?.userSessionBeatsPercentage, d)?.percentage ?? null
+    }
+
+    let submissionCalendar: Record<string, number> = {}
+    try {
+      submissionCalendar = JSON.parse(user.submissionCalendar ?? '{}')
+    } catch {
+      submissionCalendar = {}
+    }
 
     return Response.json({
-      user: {
-        username: user?.username ?? 'shajith240',
-        name: user?.name ?? 'shajith240',
-        avatar: user?.avatar ?? null,
-        ranking: user?.ranking ?? profile?.ranking ?? null,
-        country: user?.country ?? null,
-        school: user?.school ?? null,
-        gitHub: user?.gitHub ?? null,
-        linkedIN: user?.linkedIN ?? null,
-        reputation: user?.reputation ?? profile?.reputation ?? 0,
-        contributionPoint:
-          user?.contributionPoint ?? profile?.contributionPoint ?? 0,
+      totalSolved: pick(ac, 'All')?.count ?? 0,
+      totalQuestions: pick(totals, 'All')?.count ?? 0,
+      easySolved: pick(ac, 'Easy')?.count ?? 0,
+      mediumSolved: pick(ac, 'Medium')?.count ?? 0,
+      hardSolved: pick(ac, 'Hard')?.count ?? 0,
+      totalEasy: pick(totals, 'Easy')?.count ?? 0,
+      totalMedium: pick(totals, 'Medium')?.count ?? 0,
+      totalHard: pick(totals, 'Hard')?.count ?? 0,
+      acceptance,
+      submissionCount,
+      beats,
+      attempting: {
+        all: attempting.easy + attempting.medium + attempting.hard,
+        ...attempting,
       },
-      ranking: profile?.ranking ?? user?.ranking ?? null,
-      totalSolved: profile?.totalSolved ?? solved?.solvedProblem ?? 0,
-      totalQuestions: profile?.totalQuestions ?? 0,
-      easySolved: profile?.easySolved ?? solved?.easySolved ?? 0,
-      mediumSolved: profile?.mediumSolved ?? solved?.mediumSolved ?? 0,
-      hardSolved: profile?.hardSolved ?? solved?.hardSolved ?? 0,
-      totalEasy: profile?.totalEasy ?? 0,
-      totalMedium: profile?.totalMedium ?? 0,
-      totalHard: profile?.totalHard ?? 0,
-      totalSubmissions:
-        solved?.totalSubmissionNum ?? profile?.totalSubmissions ?? [],
-      acceptedSubmissions:
-        solved?.acSubmissionNum ?? profile?.matchedUserStats?.acSubmissionNum ?? [],
-      submissionCalendar: profile?.submissionCalendar ?? {},
-      acceptanceRate,
-      contestRating: Math.round(contest?.contestRating ?? 0),
-      contestRank: contest?.contestGlobalRanking ?? null,
-      contestTopPercentage: contest?.contestTopPercentage ?? null,
-      contestAttend: contest?.contestAttend ?? 0,
-      contestParticipants: contest?.totalParticipants ?? null,
-      contestParticipation: contest?.contestParticipation ?? [],
-      badgesCount: badges?.badgesCount ?? 0,
-      badges: badges?.badges ?? [],
-      activeBadge: badges?.activeBadge ?? null,
-      languageProblemCount: language?.languageProblemCount ?? [],
-      skills: skill ?? { fundamental: [], intermediate: [], advanced: [] },
+      // unix-day-seconds (UTC midnight) → submissions that day
+      submissionCalendar,
     })
   } catch {
-    return Response.json({ error: true }, { status: 500 })
+    return Response.json({ error: true }, { status: 502 })
   }
 }

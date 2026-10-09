@@ -4,7 +4,14 @@
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  --wallpaper-tint-rgb: 120, 120, 130;
+  /* The wallpaper's colour (set live by lib/useWallpaper.ts), for glass
+     that picks up a tint of what's behind it (lib/liquidGlass.ts
+     `adaptive`). This is only the default before it's measured. */
+  --backdrop-tint-rgb: 120, 120, 130;
+  /* The glass's own body: a dark "regular material" layer under the
+     tint, so text keeps its contrast while the backdrop's colour still
+     shows through and bends at the edges. */
+  --glass-body: rgba(22, 24, 34, 0.42);
 }
 
 /* ── LIQUID GLASS finishing layers ──
@@ -35,7 +42,7 @@
      properties inline once it runs (a layout effect + map build after
      first paint). This base means frame one already carries the same
      material family, so the upgrade is imperceptible. */
-  background: linear-gradient(rgba(var(--wallpaper-tint-rgb), 0.1), rgba(var(--wallpaper-tint-rgb), 0.1)), rgba(18, 20, 28, 0.18);
+  background: linear-gradient(rgba(var(--backdrop-tint-rgb), 0.1), rgba(var(--backdrop-tint-rgb), 0.1)), linear-gradient(rgba(18, 20, 28, 0.18), rgba(18, 20, 28, 0.18)), var(--glass-body);
   backdrop-filter: blur(8px) saturate(1.5) brightness(0.9) contrast(1.05);
   -webkit-backdrop-filter: blur(8px) saturate(1.5) brightness(0.9) contrast(1.05);
   /* Inner light: a crisp top lip where the slab catches light, and a

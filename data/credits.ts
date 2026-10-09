@@ -13,13 +13,10 @@
 // that auto-discovery pipeline. Adding a new dock/tech icon later just
 // means appending one line to ICON_CREDITS.
 
-import {
-  GENERATED_WALLPAPERS,
-  GENERATED_MOBILE_WALLPAPERS,
-  GENERATED_MOTIVATION_IMAGES,
-} from "./generated/content";
+import { GENERATED_WALLPAPERS, GENERATED_MOTIVATION_IMAGES } from "./generated/content";
 
-export const WALLPAPERS = [...GENERATED_WALLPAPERS, ...GENERATED_MOBILE_WALLPAPERS];
+export const WALLPAPERS = GENERATED_WALLPAPERS;
+
 export const MOTIVATION_IMAGES = GENERATED_MOTIVATION_IMAGES;
 
 export interface IconCredit {
@@ -68,8 +65,5 @@ export const FONT_CREDITS: FontCredit[] = [
   { name: "VG5000", owner: "velvetyne.fr", license: "See vg5000-master/LICENSE.txt in the repository" },
 ];
 
-// Some wallpapers depict third-party brands or copyrighted characters
-// beyond generic stock photography — called out explicitly rather
-// than left implicit in a filename.
 export const WALLPAPER_NOTE =
-  "Wallpapers may include stock photography, brand imagery, and characters from copyrighted media, sourced from publicly available wallpaper collections. None of it is original artwork by this site's owner.";
+  "Wallpapers are from 4kwallpapers.com. None of it is original artwork by this site's owner.";

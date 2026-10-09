@@ -18,7 +18,6 @@ const ICON_FILE: Record<string, string> = {
   "/about": "contact",
   "/projects": "projects",
   "/skills": "skills",
-  "/dsa": "xcode",
   "/achievements": "achievements",
   "/education": "education",
   "external:github": "github",

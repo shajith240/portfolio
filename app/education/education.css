@@ -1,0 +1,484 @@
+/* ── Education page (app/education/page.tsx) ────────────────────
+   Same approach as the Projects page (see the note above .pj-scroll in
+   app/globals.css): every breakpoint is a CSS media query, so inside a
+   desktop window iframe they resolve against the window's own width and
+   a resize costs zero React renders. Tiers from docs/design-system/
+   layout.md: phone < 640, tablet 640–1023, desktop ≥ 1024. */
+
+.ed-scroll {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  background: var(--bg-page);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.ed-scroll::-webkit-scrollbar {
+  display: none;
+}
+.ed-page {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 56px clamp(28px, 5vw, 56px) 72px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* Header */
+.ed-header {
+  margin-bottom: 32px;
+}
+.ed-title {
+  margin: 0;
+  font-size: clamp(2rem, 1.55rem + 1.6vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: rgba(255, 255, 255, 0.96);
+}
+.ed-lede {
+  margin: 10px 0 0;
+  font-size: 1.0625rem;
+  line-height: 1.45;
+  color: rgba(235, 235, 245, 0.6);
+}
+
+/* The institution card: an 8px-inset tray holding the photo (radius
+   28 − 8 = 20, concentric) and the details below it. */
+.ed-card {
+  padding: 8px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 0.5px solid rgba(255, 255, 255, 0.09);
+}
+
+/* Hero photo */
+.ed-hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 20px;
+  aspect-ratio: 2.2 / 1;
+  min-height: 300px;
+  background: #1a1414;
+}
+.ed-hero-photo {
+  position: absolute;
+  inset: 0;
+  transform-origin: 62% 40%;
+}
+.ed-hero-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0) 26%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.86) 0%, rgba(0, 0, 0, 0.55) 34%, rgba(0, 0, 0, 0) 66%);
+}
+.ed-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+}
+.ed-hero-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: rgba(255, 255, 255, 0.92);
+  /* Opaque-ish tone, not glass: this sits in the content layer. */
+  background: rgba(16, 16, 18, 0.55);
+  border: 0.5px solid rgba(255, 255, 255, 0.16);
+}
+.ed-hero-id {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  padding: 28px;
+}
+
+/* Logo roundel: the emblem is navy line art on transparent, so it sits
+   on a white disc — the way the institute shows it — with a soft ring
+   and drop shadow to lift it off the photo. */
+.ed-roundel {
+  position: relative;
+  flex-shrink: 0;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 35% 25%, #ffffff 0%, #f4f4f6 70%, #e9e9ee 100%);
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.22),
+    0 10px 28px rgba(0, 0, 0, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.25);
+}
+.ed-roundel img {
+  width: 70%;
+  height: auto;
+}
+
+.ed-name {
+  margin: 0;
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.125rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  color: #fff;
+  text-wrap: balance;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
+}
+.ed-place {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* Details under the photo */
+.ed-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  padding: 22px 20px 20px;
+}
+.ed-eyebrow {
+  margin: 0 0 6px;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  color: rgba(235, 235, 245, 0.55);
+}
+.ed-degree {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.96);
+}
+.ed-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ed-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  color: rgba(235, 235, 245, 0.78);
+  background: rgba(255, 255, 255, 0.06);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+}
+.ed-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  background: #f5f5f7;
+  color: #1d1d1f;
+  transition: background-color 0.18s ease;
+}
+.ed-link:hover {
+  background: #ffffff;
+}
+.ed-details {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+  padding: 16px 0 0;
+  border-top: 0.5px solid rgba(255, 255, 255, 0.08);
+}
+.ed-details-title {
+  margin: 0 0 10px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgba(235, 235, 245, 0.55);
+}
+.ed-details ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Timeline: a year column on the left, a hairline rail beside it, the
+   cards on the right. No nodes: each stop is anchored by its year,
+   which stays pinned next to its card while the card scrolls past. The
+   rail is a faint track plus a brighter fill that the page's scroll
+   draws downward (scaleY, set from app/education/page.tsx). */
+.ed-timeline {
+  --ed-year-col: 76px;
+  --ed-gap: 44px;
+  --ed-rail-x: calc(var(--ed-year-col) + var(--ed-gap) / 2);
+  position: relative;
+}
+.ed-rail {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: calc(var(--ed-rail-x) - 0.5px);
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  /* The far end (the start of the story) fades out. */
+  mask-image: linear-gradient(180deg, #000 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 85%, transparent 100%);
+}
+.ed-rail-fill {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-origin: 50% 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.3) 100%);
+}
+.ed-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ed-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--ed-year-col) minmax(0, 1fr);
+  column-gap: var(--ed-gap);
+}
+.ed-step + .ed-step {
+  margin-top: 20px;
+}
+.ed-year {
+  position: sticky;
+  top: 28px;
+  align-self: start;
+  margin: 0;
+  padding-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+.ed-year-num {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.94);
+}
+.ed-year-sub {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: rgba(235, 235, 245, 0.45);
+  white-space: nowrap;
+}
+
+/* The break: the rail turns dashed for its stretch (drawn over both
+   the track and the fill), with a short note instead of a card. */
+.ed-step-break::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  bottom: -20px;
+  left: calc(var(--ed-rail-x) - 0.5px);
+  width: 1px;
+  z-index: 1;
+  background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0 3px, var(--bg-page) 3px 8px);
+}
+.ed-break {
+  margin: 0;
+  padding: 14px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ed-break-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.82);
+}
+.ed-break-note {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: rgba(235, 235, 245, 0.5);
+}
+
+/* School cards: same tray as the institution card, no photo. */
+.ed-school {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 32px;
+  padding: 22px 24px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 0.5px solid rgba(255, 255, 255, 0.09);
+}
+.ed-school-main {
+  min-width: 0;
+}
+.ed-school-name {
+  margin: 0;
+  font-size: 1.1875rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.96);
+}
+.ed-school-degree {
+  margin: 4px 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: rgba(235, 235, 245, 0.72);
+}
+.ed-school-meta {
+  margin: 6px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: rgba(235, 235, 245, 0.45);
+}
+.ed-score {
+  margin: 0;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+.ed-score-value {
+  font-size: clamp(2rem, 1.7rem + 1vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.96);
+}
+.ed-score-detail {
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: rgba(235, 235, 245, 0.45);
+}
+
+/* Attribution: small and quiet, but present (and legible). */
+.ed-credit {
+  margin: 40px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+  color: rgba(235, 235, 245, 0.42);
+}
+.ed-credit a {
+  color: rgba(235, 235, 245, 0.62);
+  text-decoration: underline;
+  text-decoration-color: rgba(235, 235, 245, 0.25);
+  text-underline-offset: 2px;
+}
+.ed-credit a:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Phone */
+@media (max-width: 639px) {
+  .ed-page {
+    /* Clears the iPhone status bar at the top and the home indicator. */
+    padding: 84px 16px 64px;
+  }
+  .ed-header {
+    margin-bottom: 24px;
+  }
+  .ed-card {
+    border-radius: 26px;
+    padding: 6px;
+  }
+  .ed-hero {
+    border-radius: 20px;
+    aspect-ratio: 4 / 5;
+    min-height: 0;
+  }
+  .ed-hero-id {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 20px;
+  }
+  .ed-roundel {
+    width: 68px;
+    height: 68px;
+  }
+  .ed-body {
+    padding: 18px 14px 16px;
+  }
+  .ed-link {
+    width: 100%;
+    justify-content: center;
+  }
+  /* Phone: no room for a year column — the cards' eyebrows already
+     carry the years — so the rail runs down the left edge alone. */
+  .ed-timeline {
+    --ed-year-col: 0px;
+    --ed-gap: 22px;
+    --ed-rail-x: 4px;
+  }
+  .ed-year {
+    display: none;
+  }
+  .ed-step {
+    grid-template-columns: minmax(0, 1fr);
+    padding-left: var(--ed-gap);
+  }
+  .ed-school {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 18px;
+  }
+  .ed-score {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .ed-score-detail {
+    margin-top: 0;
+  }
+  .ed-break {
+    padding: 10px 4px;
+  }
+}
+
+/* Tablet (incl. a default-size desktop window): a little taller than
+   the desktop band so the name has room over the photo, yet short
+   enough that the degree row lands in the first screenful. */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .ed-hero {
+    aspect-ratio: 2 / 1;
+  }
+}

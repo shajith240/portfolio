@@ -2,7 +2,15 @@
 
 import { memo, useRef, useEffect, useState } from "react";
 import { motion, useMotionValue, useDragControls, animate } from "framer-motion";
-import { useWindowManager, getPositionBounds, TOP_BOUND, DOCK_RECT_KEY, type WindowState } from "@/contexts/WindowManagerContext";
+import {
+  useWindowManager,
+  getPositionBounds,
+  TOP_BOUND,
+  MENU_BAR_HEIGHT,
+  BOTTOM_RESERVE,
+  DOCK_RECT_KEY,
+  type WindowState,
+} from "@/contexts/WindowManagerContext";
 import { genieClipPath } from "@/lib/genieClipPath";
 import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
 import FinderApp from "@/components/window/FinderApp";
@@ -22,6 +30,7 @@ const ZOOM_SPRING = { type: "spring", stiffness: 380, damping: 36 } as const;
 const MIN_WIDTH = 480;
 const MIN_HEIGHT = 320;
 const RESIZE_EDGE_WIDTH = 6;
+const TITLEBAR_HEIGHT = 28;
 const RESIZE_CORNER_SIZE = 12;
 
 // Genie open/minimize: every animated property (position, scale,
@@ -143,14 +152,17 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const glassLayerRef = useRef<HTMLDivElement | null>(null);
   const [lightsHovered, setLightsHovered] = useState(false);
-  // While the window is being dragged, the content iframe must stop
-  // receiving pointer events AND stop being interactive — a live
-  // iframe under a moving cursor both swallows the pointer stream
-  // (drag freezes when the cursor crosses it) and forces content
-  // repaints mid-drag. This is the standard fix, same as every
-  // window-manager-in-the-browser does it.
+  // While the window is dragged or resized, a live iframe under the
+  // cursor would swallow the pointer stream (the drag freezes when the
+  // cursor crosses it). The fix is a transparent shield laid OVER the
+  // content for the duration — NOT toggling the iframe's own
+  // pointer-events: Chromium caches an iframe's scroll hit-test data,
+  // and flipping pointer-events none → auto left it stale, so after a
+  // resize the wheel reached the page but scrolled nothing (reported
+  // bug). The iframe itself is never touched now.
   const [dragging, setDragging] = useState(false);
-  const [resizing, setResizing] = useState(false);
+  // The edge being resized (its cursor stays on the shield), or null.
+  const [resizing, setResizing] = useState<string | null>(null);
   // Holds the currently in-flight resize's cleanup — only set while a
   // resize drag is active. Without this, closing/unmounting the window
   // mid-resize (e.g. the red traffic light, or a programmatic close)
@@ -171,6 +183,7 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
   const [clipActive, setClipActive] = useState(true);
   // Store the pre-zoom bounds so double-click zoom can toggle between them
   const preZoomBoundsRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
+  const zoomedBoundsRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
 
   // Liquid Glass on the window body — real refraction engine on the
   // existing blur layer (already isolated from the outer transformed
@@ -245,6 +258,53 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
   const height = useMotionValue(win.height);
   const scale = useMotionValue(1);
   const opacity = useMotionValue(1);
+
+  // The .lg-rim overlay (window-sized, blend-mode glint + gloss) is
+  // re-rasterized and re-blended at full window size on every frame the
+  // box changes size — measured as most of the dropped frames left in
+  // a maximize/restore. It's a faint glint, so it steps out while the
+  // bounds animate (or an edge is dragged) and fades back once the box
+  // is still. Direct style writes: no React re-render per transition.
+  const rimRef = useRef<HTMLDivElement | null>(null);
+  const rimHold = useRef(0);
+  const hideRim = () => {
+    const rim = rimRef.current;
+    if (!rim) return;
+    rim.style.transition = "none";
+    rim.style.opacity = "0";
+    rim.style.visibility = "hidden";
+  };
+  const showRim = () => {
+    const rim = rimRef.current;
+    if (!rim) return;
+    rim.style.visibility = "";
+    requestAnimationFrame(() => {
+      rim.style.transition = "opacity 0.18s ease";
+      rim.style.opacity = "";
+    });
+  };
+  // Animates the window to new bounds with the rim held back; only the
+  // latest call (rapid toggles interrupt each other) brings it back.
+  const animateBounds = (
+    to: { x: number; y: number; width: number; height: number },
+    transition: typeof BOUNDS_SPRING | typeof ZOOM_SPRING
+  ) => {
+    const token = ++rimHold.current;
+    hideRim();
+    const runs = [
+      animate(x, to.x, transition),
+      animate(y, to.y, transition),
+      animate(width, to.width, transition),
+      animate(height, to.height, transition),
+    ];
+    const restore = () => {
+      if (token === rimHold.current) showRim();
+    };
+    Promise.all(runs).then(restore);
+    // A stopped animation (a drag grabbing the window mid-zoom) never
+    // resolves — don't leave the rim hidden on that path.
+    setTimeout(restore, 1200);
+  };
   // Drives the genie clip-path funnel: 0 = full rectangle, 1 = fully
   // collapsed into a narrow neck. clipPathStr is the derived CSS string —
   // Framer motion values don't interpolate strings on their own, so
@@ -342,10 +402,17 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
       mountedRef.current = true;
       return;
     }
-    animate(x, win.x, BOUNDS_SPRING);
-    animate(y, win.y, BOUNDS_SPRING);
-    animate(width, win.width, BOUNDS_SPRING);
-    animate(height, win.height, BOUNDS_SPRING);
+    // Drag-end commits land here with the window already in place —
+    // nothing to animate, so don't blink the rim for them.
+    if (
+      Math.abs(x.get() - win.x) < 0.5 &&
+      Math.abs(y.get() - win.y) < 0.5 &&
+      Math.abs(width.get() - win.width) < 0.5 &&
+      Math.abs(height.get() - win.height) < 0.5
+    ) {
+      return;
+    }
+    animateBounds({ x: win.x, y: win.y, width: win.width, height: win.height }, BOUNDS_SPRING);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [win.x, win.y, win.width, win.height]);
 
@@ -394,7 +461,9 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
   ) => {
     e.stopPropagation();
     e.preventDefault();
-    setResizing(true);
+    setResizing(edge);
+    rimHold.current++;
+    hideRim();
     bringToFront(win.id);
 
     const startX = e.clientX;
@@ -462,7 +531,8 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
     };
 
     const handlePointerUp = () => {
-      setResizing(false);
+      setResizing(null);
+      showRim();
       updateBounds(win.id, {
         x: x.get(),
         y: y.get(),
@@ -491,31 +561,34 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
     const currentWidth = width.get();
     const currentHeight = height.get();
 
-    // If we have pre-zoom bounds stored and they match current, restore to pre-zoom
+    // Restore when we zoomed and the window is still at the zoomed
+    // bounds (not moved/resized since). This used to compare against the
+    // PRE-zoom bounds, which never match once zoomed — so a second
+    // double-click re-zoomed in place instead of restoring.
+    const zoomed = zoomedBoundsRef.current;
     if (
       preZoomBoundsRef.current &&
-      Math.abs(preZoomBoundsRef.current.x - currentX) < 1 &&
-      Math.abs(preZoomBoundsRef.current.y - currentY) < 1 &&
-      Math.abs(preZoomBoundsRef.current.width - currentWidth) < 1 &&
-      Math.abs(preZoomBoundsRef.current.height - currentHeight) < 1
+      zoomed &&
+      Math.abs(zoomed.x - currentX) < 1 &&
+      Math.abs(zoomed.y - currentY) < 1 &&
+      Math.abs(zoomed.width - currentWidth) < 1 &&
+      Math.abs(zoomed.height - currentHeight) < 1
     ) {
       // Already at zoom, restore pre-zoom bounds
       const prevBounds = preZoomBoundsRef.current;
-      animate(x, prevBounds.x, ZOOM_SPRING);
-      animate(y, prevBounds.y, ZOOM_SPRING);
-      animate(width, prevBounds.width, ZOOM_SPRING);
-      animate(height, prevBounds.height, ZOOM_SPRING);
+      animateBounds(prevBounds, ZOOM_SPRING);
       preZoomBoundsRef.current = null;
+      zoomedBoundsRef.current = null;
       updateBounds(win.id, { x: prevBounds.x, y: prevBounds.y, width: prevBounds.width, height: prevBounds.height });
     } else {
       // Not at zoom, store current bounds and zoom
       preZoomBoundsRef.current = { x: currentX, y: currentY, width: currentWidth, height: currentHeight };
 
-      // Calculate zoom bounds: viewport minus menu bar (24px top), Dock clearance (90px bottom), 12px side margins
+      // Zoom bounds: the viewport minus the menu bar, the Dock (with a
+      // little air above it) and 12px side margins.
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      const MENU_BAR_HEIGHT = 24;
-      const DOCK_CLEARANCE = 90;
+      const DOCK_CLEARANCE = BOTTOM_RESERVE - 8;
       const SIDE_MARGIN = 12;
 
       const zoomX = SIDE_MARGIN;
@@ -523,10 +596,8 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
       const zoomWidth = Math.max(MIN_WIDTH, viewportWidth - 2 * SIDE_MARGIN);
       const zoomHeight = Math.max(MIN_HEIGHT, viewportHeight - MENU_BAR_HEIGHT - DOCK_CLEARANCE);
 
-      animate(x, zoomX, ZOOM_SPRING);
-      animate(y, zoomY, ZOOM_SPRING);
-      animate(width, zoomWidth, ZOOM_SPRING);
-      animate(height, zoomHeight, ZOOM_SPRING);
+      zoomedBoundsRef.current = { x: zoomX, y: zoomY, width: zoomWidth, height: zoomHeight };
+      animateBounds(zoomedBoundsRef.current, ZOOM_SPRING);
       updateBounds(win.id, { x: zoomX, y: zoomY, width: zoomWidth, height: zoomHeight });
     }
   };
@@ -540,7 +611,12 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
       dragMomentum={false}
       dragElastic={0}
       dragConstraints={{ left: dragBounds.minX, right: dragBounds.maxX, top: dragBounds.minY, bottom: dragBounds.maxY }}
-      onDragStart={() => setDragging(true)}
+      onDragStart={() => {
+        setDragging(true);
+        // Grabbing the window mid-zoom stops the bounds spring.
+        rimHold.current++;
+        showRim();
+      }}
       onDragEnd={() => {
         setDragging(false);
         updateBounds(win.id, { x: x.get(), y: y.get() });
@@ -589,14 +665,28 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
           still clips a plain child correctly, moving backdrop-filter to
           this absolutely-positioned child sidesteps the bug entirely
           while still reading as one continuous frosted material behind
-          the titlebar + body tint layers. */}
+          the titlebar + body tint layers.
+
+          Iframe windows: the layer only spans the titlebar (+ one corner
+          radius, so its own rounded bottom corners stay hidden under the
+          opaque page). The page body (--bg-page) covers everything below,
+          so a full-height layer refracted ~500k invisible pixels — and
+          Chromium can't cache backdrop-filter output, so ANY repaint over
+          the window (scrolling the page, a maximize/restore, the mascot's
+          idle breathing where it perches on the window) re-ran the whole
+          SVG displacement filter every frame: steady ~30fps. Measured:
+          titlebar-only → 60fps, and the visible titlebar rows render
+          identically (same radius/bezel profile over rows 0–28). */}
       <div
         ref={glassLayerRef}
         aria-hidden
         className="liquid-glass"
         style={{
           position: "absolute",
-          inset: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          ...(win.kind === "iframe" ? { height: `${TITLEBAR_HEIGHT + 12}px` } : { bottom: 0 }),
           zIndex: 0,
           borderRadius: "12px",
         }}
@@ -604,10 +694,11 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
       {/* Titlebar — only this initiates drag, so iframe content never fights it */}
       <div
+        data-window-chrome
         onPointerDown={(e) => dragControls.start(e)}
         onDoubleClick={handleTitlebarDoubleClick}
         style={{
-          height: "28px",
+          height: `${TITLEBAR_HEIGHT}px`,
           flexShrink: 0,
           display: "flex",
           alignItems: "center",
@@ -688,21 +779,37 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
         <iframe
           src={`${win.route}${win.route.includes("?") ? "&" : "?"}__window=1`}
           title={win.title}
-          style={{ flex: 1, border: "none", background: "var(--bg-page)", pointerEvents: dragging || resizing ? "none" : "auto" }}
+          style={{ flex: 1, border: "none", background: "var(--bg-page)" }}
         />
       )}
       </div>
+
+      {/* Interaction shield (see `dragging` above): only mounted while a
+          drag or resize is in flight, above the content and rim, below
+          the resize zones. */}
+      {(dragging || resizing) && (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 60,
+            cursor: resizing ? `${resizing}-resize` : "default",
+          }}
+        />
+      )}
 
       {/* Liquid Glass rim + gloss ABOVE the content: the backdrop
           layer's own rim is hidden under the opaque titlebar/body, so
           this overlay is what actually makes the window read as glass
           (bright directional edge + top sheen). pointer-events none,
           below the resize zones (z 100), above content (z 1). */}
-      <div className="lg-rim" style={{ borderRadius: "12px", zIndex: 50 }} />
+      <div ref={rimRef} className="lg-rim" style={{ borderRadius: "12px", zIndex: 50 }} />
 
       {/* Resize zones: 6px-wide edges + 12px corners, invisible but with cursors */}
       {/* Top edge */}
       <div
+        data-window-chrome
         onPointerDown={(e) => handleResizeStart(e, "n")}
         style={{
           position: "absolute",
@@ -716,6 +823,7 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
       />
       {/* Bottom edge */}
       <div
+        data-window-chrome
         onPointerDown={(e) => handleResizeStart(e, "s")}
         style={{
           position: "absolute",
@@ -729,6 +837,7 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
       />
       {/* Left edge */}
       <div
+        data-window-chrome
         onPointerDown={(e) => handleResizeStart(e, "w")}
         style={{
           position: "absolute",
@@ -742,6 +851,7 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
       />
       {/* Right edge */}
       <div
+        data-window-chrome
         onPointerDown={(e) => handleResizeStart(e, "e")}
         style={{
           position: "absolute",
@@ -755,6 +865,7 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
       />
       {/* Top-left corner */}
       <div
+        data-window-chrome
         onPointerDown={(e) => handleResizeStart(e, "nw")}
         style={{
           position: "absolute",
@@ -768,6 +879,7 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
       />
       {/* Top-right corner */}
       <div
+        data-window-chrome
         onPointerDown={(e) => handleResizeStart(e, "ne")}
         style={{
           position: "absolute",
@@ -781,6 +893,7 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
       />
       {/* Bottom-left corner */}
       <div
+        data-window-chrome
         onPointerDown={(e) => handleResizeStart(e, "sw")}
         style={{
           position: "absolute",
@@ -794,6 +907,7 @@ function WindowImpl({ win, active }: { win: WindowState; active: boolean }) {
       />
       {/* Bottom-right corner */}
       <div
+        data-window-chrome
         onPointerDown={(e) => handleResizeStart(e, "se")}
         style={{
           position: "absolute",

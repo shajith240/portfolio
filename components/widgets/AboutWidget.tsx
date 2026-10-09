@@ -4,8 +4,9 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
 
-/* macOS-style info widget — sits directly below PhotoWidget (same
-   width, small gap). Liquid Glass material + widget-scale radius, per
+/* macOS-style info widget (not currently mounted on the desktop —
+   it was designed to sit below the since-removed photo widget).
+   Liquid Glass material + widget-scale radius, per
    docs/design-system/materials-glass.md. Typography follows
    docs/design-system/typography.md: Semibold (not Bold) for the
    headline-weight tagline, an uppercase Semibold label for the

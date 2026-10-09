@@ -7,6 +7,8 @@ export interface Project {
   description: string
   github: string
   live: string
+  /** Screenshot path under /public, or '' when there isn't one yet
+   *  (the Projects page then draws a designed cover tile instead). */
   image: string
 }
 
@@ -20,7 +22,7 @@ export const PROJECTS: Project[] = [
     description: 'Community app for human-powered resume feedback — upload a resume, get structured critiques from students, recruiters, and working professionals in threaded discussions, and build reviewer reputation through public profiles and a leaderboard.',
     github: 'https://github.com/shajith240/ResumeRoster',
     live: 'https://linted.space',
-    image: '/project-photos/linted.png',
+    image: '/project-photos/linted.webp',
   },
   {
     id: 2,
@@ -31,7 +33,7 @@ export const PROJECTS: Project[] = [
     description: 'Personal productivity dashboard for managing tasks and tracking focus sessions.',
     github: 'https://github.com/shajith240/intellidesk',
     live: 'https://intellidesk-ten.vercel.app',
-    image: 'https://placehold.co/800x600/242424/555555',
+    image: '',
   },
   {
     id: 3,
@@ -42,7 +44,7 @@ export const PROJECTS: Project[] = [
     description: 'CLI tool to automate WiFi connection switching based on location and priority.',
     github: 'https://github.com/shajith240/WIFI-AUTOMATION',
     live: '',
-    image: 'https://placehold.co/800x600/242424/555555',
+    image: '',
   },
   {
     id: 4,
@@ -53,7 +55,7 @@ export const PROJECTS: Project[] = [
     description: 'Autonomous AI debate agent built for Agent SLAM 2026, a live competitive tournament — connects to a central WebSocket server and argues assigned topics in Finance, Marketing, and Ethics with zero human intervention once a match starts.',
     github: 'https://github.com/shajith240/Agent-slam',
     live: '',
-    image: '/project-photos/agent_slam.png',
+    image: '/project-photos/agent_slam.webp',
   },
   {
     id: 5,
@@ -64,7 +66,7 @@ export const PROJECTS: Project[] = [
     description: 'Automates extraction and categorization of information from invoices across multiple formats using machine learning and NLP — ingestion and classification phases complete, extraction and API layers in progress.',
     github: 'https://github.com/shajith240/INVOICE-SCRAPING-SYSTEM',
     live: '',
-    image: 'https://placehold.co/800x600/242424/555555',
+    image: '',
   },
   {
     id: 6,
@@ -75,6 +77,6 @@ export const PROJECTS: Project[] = [
     description: 'Landing page for an at-home veterinary care service.',
     github: 'https://github.com/shajith240/vet_landing_page',
     live: 'https://vet-landing-page-coral.vercel.app',
-    image: '/project-photos/vetlandingpage.png',
+    image: '/project-photos/vetlandingpage.webp',
   },
 ]

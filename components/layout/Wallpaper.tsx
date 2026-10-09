@@ -10,20 +10,12 @@ import DesktopContextMenu from "@/components/layout/DesktopContextMenu";
 import WallpaperPicker from "@/components/widgets/WallpaperPicker";
 import SelectionMarquee from "@/components/layout/SelectionMarquee";
 
-const PLACEHOLDER_BG =
-  "radial-gradient(ellipse 120% 90% at 30% 20%, #2a2a2e 0%, #17171a 55%, #0d0d0f 100%)";
-
-// Phone default until public/wallpapers/mobile has files — an
-// iOS-style warm-to-cool mesh, NOT the desktop wallpaper (landscape
-// desktop art stretched over a phone was the "same wallpaper on
-// both" bug).
-const IOS_PLACEHOLDER_BG =
-  "radial-gradient(130% 90% at 18% 0%, #e0813c 0%, rgba(224, 129, 60, 0) 58%), " +
-  "radial-gradient(120% 80% at 90% 38%, #6b3fa0 0%, rgba(107, 63, 160, 0) 62%), " +
-  "radial-gradient(160% 110% at 50% 105%, #1e63b4 0%, #12224a 55%, #0a0f24 100%)";
+// Painted under the wallpaper until it loads: the wallpapers are dark
+// with black sides, so a near-black backdrop makes the fade-in seamless.
+const PLACEHOLDER_BG = "#050507";
 
 export default function Wallpaper() {
-  const { wallpaper, setWallpaper, isPhone } = useWallpaper();
+  const { wallpaper, setWallpaper } = useWallpaper();
   const { openFinder } = useWindowManager();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -70,7 +62,7 @@ export default function Wallpaper() {
           // The gradient always paints instantly underneath; the image
           // fades over it once loaded, so a slow connection sees a
           // designed backdrop rather than a blank flash.
-          background: isPhone ? IOS_PLACEHOLDER_BG : PLACEHOLDER_BG,
+          background: PLACEHOLDER_BG,
         }}
       >
         {wallpaper && (
@@ -89,7 +81,9 @@ export default function Wallpaper() {
             priority
             sizes="100vw"
             draggable={false}
-            style={{ objectFit: "cover", pointerEvents: "none" }}
+            // Centred subject: cover-cropping keeps it in the middle on
+            // any aspect, a phone's portrait screen included.
+            style={{ objectFit: "cover", objectPosition: "center", pointerEvents: "none" }}
           />
         )}
       </div>

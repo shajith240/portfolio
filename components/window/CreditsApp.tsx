@@ -20,10 +20,11 @@ const item = {
   show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0, 0, 0.58, 1] as const } },
 };
 
+/** "bmw-m2-rr-edition-3840x2160-26410.webp" → "Bmw M2 Rr Edition". */
 function prettify(filename: string) {
   return filename
-    .replace(/^mobile\//, "")
     .replace(/\.[^.]+$/, "")
+    .replace(/-\d+x\d+-\d+$/, "")
     .replace(/[-_]+/g, " ")
     .trim()
     .split(/\s+/)

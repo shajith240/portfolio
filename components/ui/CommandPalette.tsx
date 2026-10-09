@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
-import { NAV_ITEMS } from "@/data/nav";
+import { VISIBLE_NAV_ITEMS } from "@/data/nav";
+import { RESUME_URL } from "@/data/profile";
 import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
 
 /* macOS Spotlight (Tahoe, dark mode) — restyled to match the real
@@ -133,6 +134,10 @@ const QUICK_ACTIONS = [
   { id: "github",   label: "GitHub",   hint: "Open source profile",  icon: <GithubIcon />,   href: "https://github.com/shajith240" },
   { id: "linkedin", label: "LinkedIn", hint: "Professional profile",  icon: <LinkedinIcon />, href: "https://linkedin.com/in/shajith240" },
   { id: "email",    label: "Email",    hint: "Get in touch",          icon: <MailIcon />,     href: "mailto:shajith240@gmail.com" },
+  // Only once a resume is actually uploaded (data/profile.ts RESUME_URL).
+  ...(RESUME_URL
+    ? [{ id: "resume", label: "Resume", hint: "View my resume", icon: <NoteIcon />, href: RESUME_URL }]
+    : []),
 ];
 
 /* Apps that no longer have a Dock slot (the Dock was slimmed to the
@@ -149,7 +154,6 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   "/about":    <AboutIcon />,
   "/projects": <FolderIcon />,
   "/skills":   <StarIcon />,
-  "/dsa":      <CodeIcon />,
   "/achievements": <AwardIcon />,
   "/education":    <GraduationCapIcon />,
 };
@@ -325,7 +329,7 @@ export default function CommandPalette() {
 
   const allItems: AnyItem[] = useMemo(() => [
     ...QUICK_ACTIONS.map((a) => ({ ...a, section: "Quick Actions" as const, type: "action" as const })),
-    ...NAV_ITEMS.map((n) => ({
+    ...VISIBLE_NAV_ITEMS.map((n) => ({
       id: n.href,
       label: n.label.charAt(0) + n.label.slice(1).toLowerCase(),
       hint: undefined as string | undefined,

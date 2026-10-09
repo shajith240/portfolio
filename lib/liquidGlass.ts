@@ -61,9 +61,9 @@ export interface LiquidGlassOptions {
   contrast?: number;
   tint?: number; // fill alpha
   tintColor?: string; // "r,g,b"
-  // Adaptive color: the material picks up the color of what's behind
-  // it — approximated with the wallpaper's average color
-  // (--wallpaper-tint-rgb, live-updated by useWallpaper). 0 disables.
+  // Adaptive color: the material picks up a tint of what's behind it —
+  // the desktop's backdrop colour (--backdrop-tint-rgb in
+  // styles/glass-system.css). 0 disables.
   adaptive?: number;
   // Press response. "squish": swell + gel squash toward the press
   // point + bouncy release (control-sized surfaces). "glow": light and
@@ -686,13 +686,16 @@ export function applyLiquidGlass(element: HTMLElement, opts?: LiquidGlassOptions
   el.classList.add("lg-surface");
   if (lightEl !== el) lightEl.classList.add("lg-surface");
 
-  // Material base: tint + adaptive wallpaper wash. The wash reads the
-  // live CSS variable, so every surface re-tints the instant the
-  // wallpaper changes — no re-application needed.
+  // Material base: tint + adaptive backdrop wash. The wash reads a CSS
+  // variable, so a backdrop change re-tints every surface without
+  // re-applying the engine.
+  // Under it all, --glass-body (styles/glass-system.css): the material's
+  // own dark body, so glass over a dark stage still has substance.
+  const tint = `linear-gradient(rgba(${o.tintColor},${o.tint}), rgba(${o.tintColor},${o.tint}))`;
   el.style.background =
     o.adaptive > 0
-      ? `linear-gradient(rgba(var(--wallpaper-tint-rgb), ${o.adaptive}), rgba(var(--wallpaper-tint-rgb), ${o.adaptive})), rgba(${o.tintColor},${o.tint})`
-      : `rgba(${o.tintColor},${o.tint})`;
+      ? `linear-gradient(rgba(var(--backdrop-tint-rgb), ${o.adaptive}), rgba(var(--backdrop-tint-rgb), ${o.adaptive})), ${tint}, var(--glass-body)`
+      : `${tint}, var(--glass-body)`;
 
   const fx = `saturate(${o.saturate}) brightness(${o.brightness}) contrast(${o.contrast})`;
   let backdrop = `blur(${o.blur + 10}px) ${fx}`;

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useLiquidGlass } from "@/lib/liquidGlass";
+import { isNavItemVisible } from "@/data/nav";
 
 /* iPhone home screen — iOS 26 anatomy per
    scratchpad/ios26-lock-home-spec.md §2: 4-column grid of 60px
@@ -20,25 +21,31 @@ export interface HomeApp {
   external?: string; // external URL
 }
 
+// Internal apps whose section has no content yet (data/nav.ts) are
+// left off the grid and the dock; they come back when it does.
+const isAppVisible = (app: HomeApp) => !app.href || isNavItemVisible(app.href);
+
 const GRID_APPS: HomeApp[] = [
   { label: "About", icon: "contact", href: "/about" },
   { label: "Projects", icon: "projects", href: "/projects" },
   { label: "Skills", icon: "skills", href: "/skills" },
-  { label: "DSA", icon: "xcode", href: "/dsa" },
+  // Phone-only (data/nav.ts PHONE_ONLY_ROUTES): the LeetCode and
+  // Codeforces widgets, which live on the desktop's widget grid.
+  { label: "Coding", icon: "xcode", href: "/coding" },
   { label: "Achievements", icon: "achievements", href: "/achievements" },
   { label: "Education", icon: "education", href: "/education" },
   { label: "GitHub", icon: "github", external: "https://github.com/shajith240" },
   { label: "LinkedIn", icon: "linkedin", external: "https://www.linkedin.com/in/shajith240" },
   { label: "LeetCode", icon: "leetcode", external: "https://leetcode.com/shajith240" },
   { label: "Mail", icon: "contact", external: "mailto:shajith240@gmail.com" },
-];
+].filter(isAppVisible);
 
 const DOCK_APPS: HomeApp[] = [
   { label: "About", icon: "contact", href: "/about" },
   { label: "Projects", icon: "projects", href: "/projects" },
   { label: "Skills", icon: "skills", href: "/skills" },
   { label: "Achievements", icon: "achievements", href: "/achievements" },
-];
+].filter(isAppVisible);
 
 /* Both pill and dock run the real refraction engine
    (lib/liquidGlass.ts) — these style objects only carry shape;

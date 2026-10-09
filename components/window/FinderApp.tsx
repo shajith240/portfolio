@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useWindowManager } from "@/contexts/WindowManagerContext";
 import { PROJECTS, type Project } from "@/data/projects";
 import { CATEGORIES } from "@/data/skills";
+import { isNavItemVisible } from "@/data/nav";
 import { useWallpaper, WALLPAPERS } from "@/lib/useWallpaper";
 
 /* When "See more" in the wallpaper picker opens Finder, it should land
@@ -57,12 +58,14 @@ const SKILLS_FOLDER: FinderNode = {
   children: CATEGORIES.map((cat) => ({
     kind: "folder",
     name: cat.label,
-    children: cat.icons.map((icon) => ({ kind: "skill", name: icon.name, iconFile: icon.file })),
+    // Skills without an icon of their own (Next.js, Supabase…) fall back
+    // to the Skills folder icon.
+    children: cat.icons.map((icon) => ({ kind: "skill", name: icon.name, iconFile: icon.file ?? "skills" })),
   })),
 };
 
 // Every desktop wallpaper lives here — dropping an image into
-// public/wallpaper picks it up automatically (WALLPAPERS is generated),
+// public/wallpapers picks it up automatically (WALLPAPERS is generated),
 // so this folder needs no manual upkeep. Double-clicking one sets it
 // as the desktop wallpaper live.
 const WALLPAPERS_FOLDER: FinderNode = {
@@ -82,16 +85,16 @@ const WALLPAPERS_FOLDER: FinderNode = {
 const ROOT: FinderNode = {
   kind: "folder",
   name: "Macintosh HD",
-  children: [
+  children: ([
     { kind: "document", name: "About Me.rtf", iconFile: "contact", route: "/about", label: "About" },
     PROJECTS_FOLDER,
     SKILLS_FOLDER,
     WALLPAPERS_FOLDER,
-    { kind: "app", name: "DSA.app", iconFile: "xcode", route: "/dsa", label: "DSA" },
     { kind: "app", name: "Achievements.app", iconFile: "achievements", route: "/achievements", label: "Achievements" },
     { kind: "app", name: "Education.app", iconFile: "education", route: "/education", label: "Education" },
     { kind: "document", name: "Credits.rtf", iconFile: "notes", route: "credits", label: "Credits" },
-  ],
+    // Sections with no content yet (data/nav.ts) are left out until they have some.
+  ] satisfies FinderNode[]).filter((node) => node.kind !== "app" || isNavItemVisible(node.route)),
 };
 
 // Real macOS folder icon (extracted from public/icons/folder_commond.icns'
@@ -181,10 +184,8 @@ function GridItem({ node, onOpen }: { node: FinderNode; onOpen: () => void }) {
         {node.kind === "wallpaper" ? (
           // The wallpaper IS its own thumbnail — a cropped preview
           // tile, like macOS shows image files in gallery view.
-          // next/image with an explicit tiny size: these are 52px
-          // gallery tiles whose sources are the full multi-MB
-          // wallpapers — as raw <img> tags, opening the Wallpapers
-          // folder downloaded every original file at full size.
+          // next/image with an explicit tiny size, so opening the folder
+          // never downloads the full 4K files.
           <Image
             src={`/wallpapers/${node.filename}`}
             alt={name}
@@ -329,18 +330,6 @@ function QuickLook({ node, onClose, onOpenProjects }: { node: FinderNode; onClos
   );
 }
 
-// Resolve a pending "open at this folder" request (from the wallpaper
-// picker's "See more") into an initial Finder path, searching one
-// level under ROOT. Clears the flag so it fires exactly once.
-function initialPathFromPending(): FinderNode[] {
-  const target = pendingFinderFolder;
-  pendingFinderFolder = null;
-  if (target && ROOT.kind === "folder") {
-    const match = ROOT.children.find((c) => c.kind === "folder" && c.name === target);
-    if (match) return [ROOT, match];
-  }
-  return [ROOT];
-}
 
 export default function FinderApp() {
   const { openWindow, openCredits } = useWindowManager();
@@ -523,4 +512,17 @@ export default function FinderApp() {
       </div>
     </div>
   );
+}
+
+// Resolve a pending "open at this folder" request (from the wallpaper
+// picker's "See more") into an initial Finder path, searching one
+// level under ROOT. Clears the flag so it fires exactly once.
+function initialPathFromPending(): FinderNode[] {
+  const target = pendingFinderFolder;
+  pendingFinderFolder = null;
+  if (target && ROOT.kind === "folder") {
+    const match = ROOT.children.find((c) => c.kind === "folder" && c.name === target);
+    if (match) return [ROOT, match];
+  }
+  return [ROOT];
 }

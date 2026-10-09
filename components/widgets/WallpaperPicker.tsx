@@ -76,6 +76,13 @@ export default function WallpaperPicker({ current, onSelect, onClose, onSeeMore 
             See more ›
           </button>
         </div>
+        {process.env.NODE_ENV === "development" && (
+          // Owner-only: in dev, a pick is also published as the site
+          // wallpaper (lib/useWallpaper.ts → app/api/wallpaper).
+          <p style={{ margin: "-6px 0 14px", fontSize: "12px", lineHeight: 1.4, color: "var(--text-dim)" }}>
+            Dev mode: your pick becomes the wallpaper for every visitor. Commit data/wallpaper.json and push to ship it.
+          </p>
+        )}
         <div
           style={{
             display: "grid",

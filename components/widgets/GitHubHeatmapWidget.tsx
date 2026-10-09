@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { WIDGET_RADIUS } from "@/lib/widgetGrid";
 import { useLiquidGlass } from "@/lib/liquidGlass";
 import type { WidgetSize } from "@/lib/widgetLayoutSchema";
+import WidgetViewToggle, { GitHubMark, GridGlyph, PinGlyph } from "@/components/widgets/WidgetViewToggle";
 
 interface ContributionDay {
   date: string;
@@ -77,6 +78,199 @@ async function fetchContributions(): Promise<ContributionDay[]> {
   return cachePromise;
 }
 
+/* ── Pinned repositories ─────────────────────────────────────────── */
+
+interface PinnedRepo {
+  name: string;
+  description: string | null;
+  url: string;
+  stars: number;
+  language: string | null;
+  languageColor: string | null;
+  forkedFrom: string | null;
+}
+
+let cachedPinned: PinnedRepo[] | null = null;
+let pinnedPromise: Promise<PinnedRepo[] | null> | null = null;
+
+function fetchPinned(): Promise<PinnedRepo[] | null> {
+  if (cachedPinned) return Promise.resolve(cachedPinned);
+  if (!pinnedPromise) {
+    pinnedPromise = fetch("/api/github/pinned")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d || d.error || !Array.isArray(d.repos)) return null;
+        cachedPinned = d.repos as PinnedRepo[];
+        return cachedPinned;
+      })
+      .catch(() => null)
+      .finally(() => {
+        if (!cachedPinned) pinnedPromise = null;
+      });
+  }
+  return pinnedPromise;
+}
+
+// GitHub's linguist colours for the languages in play; the route
+// usually supplies the colour itself (GraphQL / profile HTML), this
+// covers the REST fallback.
+const LANGUAGE_COLORS: Record<string, string> = {
+  TypeScript: "#3178c6",
+  Python: "#3572A5",
+  JavaScript: "#f1e05a",
+  HTML: "#e34c26",
+  CSS: "#663399",
+  Java: "#b07219",
+  C: "#555555",
+  "C++": "#f34b7d",
+};
+const NEUTRAL_LANGUAGE = "#8b949e";
+
+// GitHub dark mode's link blue — reads clearly on the dark glass and
+// says "this opens" the way GitHub's own pinned cards do.
+const REPO_LINK = "#4493f8";
+
+function RepoCard({ repo, roomy }: { repo: PinnedRepo; roomy: boolean }) {
+  const downAt = useRef<{ x: number; y: number } | null>(null);
+  const muted = "rgba(255, 255, 255, 0.6)";
+  const color = repo.languageColor || (repo.language && LANGUAGE_COLORS[repo.language]) || NEUTRAL_LANGUAGE;
+  return (
+    <a
+      href={repo.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      draggable={false}
+      onPointerDown={(e) => (downAt.current = { x: e.clientX, y: e.clientY })}
+      onClick={(e) => {
+        // A drag (edit mode) that ends on a card isn't a click.
+        const d = downAt.current;
+        if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6) e.preventDefault();
+      }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        gap: 4,
+        minWidth: 0,
+        minHeight: 0,
+        padding: "7px 9px",
+        boxSizing: "border-box",
+        // GitHub's pinned card (dark mode), adapted to glass like the
+        // heatmap's cells: a light wash + hairline keyline instead of
+        // GitHub's solid #0d1117 box and #3d444d border. Radius 8 =
+        // the widget's 22 minus its 14 padding (concentric).
+        borderRadius: 8,
+        background: "rgba(255, 255, 255, 0.05)",
+        boxShadow: "inset 0 0 0 0.5px rgba(255, 255, 255, 0.12)",
+        textDecoration: "none",
+        overflow: "hidden",
+      }}
+    >
+      <div style={{ minWidth: 0, overflow: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
+          {/* Octicon repo-16 */}
+          <svg width="11" height="11" viewBox="0 0 16 16" aria-hidden style={{ flex: "none" }}>
+            <path
+              fill="rgba(255, 255, 255, 0.5)"
+              d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.249.249 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z"
+            />
+          </svg>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: REPO_LINK,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {repo.name}
+          </span>
+        </div>
+        {roomy && (repo.description || repo.forkedFrom) && (
+          <div
+            style={{
+              marginTop: 4,
+              fontSize: 10.5,
+              lineHeight: "14px",
+              color: repo.description ? muted : "rgba(255, 255, 255, 0.45)",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {repo.description ?? `Forked from ${repo.forkedFrom}`}
+          </div>
+        )}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 10.5, color: muted, whiteSpace: "nowrap" }}>
+        {repo.language && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, minWidth: 0 }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flex: "none" }} />
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{repo.language}</span>
+          </span>
+        )}
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }} aria-label={`${repo.stars} stars`}>
+          {/* Octicon star-16 */}
+          <svg width="10" height="10" viewBox="0 0 16 16" aria-hidden>
+            <path
+              fill="currentColor"
+              d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Zm0 2.445L6.615 5.5a.75.75 0 0 1-.564.41l-3.097.45 2.24 2.184a.75.75 0 0 1 .216.664l-.528 3.084 2.769-1.456a.75.75 0 0 1 .698 0l2.77 1.456-.53-3.084a.75.75 0 0 1 .216-.664l2.24-2.183-3.096-.45a.75.75 0 0 1-.564-.41L8 2.694Z"
+            />
+          </svg>
+          {repo.stars}
+        </span>
+      </div>
+    </a>
+  );
+}
+
+// Pinned cards in a 2-column grid (1 column when narrow) filling the
+// given box. Rows share the height, capped so a short list doesn't
+// stretch into slabs.
+function PinnedGrid({ repos, width, height, max }: {
+  repos: PinnedRepo[] | null;
+  width: number;
+  height: number;
+  max: number;
+}) {
+  const GAP = 8;
+  const cols = width >= 240 ? 2 : 1;
+  if (repos && repos.length === 0) {
+    return (
+      <div style={{ height, display: "grid", placeItems: "center", fontSize: 11, color: "rgba(255, 255, 255, 0.45)" }}>
+        No pinned repositories
+      </div>
+    );
+  }
+  const capacityRows = Math.max(1, Math.floor((height + GAP) / (44 + GAP)));
+  const shown = (repos ?? []).slice(0, Math.min(max, capacityRows * cols));
+  const rows = repos ? Math.max(1, Math.ceil(shown.length / cols)) : Math.min(2, capacityRows);
+  const rowH = Math.min(96, (height - GAP * (rows - 1)) / rows);
+  return (
+    <div
+      style={{
+        width,
+        height,
+        display: "grid",
+        gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+        gridAutoRows: rowH,
+        gap: GAP,
+        alignContent: "start",
+      }}
+    >
+      {repos
+        ? shown.map((r) => <RepoCard key={r.url} repo={r} roomy={rowH >= 64} />)
+        : // Loading: quiet placeholder cards in the same grid.
+          Array.from({ length: rows * cols }, (_, i) => (
+            <div key={i} style={{ borderRadius: 8, background: "rgba(255, 255, 255, 0.05)" }} />
+          ))}
+    </div>
+  );
+}
+
 // Compute month labels for the grid using GitHub's collision rules
 // Label appears above the first week-column of a new month
 // Skip if within 2 columns of previous label or if it's the first column and next label would crowd it
@@ -133,8 +327,14 @@ function computeMonthLabels(
   return labels;
 }
 
+type View = "contributions" | "pinned";
+
 export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
   const [contributions, setContributions] = useState<ContributionDay[]>([]);
+  const [pinned, setPinned] = useState<PinnedRepo[] | null>(cachedPinned);
+  const [view, setView] = useState<View>("contributions");
+  const reduceMotion = useReducedMotion();
+  const stacked = size === "large";
   const [inner, setInner] = useState<{ width: number; height: number } | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   // Card material: refraction engine + .liquid-glass rim class.
@@ -145,6 +345,15 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
       const data = await fetchContributions();
       setContributions(data);
     })();
+    let alive = true;
+    fetchPinned().then((d) => {
+      // A failed fetch shows the empty state rather than a forever
+      // skeleton.
+      if (alive) setPinned(d ?? []);
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   // Measure the card's real content box (and re-measure when the
@@ -216,6 +425,19 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
   const LABEL_HEIGHT = 13;
   const LABEL_GAP = 4;
 
+  // View switch: a short crossfade with a subtle slide, each view on
+  // its own side (contributions left, pinned right). Reduced motion:
+  // opacity only.
+  const swap = (side: -1 | 1) =>
+    reduceMotion
+      ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.15 } }
+      : {
+          initial: { opacity: 0, x: 10 * side },
+          animate: { opacity: 1, x: 0 },
+          exit: { opacity: 0, x: 10 * side },
+          transition: { duration: 0.22, ease: [0, 0, 0.58, 1] as const },
+        };
+
   return (
     <motion.div
       ref={lgRef}
@@ -239,7 +461,9 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
           width: "100%",
           height: "100%",
           display: "flex",
-          alignItems: "center",
+          // Large stacks heatmap + pinned from the top; the other tiers
+          // keep the heatmap unit centred exactly as before.
+          alignItems: stacked ? "flex-start" : "center",
           justifyContent: "center",
           overflow: "hidden",
         }}
@@ -248,17 +472,31 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
         <div style={{ position: "relative", width: gridWidth }}>
         {/* Identity row — octocat mark + "GitHub" so the graph reads
             as a GitHub streak at a glance. Quiet, label-weight. */}
-        <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "8px" }}>
-          <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden>
-            <path
-              d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
-              fill="rgba(255, 255, 255, 0.55)"
-            />
-          </svg>
+        <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "8px", position: "relative" }}>
+          <GitHubMark />
           <span style={{ fontSize: "10px", fontWeight: 600, color: "rgba(255, 255, 255, 0.55)", letterSpacing: "0.01em" }}>
             GitHub
           </span>
+          {/* Toggle shares the header line, absolutely placed so the
+              row (and the grid under it) lays out exactly as before. */}
+          {!stacked && (
+            <WidgetViewToggle
+              value={view}
+              onChange={setView}
+              options={[
+                { id: "contributions", label: "Contributions", icon: <GridGlyph /> },
+                { id: "pinned", label: "Pinned repositories", icon: <PinGlyph /> },
+              ]}
+              style={{ top: -4, right: 0 }}
+            />
+          )}
         </div>
+        {/* Both views live in one box exactly as tall as the labels row
+            + grid, so switching never moves the header or the card. */}
+        <div style={{ position: "relative", height: LABEL_HEIGHT + LABEL_GAP + gridHeight }}>
+        <AnimatePresence initial={false}>
+        {(stacked || view === "contributions") ? (
+        <motion.div key="contributions" {...swap(-1)} style={{ position: "absolute", inset: 0 }}>
         {/* Month labels row (absolutely positioned above grid) */}
         <div
           style={{
@@ -327,6 +565,24 @@ export default function GitHubHeatmapWidget({ size }: { size: WidgetSize }) {
             })
           )}
         </svg>
+        </motion.div>
+        ) : (
+        <motion.div key="pinned" {...swap(1)} style={{ position: "absolute", inset: 0 }}>
+          <PinnedGrid repos={pinned} width={gridWidth} height={LABEL_HEIGHT + LABEL_GAP + gridHeight} max={4} />
+        </motion.div>
+        )}
+        </AnimatePresence>
+        </div>
+        {stacked && inner && (
+          <div style={{ marginTop: 14 }}>
+            <PinnedGrid
+              repos={pinned}
+              width={gridWidth}
+              height={Math.max(0, inner.height - (12 + 8) - (LABEL_HEIGHT + LABEL_GAP + gridHeight) - 14)}
+              max={6}
+            />
+          </div>
+        )}
         </div>
         )}
       </div>

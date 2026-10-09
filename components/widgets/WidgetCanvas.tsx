@@ -3,17 +3,18 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { useWidgetLayout } from "@/contexts/WidgetLayoutContext";
+import { MENU_BAR_HEIGHT } from "@/contexts/WindowManagerContext";
 import { spanForSize, type Occupancy, type Rect } from "@/lib/widgetPositioning";
 import { WIDGET_RADIUS } from "@/lib/widgetGrid";
-import type { WidgetId, WidgetSize } from "@/lib/widgetLayoutSchema";
+import { WIDGET_IDS, RESERVED_OCCUPANCY, type WidgetId, type WidgetSize } from "@/lib/widgetLayoutSchema";
 import WidgetFrame from "@/components/widgets/WidgetFrame";
-import PhotoWidget from "@/components/widgets/PhotoWidget";
 import GitHubHeatmapWidget from "@/components/widgets/GitHubHeatmapWidget";
 // Keep widget id as "aiTools" to maintain stored layouts; render the new widget for it
 import LocationWidget from "@/components/widgets/LocationWidget";
 import MotivationWidget from "@/components/widgets/MotivationWidget";
-
-const WIDGET_IDS: WidgetId[] = ["photo", "aiTools", "location", "motivation"];
+import LeetCodeWidget from "@/components/widgets/LeetCodeWidget";
+import CodeforcesWidget from "@/components/widgets/CodeforcesWidget";
+import ClaudeWidget from "@/components/widgets/ClaudeWidget";
 
 export default function WidgetCanvas() {
   const { layout, isEditing, exitEditMode, resetLayout } = useWidgetLayout();
@@ -37,10 +38,14 @@ export default function WidgetCanvas() {
   // every one of those frames even though `layout` itself hadn't
   // changed, which defeated WidgetFrame's own memoization for every
   // widget, not just the one being dragged.
+  // Each list also carries the mascot's reserved top-left cell, so the
+  // drag-preview outline routes around it exactly like the commit in
+  // moveWidget does (the mascot frame itself lives outside this
+  // canvas).
   const othersById = useMemo(() => {
     const result = {} as Record<WidgetId, Occupancy[]>;
     for (const id of WIDGET_IDS) {
-      result[id] = WIDGET_IDS.filter((other) => other !== id).map(occupancyFor);
+      result[id] = [...RESERVED_OCCUPANCY, ...WIDGET_IDS.filter((other) => other !== id).map(occupancyFor)];
     }
     return result;
   }, [occupancyFor]);
@@ -53,10 +58,12 @@ export default function WidgetCanvas() {
   // single render regardless of whether anything relevant changed.
   const renderById = useMemo<Record<WidgetId, (size: WidgetSize) => React.ReactNode>>(
     () => ({
-      photo: (size) => <PhotoWidget size={size} />,
       aiTools: (size) => <GitHubHeatmapWidget size={size} />,
       location: (size) => <LocationWidget size={size} />,
       motivation: (size) => <MotivationWidget size={size} />,
+      leetcode: (size) => <LeetCodeWidget size={size} />,
+      codeforces: (size) => <CodeforcesWidget size={size} />,
+      claude: (size) => <ClaudeWidget size={size} />,
     }),
     []
   );
@@ -112,8 +119,8 @@ export default function WidgetCanvas() {
           }}
           style={{
             position: "fixed",
-            // Below the 24px menu bar (was 16px, which overlapped it).
-            top: "38px",
+            // Clear of the menu bar.
+            top: `${MENU_BAR_HEIGHT + 14}px`,
             left: "50%",
             transform: "translateX(-50%)",
             zIndex: 40,

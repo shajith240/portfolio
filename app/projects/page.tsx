@@ -1,394 +1,292 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import Image from 'next/image'
-import { useLayout } from '@/contexts/LayoutContext'
-import { useShellMetrics } from '@/lib/useShellMetrics'
 import { PROJECTS, type Project } from '@/data/projects'
+import { mascotTarget } from '@/lib/mascotTargets'
+
+/* Projects — one featured project, then the rest as a calm list.
+
+   Performance notes (measured, see the rules in app/globals.css):
+   - No useLayout()/useShellMetrics(). Every breakpoint is a CSS media
+     query, so resizing the window (a maximize spring fires a resize on
+     every frame) never re-renders this page.
+   - No per-card motion, shadows, will-change or hover transforms. The
+     only authored motion is one fade-and-rise of the page on mount.
+   - Covers are WebP at <=1600px; only the featured one preloads. */
+
+// Staggered-entrance easing from docs/design-system/motion.md.
+const EASE_OUT = [0, 0, 0.58, 1] as const
+
+const GITHUB_PROFILE = 'https://github.com/shajith240'
+
+/** "resume feedback community" → "Resume feedback community" */
+const sentence = (text: string) => (text ? text[0].toUpperCase() + text.slice(1) : text)
 
 /* ─────────────────────────────────────────────────────────────────
-   Apple Editorial Motion — fade + rise, butter easing
+   ProjectCover — the screenshot, or (when a project has none yet) a
+   designed cover tile in its place. The tile fills the exact same box
+   the image would, so nothing shifts when a screenshot is added later.
+   Calm by design: a near-black gradient with a faint, per-project tint
+   (hue derived from the title, so it's stable across renders), a dot
+   grid that fades out, the project's main stack item as a badge, and a
+   centred monogram tile with the title and `sub` label beneath it.
    ───────────────────────────────────────────────────────────────── */
 
-const EASE_APPLE = [0.32, 0.72, 0, 1] as const
-
-const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.07 } },
+function titleHue(title: string) {
+  let h = 0
+  for (let i = 0; i < title.length; i++) h = (h * 31 + title.charCodeAt(i)) % 360
+  return h
 }
 
-const cardVariant = {
-  hidden: { y: 12, opacity: 0 },
-  show: {
-    y: 0,
-    opacity: 1,
-    transition: { duration: 0.5, ease: EASE_APPLE },
-  },
+/** "IntelliDesk" → "I", "WIFI-AUTOMATION" → "WA", "Invoice Processing System" → "IP". */
+function monogram(title: string) {
+  const words = title.split(/[\s\-_]+/).filter(Boolean)
+  return words.slice(0, 2).map(w => w[0].toUpperCase()).join('')
 }
 
-const headerVariant = {
-  hidden: { y: 12, opacity: 0 },
-  show: {
-    y: 0,
-    opacity: 1,
-    transition: { duration: 0.5, ease: EASE_APPLE },
-  },
-}
+function ProjectCover({
+  project,
+  sizes,
+  variant,
+}: {
+  project: Project
+  sizes: string
+  variant: 'featured' | 'grid'
+}) {
+  if (project.image) {
+    return (
+      <Image
+        src={project.image}
+        alt={project.title}
+        fill
+        sizes={sizes}
+        // The featured cover is the first thing on screen; everything
+        // else waits until it's scrolled near.
+        preload={variant === 'featured'}
+        loading={variant === 'featured' ? undefined : 'lazy'}
+        // Screenshots read from the top-left (logo, nav, headline), so
+        // any crop to the frame's aspect trims the bottom/right instead.
+        style={{ objectFit: 'cover', objectPosition: 'left top' }}
+      />
+    )
+  }
 
-/* ─────────────────────────────────────────────────────────────────
-   TechChip — Apple pill style, sentence case, frosted background
-   ───────────────────────────────────────────────────────────────── */
+  const hue = titleHue(project.title)
+  const big = variant === 'featured'
 
-function TechChip({ label }: { label: string }) {
   return (
-    <span
+    <div
+      role="img"
+      aria-label={`${project.title}: ${project.sub}`}
       style={{
-        display: 'inline-block',
-        fontSize: '11px',
-        fontWeight: 500,
-        color: 'rgba(255, 255, 255, 0.65)',
-        background: 'rgba(255, 255, 255, 0.08)',
-        border: 'none',
-        borderRadius: '20px',
-        padding: '4px 12px',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        transition: 'background 0.22s ease, color 0.22s ease',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {label}
-    </span>
-  )
-}
-
-/* ─────────────────────────────────────────────────────────────────
-   FeaturedCard — 50/50 editorial split, content left / image right
-   Border only on hover, no card scale
-   ───────────────────────────────────────────────────────────────── */
-
-function FeaturedCard({ project, isMobile }: { project: Project; isMobile: boolean }) {
-  return (
-    <motion.div
-      variants={cardVariant}
-      className="project-card"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
-        background: '#2a2a2a',
-        borderRadius: '18px',
-        overflow: 'hidden',
-        minHeight: 'clamp(280px, 40vw, 380px)',
-      }}
-    >
-      {/* Left — content */}
-      <div
-        style={{
-          padding: isMobile ? '28px' : '32px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          borderRight: isMobile ? 'none' : `1px solid rgba(255, 255, 255, 0.08)`,
-          borderBottom: isMobile ? `1px solid rgba(255, 255, 255, 0.08)` : 'none',
-          transition: 'border-color 0.22s ease',
-        }}
-      >
-        {/* Top */}
-        <div>
-          {/* Category line (clean, no index/decorator) */}
-          <div
-            style={{
-              fontSize: '13px',
-              color: 'rgba(255, 255, 255, 0.54)',
-              marginBottom: '12px',
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-              fontWeight: 400,
-              letterSpacing: 0,
-              transition: 'color 0.22s ease',
-            }}
-          >
-            {project.sub}
-          </div>
-
-          {/* Title */}
-          <h2
-            style={{
-              margin: '0 0 16px 0',
-              fontSize: '28px',
-              fontWeight: 700,
-              color: 'white',
-              letterSpacing: '-0.02em',
-              lineHeight: 1.1,
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-              transition: 'color 0.22s ease',
-            }}
-          >
-            {project.title}
-          </h2>
-
-          {/* Description */}
-          <p
-            style={{
-              margin: 0,
-              fontSize: '15px',
-              color: 'rgba(255, 255, 255, 0.54)',
-              lineHeight: 1.5,
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-              maxWidth: '65ch',
-              transition: 'color 0.22s ease',
-            }}
-          >
-            {project.description}
-          </p>
-        </div>
-
-        {/* Bottom — tech + CTAs */}
-        <div>
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: '8px',
-              marginBottom: '20px',
-            }}
-          >
-            {project.tech.map(t => (
-              <TechChip key={t} label={t} />
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
-            {project.github && (
-              <a
-                href={project.github}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  color: '#0a84ff',
-                  textDecoration: 'none',
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                  transition: 'opacity 0.15s ease',
-                }}
-              >
-                GitHub ›
-              </a>
-            )}
-            {project.live && (
-              <a
-                href={project.live}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  color: '#0a84ff',
-                  textDecoration: 'none',
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                  transition: 'opacity 0.15s ease',
-                }}
-              >
-                Live ↗
-              </a>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Right — full-bleed image */}
-      <div
-        style={{
-          overflow: 'hidden',
-          background: '#1c1c1c',
-          position: 'relative',
-          minHeight: isMobile ? '200px' : 'clamp(280px, 40vw, 380px)',
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            inset: '12px',
-            borderRadius: '10px',
-            overflow: 'hidden',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-          }}
-        >
-          <Image
-            src={project.image || 'https://placehold.co/800x600/141414/222222'}
-            alt={project.title}
-            fill
-            loading="lazy"
-            sizes={isMobile ? '100vw' : '50vw'}
-            style={{ objectFit: 'cover' }}
-          />
-        </div>
-      </div>
-    </motion.div>
-  )
-}
-
-/* ─────────────────────────────────────────────────────────────────
-   GridCard — image top, content bottom, border brightens on hover
-   ───────────────────────────────────────────────────────────────── */
-
-function GridCard({ project }: { project: Project }) {
-  return (
-    <motion.div
-      variants={cardVariant}
-      className="project-card"
-      style={{
-        background: '#2a2a2a',
-        borderRadius: '18px',
-        overflow: 'hidden',
+        position: 'absolute',
+        inset: 0,
         display: 'flex',
         flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: big ? '24px' : '18px',
+        overflow: 'hidden',
+        background: [
+          `radial-gradient(120% 90% at 0% 0%, hsla(${hue}, 70%, 60%, 0.16) 0%, transparent 60%)`,
+          `radial-gradient(90% 80% at 100% 100%, hsla(${(hue + 40) % 360}, 60%, 50%, 0.08) 0%, transparent 65%)`,
+          'linear-gradient(160deg, #222224 0%, #18181a 55%, #141415 100%)',
+        ].join(', '),
+        fontFamily: 'system-ui, -apple-system, sans-serif',
       }}
     >
-      {/* Image */}
+      {/* Dot grid, fading out toward the lower left so the text sits on
+          clean ground. Purely decorative. */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1.2px)',
+          backgroundSize: '16px 16px',
+          maskImage: 'radial-gradient(90% 80% at 85% 15%, #000 0%, transparent 70%)',
+          WebkitMaskImage: 'radial-gradient(90% 80% at 85% 15%, #000 0%, transparent 70%)',
+        }}
+      />
+
+      {/* Main stack item, top-left like a file-type badge */}
+      {project.tech[0] && (
+        <span
+          style={{
+            position: 'absolute',
+            top: big ? '20px' : '14px',
+            left: big ? '20px' : '14px',
+            fontSize: '11px',
+            fontWeight: 500,
+            color: 'rgba(255, 255, 255, 0.7)',
+            background: 'rgba(255, 255, 255, 0.07)',
+            border: '0.5px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '20px',
+            padding: '4px 10px',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {project.tech[0]}
+        </span>
+      )}
+
+      {/* Monogram squircle + title + sub label, centred like an app's
+          cover art rather than a second copy of the card's text block */}
       <div
         style={{
           position: 'relative',
-          width: 'calc(100% - 20px)',
-          aspectRatio: '16 / 10',
-          overflow: 'hidden',
-          background: '#1c1c1c',
-          flexShrink: 0,
-          margin: '10px',
-          borderRadius: '10px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-        }}
-      >
-        <Image
-          src={project.image || 'https://placehold.co/800x500/141414/222222'}
-          alt={project.title}
-          fill
-          loading="lazy"
-          sizes="(max-width: 900px) 100vw, 33vw"
-          style={{ objectFit: 'cover' }}
-        />
-      </div>
-
-      {/* Content */}
-      <div
-        style={{
-          padding: '20px',
           display: 'flex',
           flexDirection: 'column',
-          flex: 1,
+          alignItems: 'center',
+          textAlign: 'center',
+          minWidth: 0,
+          maxWidth: '100%',
         }}
       >
-        {/* Category line */}
+        <div
+          aria-hidden
+          style={{
+            width: big ? '64px' : '52px',
+            height: big ? '64px' : '52px',
+            borderRadius: '24%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: big ? '16px' : '12px',
+            fontSize: big ? '24px' : '19px',
+            fontWeight: 600,
+            letterSpacing: '-0.02em',
+            color: 'rgba(255, 255, 255, 0.92)',
+            background: `linear-gradient(145deg, hsla(${hue}, 55%, 58%, 0.55) 0%, hsla(${(hue + 30) % 360}, 50%, 34%, 0.55) 100%)`,
+            boxShadow: [
+              'inset 0 1px 0 rgba(255, 255, 255, 0.22)',
+              'inset 0 0 0 0.5px rgba(255, 255, 255, 0.12)',
+              '0 8px 24px rgba(0, 0, 0, 0.35)',
+            ].join(', '),
+          }}
+        >
+          {monogram(project.title)}
+        </div>
         <div
           style={{
-            fontSize: '13px',
-            color: 'rgba(255, 255, 255, 0.54)',
-            marginBottom: '8px',
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            fontWeight: 400,
-            letterSpacing: 0,
-            transition: 'color 0.22s ease',
+            fontSize: big ? '20px' : '16px',
+            fontWeight: 600,
+            letterSpacing: '-0.01em',
+            lineHeight: 1.2,
+            color: 'rgba(255, 255, 255, 0.92)',
+            overflowWrap: 'anywhere',
+          }}
+        >
+          {project.title}
+        </div>
+        <div
+          style={{
+            marginTop: '3px',
+            fontSize: big ? '13px' : '12px',
+            color: 'rgba(255, 255, 255, 0.5)',
           }}
         >
           {project.sub}
         </div>
+      </div>
+    </div>
+  )
+}
 
-        {/* Title */}
-        <h3
-          style={{
-            margin: '0 0 8px 0',
-            fontSize: '18px',
-            fontWeight: 700,
-            color: 'white',
-            letterSpacing: '-0.02em',
-            lineHeight: 1.2,
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            transition: 'color 0.22s ease',
-          }}
-        >
-          {project.title}
-        </h3>
+/* ─────────────────────────────────────────────────────────────────
+   Actions — Live first (recruiters want the demo), then the code.
+   ───────────────────────────────────────────────────────────────── */
 
-        {/* Description */}
-        <p
-          style={{
-            margin: '0 0 16px 0',
-            fontSize: '14px',
-            color: 'rgba(255, 255, 255, 0.54)',
-            lineHeight: 1.5,
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            flex: 1,
-            transition: 'color 0.22s ease',
-          }}
+function Actions({ project, size }: { project: Project; size: 'lg' | 'sm' }) {
+  if (!project.live && !project.github) return null
+  return (
+    <div className="pj-actions">
+      {project.live && (
+        <a
+          href={project.live}
+          data-mascot-link="live"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`pj-btn pj-btn-primary pj-btn-${size}`}
+          aria-label={`${project.title}: live demo (opens in a new tab)`}
         >
-          {project.description}
+          Live <span aria-hidden>↗</span>
+        </a>
+      )}
+      {project.github && (
+        <a
+          href={project.github}
+          data-mascot-link="code"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`pj-btn pj-btn-secondary pj-btn-${size}`}
+          aria-label={`${project.title}: source code on GitHub (opens in a new tab)`}
+        >
+          Code
+        </a>
+      )}
+    </div>
+  )
+}
+
+const Stack = ({ tech }: { tech: string[] }) =>
+  tech.length > 0 ? <p className="pj-stack">{tech.join('  ·  ')}</p> : null
+
+/* ─────────────────────────────────────────────────────────────────
+   FeaturedProject — copy, then cover; side by side on desktop
+   ───────────────────────────────────────────────────────────────── */
+
+function FeaturedProject({ project }: { project: Project }) {
+  return (
+    <article className="pj-featured" data-mascot={mascotTarget('project', project.title)}>
+      {/* Copy first: the name, the pitch and the Live button land in the
+          first screenful of a 900px window and of a phone; the cover
+          follows (to the right of the copy on desktop). */}
+      <div className="pj-featured-body">
+        <p className="pj-eyebrow">
+          <span className="pj-eyebrow-accent">Featured</span> · {sentence(project.sub)}
         </p>
+        <h2 className="pj-featured-title">{project.title}</h2>
+        <p className="pj-desc">{project.description}</p>
+        <Stack tech={project.tech} />
+        <Actions project={project} size="lg" />
+      </div>
+      <div className="pj-cover">
+        <ProjectCover
+          project={project}
+          sizes="(min-width: 1024px) 640px, (min-width: 640px) 90vw, 100vw"
+          variant="featured"
+        />
+      </div>
+    </article>
+  )
+}
 
-        {/* Tech chips + overflow count */}
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '6px',
-            marginBottom: '14px',
-            alignItems: 'center',
-          }}
-        >
-          {project.tech.slice(0, 3).map(t => (
-            <TechChip key={t} label={t} />
-          ))}
-          {project.tech.length > 3 && (
-            <span
-              style={{
-                fontSize: '11px',
-                color: 'rgba(255, 255, 255, 0.54)',
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                transition: 'color 0.22s ease',
-              }}
-            >
-              +{project.tech.length - 3}
-            </span>
-          )}
-        </div>
+/* ─────────────────────────────────────────────────────────────────
+   ProjectRow — thumbnail + copy, hairline-separated
+   ───────────────────────────────────────────────────────────────── */
 
-        {/* CTAs */}
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-          {project.github && (
-            <a
-              href={project.github}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                fontSize: '13px',
-                fontWeight: 500,
-                color: '#0a84ff',
-                textDecoration: 'none',
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                transition: 'opacity 0.15s ease',
-              }}
-            >
-              GitHub ›
-            </a>
-          )}
-          {project.live && (
-            <a
-              href={project.live}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                fontSize: '13px',
-                fontWeight: 500,
-                color: '#0a84ff',
-                textDecoration: 'none',
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                transition: 'opacity 0.15s ease',
-              }}
-            >
-              Live ↗
-            </a>
-          )}
+function ProjectRow({ project }: { project: Project }) {
+  return (
+    <li className="pj-row" data-mascot={mascotTarget('project', project.title)}>
+      <div className="pj-cover">
+        <ProjectCover
+          project={project}
+          sizes="(min-width: 1024px) 300px, (min-width: 640px) 240px, 100vw"
+          variant="grid"
+        />
+      </div>
+      <div className="pj-row-body">
+        <p className="pj-eyebrow">{sentence(project.sub)}</p>
+        <h3 className="pj-row-title">{project.title}</h3>
+        <p className="pj-desc">{project.description}</p>
+        <div className="pj-row-foot">
+          <Stack tech={project.tech} />
+          <Actions project={project} size="sm" />
         </div>
       </div>
-    </motion.div>
+    </li>
   )
 }
 
@@ -397,171 +295,45 @@ function GridCard({ project }: { project: Project }) {
    ───────────────────────────────────────────────────────────────── */
 
 export default function ProjectsPage() {
-  const { isMobileLayout, isTabletLayout } = useLayout()
-  const metrics = useShellMetrics()
-  const ml = metrics.contentLeft
-  const mr = metrics.contentRight
-  const isPhone = isMobileLayout && !isTabletLayout
-
-  const featured = PROJECTS.find(p => p.type === 'featured')
-  const grid = PROJECTS.filter(p => p.type !== 'featured')
+  const reduceMotion = useReducedMotion()
+  const featured = PROJECTS.find(p => p.type === 'featured') ?? PROJECTS[0]
+  const rest = PROJECTS.filter(p => p !== featured)
 
   return (
-    <>
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: isPhone ? 72 : 0,
-          overflowY: 'auto',
-          scrollbarWidth: 'none',
-          background: 'var(--bg-page)',
-          transition: 'background 0.22s ease',
-        }}
+    <div className="pj-scroll">
+      {/* One entrance for the whole page, once. Reduced motion: a plain
+          150ms cross-fade, no travel. */}
+      <motion.div
+        className="pj-page"
+        initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={reduceMotion ? { duration: 0.15 } : { duration: 0.45, ease: EASE_OUT }}
       >
-        {/* Static padding — NOT an animated motion value. paddingLeft/
-            paddingRight are LAYOUT properties; springing them meant the
-            entire content tree (header + every card + image) reflowed on
-            every frame of the spring during a window resize — the resize
-            lag. The inset now changes in a single reflow when the window
-            settles, which is what "smooth resize" needs. */}
-        <div
-          style={{
-            paddingLeft: `${ml + (isMobileLayout ? 16 : 48)}px`,
-            paddingRight: `${mr + (isMobileLayout ? 16 : 48)}px`,
-            paddingTop: '80px',
-            paddingBottom: '120px',
-          }}
-        >
+        <header className="pj-header">
+          <div>
+            <h1 className="pj-title">Projects</h1>
+            <p className="pj-lede">Work I&apos;ve shipped and open-sourced.</p>
+          </div>
+          <a href={GITHUB_PROFILE} target="_blank" rel="noopener noreferrer" className="pj-all">
+            All repos ›
+          </a>
+        </header>
 
-          {/* ── Header ──────────────────────────────────────────── */}
-          <motion.div
-            variants={headerVariant}
-            initial="hidden"
-            animate="show"
-            style={{ marginBottom: '32px' }}
-          >
-            {/* Title */}
-            <h1
-              style={{
-                margin: '0 0 8px 0',
-                fontSize: '40px',
-                fontWeight: 700,
-                color: 'white',
-                letterSpacing: '-0.02em',
-                lineHeight: 1.0,
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                transition: 'color 0.22s ease',
-              }}
-            >
-              Projects
-            </h1>
+        {featured && <FeaturedProject project={featured} />}
 
-            {/* Subtitle + GitHub link */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '20px',
-              }}
-            >
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: '15px',
-                  color: 'rgba(255, 255, 255, 0.54)',
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                  lineHeight: 1.5,
-                  transition: 'color 0.22s ease',
-                }}
-              >
-                Work I&apos;ve shipped and open-sourced.
-              </p>
-              <a
-                href="https://github.com/shajith240"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  color: '#0a84ff',
-                  textDecoration: 'none',
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                  transition: 'opacity 0.15s ease',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                All repos ›
-              </a>
-            </div>
-          </motion.div>
-
-          {/* ── Cards ───────────────────────────────────────────── */}
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            animate="show"
-            style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
-          >
-            {/* Featured — full width, editorial split (stacks on mobile) */}
-            {featured && <FeaturedCard project={featured} isMobile={isPhone} />}
-
-            {/* Grid — 3 cols desktop / 2 cols tablet / 1 col phone */}
-            {grid.length > 0 && (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: isPhone
-                    ? '1fr'
-                    : isTabletLayout
-                    ? 'repeat(2, 1fr)'
-                    : 'repeat(3, 1fr)',
-                  gap: '24px',
-                }}
-              >
-                {grid.map(p => (
-                  <GridCard key={p.id} project={p} />
-                ))}
-              </div>
-            )}
-          </motion.div>
-
-          {/* ── Footer ──────────────────────────────────────────── */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.9 }}
-            style={{
-              marginTop: '48px',
-              paddingTop: '24px',
-              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <a
-              href="https://github.com/shajith240"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                fontSize: '13px',
-                fontWeight: 500,
-                color: '#0a84ff',
-                textDecoration: 'none',
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-                transition: 'opacity 0.15s ease',
-              }}
-            >
-              View all repos on GitHub ›
-            </a>
-          </motion.div>
-
-        </div>
-      </div>
-    </>
+        {rest.length > 0 && (
+          <section aria-labelledby="pj-more">
+            <h2 id="pj-more" className="pj-section-title">
+              More projects
+            </h2>
+            <ul className="pj-list">
+              {rest.map(p => (
+                <ProjectRow key={p.id} project={p} />
+              ))}
+            </ul>
+          </section>
+        )}
+      </motion.div>
+    </div>
   )
 }

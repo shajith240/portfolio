@@ -4,16 +4,18 @@
 // public/motivation_quotes and restart/redeploy.
 
 export const GENERATED_WALLPAPERS: string[] = [
-  "abstract-background-3840x2160-11753.jpeg",
-  "captain-america-3840x2160-24354.jpg",
-  "maserati-gt2-3840x2160-26562.jpg",
-  "microsoft-surface-3840x2160-9246.png",
-  "os-x-lion-beach-mac-5120x2880-24056.jpg",
-  "zenitsu-agatsuma-3840x2160-24356.jpg"
-];
-
-export const GENERATED_MOBILE_WALLPAPERS: string[] = [
-  "mobile/iPhone 14 Pro Wallpaper Gold.jpg"
+  "avengers-doomsday-3840x2160-17768.webp",
+  "black-panther-3840x2160-13195.webp",
+  "chris-evans-captain-3840x2160-24351.webp",
+  "cristiano-ronaldo-3840x2160-17371.webp",
+  "cristiano-ronaldo-3840x2160-9628.webp",
+  "doctor-doom-8k-3840x2160-27347.webp",
+  "eat-sleep-code-3840x2160-16019.webp",
+  "eren-yeager-3840x2160-22836.webp",
+  "iron-spider-spider-3840x2160-11245.webp",
+  "marvels-spider-man-3840x2160-26997.webp",
+  "muhammad-ali-boxer-3840x2160-11119.webp",
+  "superman-red-3840x2160-19039.webp"
 ];
 
 export const GENERATED_MOTIVATION_IMAGES: string[] = [

@@ -6,8 +6,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useShellMetrics } from "@/lib/useShellMetrics";
 import { useWindowManager, DOCK_RECT_KEY } from "@/contexts/WindowManagerContext";
-import { NAV_ITEMS } from "@/data/nav";
+import { NAV_ITEMS, isNavItemVisible } from "@/data/nav";
+import { RESUME_URL } from "@/data/profile";
 import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
+import { mascotTarget } from "@/lib/mascotTargets";
 
 /* ── Icon art — plain /icons/*.png, no clip mask or box-shadow "chip"
    imposed on top (that was the "invisible border" bug — a rectangular
@@ -16,14 +18,13 @@ import { applyLiquidGlass, releaseLiquidGlass } from "@/lib/liquidGlass";
    dropped into public/icons/ — see the ic10 1024x1024 PNG chunk each
    one embeds). "/skills" intentionally uses skills.png — despite the
    filename, that file is a terminal-glyph icon, not the skills.icns
-   originally extracted for "/dsa"'s old slot. "/dsa" uses xcode.png.
-   dsa.icns/dsa.png also exist but aren't used by any Dock slot. */
+   originally extracted for the old DSA section's slot. dsa.icns/
+   dsa.png also exist but aren't used by any Dock slot. */
 
 const ICON_FILE: Record<string, string> = {
   "/about": "contact",
   "/projects": "projects",
   "/skills": "skills",
-  "/dsa": "xcode",
   "/achievements": "achievements",
   "/education": "education",
   "external:github": "github",
@@ -42,7 +43,33 @@ const EXTERNAL_LINKS: { href: string; label: string; url: string }[] = [
   { href: "external:github", label: "GitHub", url: "https://github.com/shajith240" },
   { href: "external:linkedin", label: "LinkedIn", url: "https://linkedin.com/in/shajith240" },
   { href: "external:leetcode", label: "LeetCode", url: "https://leetcode.com/u/shajith240/" },
+  // Only once a resume is actually uploaded (data/profile.ts).
+  ...(RESUME_URL ? [{ href: "external:resume", label: "Resume", url: RESUME_URL }] : []),
 ];
+
+/* Resume has no .icns art in public/icons, so it gets a small inline
+   document icon drawn in the same spirit as the others: a white page
+   with a folded corner, a few text lines and a red PDF tag, the way
+   macOS renders a PDF document's icon. */
+function ResumeIcon() {
+  return (
+    <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" aria-hidden>
+      <defs>
+        <linearGradient id="dock-resume-page" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="1" stopColor="#ebebef" />
+        </linearGradient>
+      </defs>
+      <path d="M24 8h36l20 20v60a4 4 0 0 1-4 4H24a4 4 0 0 1-4-4V12a4 4 0 0 1 4-4Z" fill="url(#dock-resume-page)" />
+      <path d="M60 8v16a4 4 0 0 0 4 4h16" fill="#d6d6dc" />
+      <path d="M30 40h40M30 50h40M30 60h26" stroke="#b4b4bc" strokeWidth="3.5" strokeLinecap="round" />
+      <rect x="28" y="70" width="30" height="14" rx="3.5" fill="#e5483d" />
+      <text x="43" y="80.5" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontSize="10" fontWeight="700" fill="#ffffff">
+        PDF
+      </text>
+    </svg>
+  );
+}
 
 /* The Dock is deliberately slim — a recruiter skims for ~30s, so only
    the content windows and the external profiles live here. Projects
@@ -60,9 +87,11 @@ const EXTERNAL_LINKS: { href: string; label: string; url: string }[] = [
    External profile links sit last, after a divider, matching where
    real macOS puts Trash/the Downloads stack — persistent utilities
    separated from the running apps rather than mixed in with them. */
-const DOCK_ORDER = ["/projects", "/about", "/skills", "/dsa", "/achievements", "/education"];
+const DOCK_ORDER = ["/projects", "/about", "/skills", "/achievements", "/education"];
+// Sections with no content yet (data/nav.ts isNavItemVisible) are left
+// out, so DOCK_ITEMS, and DOCK_REST_WIDTH below, follow the data.
 const DOCK_ITEMS: { href: string; label: string; external?: string }[] = [
-  ...DOCK_ORDER.flatMap((href) => {
+  ...DOCK_ORDER.filter(isNavItemVisible).flatMap((href) => {
     const nav = NAV_ITEMS.find((item) => item.href === href);
     return nav ? [{ href: nav.href, label: nav.label }] : [];
   }),
@@ -88,18 +117,28 @@ const FIRST_EXTERNAL_INDEX = DOCK_ITEMS.length - EXTERNAL_LINKS.length;
    live DOM read is the container's own left edge, once per
    mouse-move. See docs/design-system/motion.md. */
 
-const BASE_ICON_SIZE = 50;
+const BASE_ICON_SIZE = 54;
 const MAX_SCALE = 1.7;
-const EFFECT_WIDTH = 260;
+const EFFECT_WIDTH = 270;
 const MIN_SCALE = 1;
-const BASE_SPACING = 14;
-const PADDING = 14;
+// Proportions: macOS icon art carries ~10% transparent margin, so the
+// visible gap between two icons is BASE_SPACING + ~11px. The edges get
+// more room than the gaps (Apple's rule: the container breathes more
+// than its contents), so the icons never look pressed against the rim.
+const BASE_SPACING = 12;
+const PADDING = 18; // left/right
+const PADDING_Y = 13; // top/bottom
+const DOCK_HEIGHT = BASE_ICON_SIZE + PADDING_Y * 2;
+// Concentric corners: the visible icon squircle's radius (~22.5% of
+// its ~80% art box) plus its inset from the rim, so the slab and the
+// icons share one curve family — what makes Apple's Dock read as calm.
+const DOCK_RADIUS = Math.round(BASE_ICON_SIZE * 0.8 * 0.225 + PADDING_Y + BASE_ICON_SIZE * 0.1);
 
 // The pill's resting (un-magnified) footprint — exported so the
 // mascot can line itself up with the Dock's left end without
 // measuring a DOM node that animates its own width every frame.
 export const DOCK_REST_WIDTH = DOCK_ITEMS.length * (BASE_ICON_SIZE + BASE_SPACING) - BASE_SPACING + PADDING * 2;
-export const DOCK_REST_HEIGHT = BASE_ICON_SIZE + 20;
+export const DOCK_REST_HEIGHT = DOCK_HEIGHT;
 export const DOCK_BOTTOM = 24;
 
 function targetScales(mouseX: number | null) {
@@ -264,7 +303,7 @@ export default function Dock() {
   useEffect(() => {
     const el = dockRef.current;
     if (!el) return;
-    const radius = Math.round((BASE_ICON_SIZE + 20) * 0.22);
+    const radius = DOCK_RADIUS;
     // "Clear" variant of the material — Apple uses the lighter recipe
     // (2-3px blur, lower tint) for dock-style floating chrome.
     const apply = () => applyLiquidGlass(el, { radius, bezel: 22, strength: 0.7, blur: 2, brightness: 0.95, tint: 0.1, press: "glow", stretch: "x" });
@@ -314,15 +353,11 @@ export default function Dock() {
         style={{
           position: "relative",
           width: `${contentWidth + PADDING * 2}px`,
-          height: `${BASE_ICON_SIZE + 20}px`,
-          padding: `10px ${PADDING}px`,
-          // Real macOS Dock reads as a rounded rectangle, not a stadium/
-          // pill — roughly 22% of its own height, the same squircle
-          // ratio already used on the icons themselves (borderRadius:
-          // "22%" below). The previous 32px (~46% of the 70px height)
-          // was nearly semicircular at the ends, which is why it looked
-          // over-rounded compared to the real thing.
-          borderRadius: `${Math.round((BASE_ICON_SIZE + 20) * 0.22)}px`,
+          height: `${DOCK_HEIGHT}px`,
+          padding: `${PADDING_Y}px ${PADDING}px`,
+          // A rounded rectangle, not a stadium: concentric with the
+          // icons (see DOCK_RADIUS).
+          borderRadius: `${DOCK_RADIUS}px`,
           // Material comes from the refraction engine (effect above)
           // + the .liquid-glass rim/gloss class — no inline frosted
           // background/blur/shadow here anymore.
@@ -353,15 +388,21 @@ export default function Dock() {
                   style={{
                     position: "absolute",
                     left: `${PADDING + dividerX}px`,
-                    bottom: "10px",
+                    // Shorter than an icon and centred on the row, like
+                    // the real Dock's separator.
+                    bottom: `${PADDING_Y + BASE_ICON_SIZE * 0.2}px`,
                     width: "1px",
-                    height: `${BASE_ICON_SIZE}px`,
+                    height: `${BASE_ICON_SIZE * 0.6}px`,
                     background: glassBorder,
                   }}
                 />
               )}
               <div
               ref={(el) => registerDockIconEl(item.href, el)}
+              // Lets the mascot notice which icon the visitor is
+              // hovering (lib/mascotAttention.ts).
+              data-mascot={mascotTarget("dock", item.label)}
+              data-mascot-hover-only
               onClick={() => handleClick(item.href, item.label, i, item.external)}
               onMouseEnter={() => setHoveredIndex(i)}
               onMouseLeave={() => setHoveredIndex(null)}
@@ -369,7 +410,7 @@ export default function Dock() {
               style={{
                 position: "absolute",
                 left: `${PADDING + position - scaledSize / 2}px`,
-                bottom: "10px",
+                bottom: `${PADDING_Y}px`,
                 width: `${scaledSize}px`,
                 height: `${scaledSize}px`,
                 cursor: "pointer",
@@ -396,14 +437,18 @@ export default function Dock() {
                     several MB of icons for the dock alone. sizes=96px
                     covers max magnification (85px) at 1x; Next picks the
                     2x variant on retina automatically. */}
-                <Image
-                  src={`/icons/${ICON_FILE[item.href] ?? "react"}.png`}
-                  alt={item.label}
-                  fill
-                  sizes="96px"
-                  draggable={false}
-                  style={{ objectFit: "contain" }}
-                />
+                {item.href === "external:resume" ? (
+                  <ResumeIcon />
+                ) : (
+                  <Image
+                    src={`/icons/${ICON_FILE[item.href] ?? "react"}.png`}
+                    alt={item.label}
+                    fill
+                    sizes="96px"
+                    draggable={false}
+                    style={{ objectFit: "contain" }}
+                  />
+                )}
               </motion.div>
 
               {/* Running-app indicator dot — 4px diameter, white with
@@ -417,7 +462,8 @@ export default function Dock() {
                     transition={{ duration: 0.15 }}
                     style={{
                       position: "absolute",
-                      bottom: "-6px",
+                      // Centred in the bottom padding.
+                      bottom: `${-(PADDING_Y / 2 + 2)}px`,
                       left: "50%",
                       transform: "translateX(-50%)",
                       width: "4px",

@@ -16,6 +16,7 @@ import {
 import { nearestSizeTier, TIER_DIMENSIONS } from "@/lib/widgetSizeTiers";
 import { CELL_STRIDE, WIDGET_RADIUS } from "@/lib/widgetGrid";
 import type { WidgetId, WidgetSize } from "@/lib/widgetLayoutSchema";
+import { WIDGET_TARGETS } from "@/lib/mascotTargets";
 
 // Apple's own default spring (SwiftUI response ≈ 0.5s, dampingFraction
 // 0.8) expressed in Framer's duration/bounce form — used for position
@@ -223,6 +224,10 @@ function WidgetFrameImpl({ id, others, onSnapPreview, children }: WidgetFramePro
   return (
     <motion.div
       ref={frameRef}
+      // Lets the mascot notice which widget the visitor is looking at
+      // (lib/mascotAttention.ts).
+      data-mascot={WIDGET_TARGETS[id]}
+      data-mascot-hover-only
       // Dragging requires edit mode (long-press first) — a plain
       // press/click on a widget interacts with its content, never
       // moves it.

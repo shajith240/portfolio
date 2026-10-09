@@ -1,0 +1,447 @@
+{
+ "updated": "2026-10-10",
+ "days": [
+  {
+   "date": "2026-09-23",
+   "turns": 2,
+   "prompts": 1,
+   "toolCalls": 1,
+   "subagents": 0,
+   "sessions": 1,
+   "tools": {
+    "shell": 1,
+    "read": 0,
+    "edit": 0,
+    "web": 0,
+    "agents": 0,
+    "other": 0
+   },
+   "models": {
+    "opus": 0,
+    "sonnet": 2,
+    "haiku": 0
+   },
+   "tokens": {
+    "fresh": 12504,
+    "cached": 92376,
+    "output": 252
+   }
+  },
+  {
+   "date": "2026-09-24",
+   "turns": 1826,
+   "prompts": 35,
+   "toolCalls": 2390,
+   "subagents": 57,
+   "sessions": 61,
+   "tools": {
+    "shell": 953,
+    "read": 739,
+    "edit": 437,
+    "web": 139,
+    "agents": 57,
+    "other": 65
+   },
+   "models": {
+    "opus": 229,
+    "sonnet": 908,
+    "haiku": 681
+   },
+   "tokens": {
+    "fresh": 8703232,
+    "cached": 288413450,
+    "output": 787286
+   }
+  },
+  {
+   "date": "2026-09-25",
+   "turns": 994,
+   "prompts": 20,
+   "toolCalls": 1478,
+   "subagents": 20,
+   "sessions": 22,
+   "tools": {
+    "shell": 632,
+    "read": 440,
+    "edit": 207,
+    "web": 155,
+    "agents": 20,
+    "other": 24
+   },
+   "models": {
+    "opus": 469,
+    "sonnet": 431,
+    "haiku": 78
+   },
+   "tokens": {
+    "fresh": 6169064,
+    "cached": 259493039,
+    "output": 741386
+   }
+  },
+  {
+   "date": "2026-09-27",
+   "turns": 1,
+   "prompts": 1,
+   "toolCalls": 0,
+   "subagents": 0,
+   "sessions": 1,
+   "tools": {
+    "shell": 0,
+    "read": 0,
+    "edit": 0,
+    "web": 0,
+    "agents": 0,
+    "other": 0
+   },
+   "models": {
+    "opus": 1,
+    "sonnet": 0,
+    "haiku": 0
+   },
+   "tokens": {
+    "fresh": 11354,
+    "cached": 23132,
+    "output": 182
+   }
+  },
+  {
+   "date": "2026-09-28",
+   "turns": 2,
+   "prompts": 4,
+   "toolCalls": 0,
+   "subagents": 0,
+   "sessions": 1,
+   "tools": {
+    "shell": 0,
+    "read": 0,
+    "edit": 0,
+    "web": 0,
+    "agents": 0,
+    "other": 0
+   },
+   "models": {
+    "opus": 0,
+    "sonnet": 0,
+    "haiku": 2
+   },
+   "tokens": {
+    "fresh": 9955,
+    "cached": 59815,
+    "output": 131
+   }
+  },
+  {
+   "date": "2026-09-29",
+   "turns": 1830,
+   "prompts": 12,
+   "toolCalls": 2153,
+   "subagents": 26,
+   "sessions": 27,
+   "tools": {
+    "shell": 1116,
+    "read": 328,
+    "edit": 513,
+    "web": 102,
+    "agents": 44,
+    "other": 50
+   },
+   "models": {
+    "opus": 321,
+    "sonnet": 1457,
+    "haiku": 47
+   },
+   "tokens": {
+    "fresh": 6635167,
+    "cached": 366818737,
+    "output": 567297
+   }
+  },
+  {
+   "date": "2026-09-30",
+   "turns": 546,
+   "prompts": 39,
+   "toolCalls": 759,
+   "subagents": 10,
+   "sessions": 16,
+   "tools": {
+    "shell": 388,
+    "read": 110,
+    "edit": 17,
+    "web": 212,
+    "agents": 11,
+    "other": 21
+   },
+   "models": {
+    "opus": 108,
+    "sonnet": 387,
+    "haiku": 45
+   },
+   "tokens": {
+    "fresh": 5816110,
+    "cached": 121999642,
+    "output": 528481
+   }
+  },
+  {
+   "date": "2026-10-01",
+   "turns": 224,
+   "prompts": 27,
+   "toolCalls": 261,
+   "subagents": 2,
+   "sessions": 3,
+   "tools": {
+    "shell": 130,
+    "read": 74,
+    "edit": 36,
+    "web": 13,
+    "agents": 2,
+    "other": 6
+   },
+   "models": {
+    "opus": 216,
+    "sonnet": 0,
+    "haiku": 8
+   },
+   "tokens": {
+    "fresh": 562612,
+    "cached": 64452551,
+    "output": 256651
+   }
+  },
+  {
+   "date": "2026-10-02",
+   "turns": 530,
+   "prompts": 29,
+   "toolCalls": 836,
+   "subagents": 12,
+   "sessions": 14,
+   "tools": {
+    "shell": 271,
+    "read": 134,
+    "edit": 53,
+    "web": 238,
+    "agents": 12,
+    "other": 128
+   },
+   "models": {
+    "opus": 429,
+    "sonnet": 67,
+    "haiku": 34
+   },
+   "tokens": {
+    "fresh": 2846511,
+    "cached": 127074917,
+    "output": 457858
+   }
+  },
+  {
+   "date": "2026-10-03",
+   "turns": 1015,
+   "prompts": 35,
+   "toolCalls": 1742,
+   "subagents": 23,
+   "sessions": 26,
+   "tools": {
+    "shell": 553,
+    "read": 328,
+    "edit": 56,
+    "web": 601,
+    "agents": 23,
+    "other": 181
+   },
+   "models": {
+    "opus": 995,
+    "sonnet": 18,
+    "haiku": 0
+   },
+   "tokens": {
+    "fresh": 7749201,
+    "cached": 247082478,
+    "output": 496577
+   }
+  },
+  {
+   "date": "2026-10-04",
+   "turns": 737,
+   "prompts": 66,
+   "toolCalls": 755,
+   "subagents": 1,
+   "sessions": 3,
+   "tools": {
+    "shell": 518,
+    "read": 108,
+    "edit": 51,
+    "web": 52,
+    "agents": 1,
+    "other": 25
+   },
+   "models": {
+    "opus": 737,
+    "sonnet": 0,
+    "haiku": 0
+   },
+   "tokens": {
+    "fresh": 4507161,
+    "cached": 328901510,
+    "output": 782629
+   }
+  },
+  {
+   "date": "2026-10-05",
+   "turns": 555,
+   "prompts": 37,
+   "toolCalls": 776,
+   "subagents": 6,
+   "sessions": 9,
+   "tools": {
+    "shell": 296,
+    "read": 104,
+    "edit": 40,
+    "web": 281,
+    "agents": 6,
+    "other": 49
+   },
+   "models": {
+    "opus": 544,
+    "sonnet": 8,
+    "haiku": 0
+   },
+   "tokens": {
+    "fresh": 6909463,
+    "cached": 158782507,
+    "output": 442810
+   }
+  },
+  {
+   "date": "2026-10-06",
+   "turns": 869,
+   "prompts": 63,
+   "toolCalls": 1220,
+   "subagents": 11,
+   "sessions": 27,
+   "tools": {
+    "shell": 527,
+    "read": 280,
+    "edit": 26,
+    "web": 350,
+    "agents": 11,
+    "other": 26
+   },
+   "models": {
+    "opus": 859,
+    "sonnet": 0,
+    "haiku": 0
+   },
+   "tokens": {
+    "fresh": 6000547,
+    "cached": 265654423,
+    "output": 526967
+   }
+  },
+  {
+   "date": "2026-10-07",
+   "turns": 722,
+   "prompts": 55,
+   "toolCalls": 1207,
+   "subagents": 8,
+   "sessions": 35,
+   "tools": {
+    "shell": 461,
+    "read": 482,
+    "edit": 35,
+    "web": 193,
+    "agents": 12,
+    "other": 24
+   },
+   "models": {
+    "opus": 708,
+    "sonnet": 6,
+    "haiku": 0
+   },
+   "tokens": {
+    "fresh": 5992575,
+    "cached": 191697404,
+    "output": 370331
+   }
+  },
+  {
+   "date": "2026-10-08",
+   "turns": 582,
+   "prompts": 42,
+   "toolCalls": 659,
+   "subagents": 8,
+   "sessions": 14,
+   "tools": {
+    "shell": 415,
+    "read": 110,
+    "edit": 43,
+    "web": 64,
+    "agents": 9,
+    "other": 18
+   },
+   "models": {
+    "opus": 534,
+    "sonnet": 37,
+    "haiku": 11
+   },
+   "tokens": {
+    "fresh": 2678859,
+    "cached": 97579096,
+    "output": 467222
+   }
+  },
+  {
+   "date": "2026-10-09",
+   "turns": 333,
+   "prompts": 12,
+   "toolCalls": 363,
+   "subagents": 7,
+   "sessions": 8,
+   "tools": {
+    "shell": 265,
+    "read": 56,
+    "edit": 14,
+    "web": 2,
+    "agents": 7,
+    "other": 19
+   },
+   "models": {
+    "opus": 331,
+    "sonnet": 0,
+    "haiku": 2
+   },
+   "tokens": {
+    "fresh": 2635422,
+    "cached": 106242619,
+    "output": 228257
+   }
+  },
+  {
+   "date": "2026-10-10",
+   "turns": 506,
+   "prompts": 22,
+   "toolCalls": 600,
+   "subagents": 7,
+   "sessions": 8,
+   "tools": {
+    "shell": 393,
+    "read": 112,
+    "edit": 26,
+    "web": 43,
+    "agents": 12,
+    "other": 14
+   },
+   "models": {
+    "opus": 490,
+    "sonnet": 0,
+    "haiku": 16
+   },
+   "tokens": {
+    "fresh": 2240011,
+    "cached": 140353031,
+    "output": 249139
+   }
+  }
+ ]
+}

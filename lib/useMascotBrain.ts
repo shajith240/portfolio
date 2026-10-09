@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import type { Expression, LookTarget, MascotHandle } from "@/components/mascot/Mascot";
+import { watchAttention, type AttentionEvent } from "@/lib/mascotAttention";
 
 /* The mascot's "brain" — page-level behaviours layered on top of the
    Mascot command API (MASCOT.md §5). It never touches the engine;
@@ -48,14 +49,31 @@ const AWAY_FOR_WELCOME = 60_000;
 const FOCUSABLE = "a, button, [tabindex]";
 
 type Range = readonly [number, number];
-type LookOwner = "glance" | "focus" | "scroll";
+type LookOwner = "glance" | "focus" | "scroll" | "guide";
 
 const between = ([min, max]: Range) => min + Math.random() * (max - min);
 
+/* What the guide layer (ShellMascot) can ask of the brain. Both go
+   through the same rules as everything else: react() is dropped (not
+   queued) inside the 3s cooldown and returns whether it fired; look()
+   is capped at LOOK_MAX_HOLD and a real cursor move cancels it. */
+export interface MascotBrainApi {
+  react(expression: Expression, ms: number): boolean;
+  look(target: LookTarget, ms: number): void;
+}
+
 export function useMascotBrain(
   mascotRef: RefObject<MascotHandle | null>,
-  anchorRef: RefObject<HTMLElement | null>
-) {
+  anchorRef: RefObject<HTMLElement | null>,
+  // What the visitor reads / hovers / clicks / copies on the page and
+  // inside windows (lib/mascotAttention.ts) — the guide decides what,
+  // if anything, to say about it.
+  onAttention?: (event: AttentionEvent) => void
+): RefObject<MascotBrainApi | null> {
+  const apiRef = useRef<MascotBrainApi | null>(null);
+  const onAttentionRef = useRef(onAttention);
+  onAttentionRef.current = onAttention;
+
   useEffect(() => {
     const mascot = () => mascotRef.current;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -86,13 +104,28 @@ export function useMascotBrain(
     // Exactly one brain look at a time, tagged with who started it so
     // e.g. a focusout can't release a scroll look it doesn't own.
     let lookOwner: LookOwner | null = null;
+
+    // ── Cursor inside a window (iframe) ─────────────────────────────
+    // The engine follows the cursor from `pointermove` on THIS window,
+    // which never fires while the cursor is over a window's iframe — it
+    // would freeze on the last desktop position. So the brain forwards
+    // the iframe cursor (converted to page coordinates) through the
+    // public lookAt(), once per frame, and release()s the moment the
+    // cursor is back on the desktop. Anything that "returns to the
+    // cursor" while it's inside a window returns to this point.
+    let proxyPoint: { x: number; y: number } | null = null;
+    let proxyRaf = 0;
+    const restOnCursor = () => {
+      if (proxyPoint) mascot()?.lookAt(proxyPoint);
+      else mascot()?.release();
+    };
     let lookTimer: number | null = null;
 
     const stopLook = (owner?: LookOwner) => {
       if (lookOwner === null || (owner && owner !== lookOwner)) return;
       lookTimer = cancel(lookTimer);
       lookOwner = null;
-      mascot()?.release();
+      restOnCursor();
     };
 
     const look = (owner: LookOwner, target: LookTarget, holdMs: number) => {
@@ -107,10 +140,11 @@ export function useMascotBrain(
 
     const tryReact = (expression: Expression, ms: number) => {
       const now = performance.now();
-      if (now - lastReactionAt < REACTION_COOLDOWN) return;
+      if (now - lastReactionAt < REACTION_COOLDOWN) return false;
       lastReactionAt = now;
       stopLook();
       mascot()?.react(expression, ms);
+      return true;
     };
 
     // ── Idle life & sleep ───────────────────────────────────────────
@@ -295,7 +329,27 @@ export function useMascotBrain(
     const listen = (doc: Document, frame: HTMLIFrameElement | null) => {
       const pointerMove = (e: PointerEvent) => {
         const box = frame?.getBoundingClientRect();
-        onPointerMove(e.clientX + (box?.left ?? 0), e.clientY + (box?.top ?? 0));
+        const x = e.clientX + (box?.left ?? 0) + (frame?.clientLeft ?? 0);
+        const y = e.clientY + (box?.top ?? 0) + (frame?.clientTop ?? 0);
+        if (e.pointerType === "mouse" || e.pointerType === "pen") {
+          if (frame) {
+            proxyPoint = { x, y };
+            if (!proxyRaf) {
+              proxyRaf = requestAnimationFrame(() => {
+                proxyRaf = 0;
+                // A deliberate brain look (focus, scroll, guide) keeps
+                // the head until it releases — then it lands here.
+                if (proxyPoint && lookOwner === null) mascot()?.lookAt(proxyPoint);
+              });
+            }
+          } else if (proxyPoint) {
+            // Back on the desktop: the engine's own cursor tracking
+            // takes over again (this same event reaches it next).
+            proxyPoint = null;
+            if (lookOwner === null) mascot()?.release();
+          }
+        }
+        onPointerMove(x, y);
       };
       const focusIn = (e: FocusEvent) => onFocusIn(e.target, frame);
       const scroll = (e: Event) => onScroll(e.target);
@@ -310,7 +364,9 @@ export function useMascotBrain(
       // only inner panes do, and scroll events don't bubble.
       doc.addEventListener("scroll", scroll, opts);
       doc.addEventListener("copy", onCopy, opts);
+      const unwatch = watchAttention(doc, frame, (event) => onAttentionRef.current?.(event));
       return () => {
+        unwatch();
         doc.removeEventListener("pointermove", pointerMove, opts);
         doc.removeEventListener("pointerdown", onPointerDown, opts);
         doc.removeEventListener("keydown", onKeyDown, opts);
@@ -384,9 +440,21 @@ export function useMascotBrain(
     document.addEventListener("visibilitychange", onVisibilityChange);
     armTimers();
 
+    apiRef.current = {
+      react: tryReact,
+      look: (target, ms) => {
+        // A guide look is deliberate — it takes over from an idle
+        // glance, but never from a keyboard user's focus.
+        if (lookOwner === "focus") return;
+        look("guide", target, ms);
+      },
+    };
+
     return () => {
+      apiRef.current = null;
       for (const id of timers) window.clearTimeout(id);
       timers.clear();
+      cancelAnimationFrame(proxyRaf);
       unlistenPage();
       frameObserver.disconnect();
       for (const [frame, entry] of frames) {
@@ -397,4 +465,6 @@ export function useMascotBrain(
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [mascotRef, anchorRef]);
+
+  return apiRef;
 }

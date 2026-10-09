@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { GENERATED_WALLPAPERS, GENERATED_MOBILE_WALLPAPERS } from "@/data/generated/content";
+import { GENERATED_WALLPAPERS } from "@/data/generated/content";
+import { published as PUBLISHED_WALLPAPER } from "@/data/wallpaper.json";
 
 const STORAGE_KEY = "portfolio.wallpaper";
 const MOBILE_STORAGE_KEY = "portfolio.wallpaper.mobile";
@@ -13,14 +14,35 @@ const PHONE_MAX_WIDTH = 640;
 
 // Auto-discovered from public/wallpapers by scripts/generate-content.mjs
 // — drop an image in that folder and it appears in the picker on the
-// next dev start / deploy, no code changes. Phones get their own
-// PORTRAIT set from public/wallpapers/mobile (entries carry the
-// "mobile/" prefix so the /wallpapers/<name> URL convention holds).
-// Deliberately NO desktop fallback: landscape desktop art on a phone
-// is exactly the wrong look — until the mobile folder has files, the
-// phone shows its own iOS-style gradient (see Wallpaper.tsx).
+// next dev start / deploy, no code changes.
+//
+// Chosen for this desktop (4kwallpapers.com, see Credits): dark, with
+// the subject dead centre and quiet sides, so the left and right
+// widget columns sit on darkness and stay legible. Because the subject
+// is centred, the same files crop cleanly to a phone's portrait screen
+// — one list serves both (the phone still remembers its own pick).
 export const WALLPAPERS = GENERATED_WALLPAPERS;
-export const MOBILE_WALLPAPERS = GENERATED_MOBILE_WALLPAPERS;
+export const MOBILE_WALLPAPERS = GENERATED_WALLPAPERS;
+
+/* The site wallpaper — the owner's pick, the same for every visitor.
+   It lives in data/wallpaper.json (committed). In development, choosing
+   a wallpaper also PUBLISHES it there (app/api/wallpaper); commit and
+   push, and every visitor gets it. A visitor can still pick their own,
+   but each personal pick remembers which published wallpaper it was
+   made over: once the owner publishes a new one, old personal picks
+   are dropped and everyone sees the new wallpaper. */
+const IS_DEV = process.env.NODE_ENV === "development";
+const PICKED_OVER = ".publishedAtPick";
+
+function publishWallpaper(filename: string) {
+  fetch("/api/wallpaper", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filename }),
+  })
+    .then((r) => (r.ok ? console.info(`[wallpaper] published ${filename} → data/wallpaper.json (commit & push to ship it)`) : null))
+    .catch(() => {});
+}
 
 // Module-level, reused across every call — wallpaper switches are
 // inherently serial (one at a time, never concurrent), so there's no
@@ -165,12 +187,13 @@ function boostSaturation(r: number, g: number, b: number): [number, number, numb
 }
 
 /**
- * Apply wallpaper tint to document root CSS variable.
+ * Apply the wallpaper's colour as the glass's adaptive tint
+ * (--backdrop-tint-rgb, styles/glass-system.css).
  */
 function applyWallpaperTint(r: number, g: number, b: number) {
   if (typeof window === "undefined") return;
   document.documentElement.style.setProperty(
-    "--wallpaper-tint-rgb",
+    "--backdrop-tint-rgb",
     `${r}, ${g}, ${b}`
   );
 }
@@ -204,21 +227,15 @@ export function useWallpaper() {
     setIsPhone(phone);
     const list = phone ? MOBILE_WALLPAPERS : WALLPAPERS;
     const key = phone ? MOBILE_STORAGE_KEY : STORAGE_KEY;
+    // A personal pick only stands while the wallpaper it was made over
+    // is still the published one (see PUBLISHED_WALLPAPER above).
     const stored = window.localStorage.getItem(key);
-    if (stored && list.includes(stored)) {
-      setWallpaperState(stored);
-      handleWallpaperChange(`/wallpapers/${stored}`);
-    } else if (list.length > 0) {
-      // Nothing chosen yet (first visit): a real default wallpaper,
-      // never a bare gradient — the desktop should look finished for
-      // a brand-new visitor. Prefers a macOS-flavored file when one
-      // exists (this is a macOS-style desktop, after all), otherwise
-      // the first file. Deliberately NOT persisted to localStorage:
-      // an explicit user pick persists via setWallpaper below, while
-      // the default stays free to evolve with the wallpaper folder.
-      const preferred = list.find((f) => /os-x|os_x|mac/i.test(f)) ?? list[0];
-      setWallpaperState(preferred);
-      handleWallpaperChange(`/wallpapers/${preferred}`);
+    const pickedOver = window.localStorage.getItem(key + PICKED_OVER);
+    const published = list.includes(PUBLISHED_WALLPAPER) ? PUBLISHED_WALLPAPER : list[0];
+    const initial = stored && list.includes(stored) && pickedOver === PUBLISHED_WALLPAPER ? stored : published;
+    if (initial) {
+      setWallpaperState(initial);
+      handleWallpaperChange(`/wallpapers/${initial}`);
     }
 
     // Cross-instance sync: multiple components call useWallpaper()
@@ -239,7 +256,10 @@ export function useWallpaper() {
   const setWallpaper = useCallback(
     (filename: string) => {
       setWallpaperState(filename);
-      window.localStorage.setItem(isPhone ? MOBILE_STORAGE_KEY : STORAGE_KEY, filename);
+      const key = isPhone ? MOBILE_STORAGE_KEY : STORAGE_KEY;
+      window.localStorage.setItem(key, filename);
+      window.localStorage.setItem(key + PICKED_OVER, PUBLISHED_WALLPAPER);
+      if (IS_DEV) publishWallpaper(filename);
       handleWallpaperChange(`/wallpapers/${filename}`);
       window.dispatchEvent(new CustomEvent(WALLPAPER_EVENT, { detail: filename }));
     },

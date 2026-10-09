@@ -3,16 +3,9 @@
 import { motion } from "framer-motion";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useShellMetrics } from "@/lib/useShellMetrics";
-
-// TODO: fill in with real hackathon wins, contest ranks, and
-// certifications — intentionally empty rather than invented. Each
-// entry: { title, org, date, description }.
-const ACHIEVEMENTS: {
-  title: string;
-  org: string;
-  date: string;
-  description: string;
-}[] = [];
+// Single source: data/profile.ts (also read by the mascot). Empty until
+// real hackathon wins / contest ranks / certifications are added there.
+import { ACHIEVEMENTS } from "@/data/profile";
 
 const container = {
   hidden: {},
@@ -40,7 +33,9 @@ export default function AchievementsPage() {
         style={{
           position: "fixed",
           top: 0,
-          bottom: isPhone ? 72 : 0,
+          // Phone: full height; the padding below clears the home
+          // indicator and the safe-area inset.
+          bottom: 0,
           background: "var(--bg-page)",
           overflowY: "auto",
           scrollbarWidth: "none",
@@ -51,7 +46,7 @@ export default function AchievementsPage() {
           style={{
             maxWidth: "760px",
             margin: "0 auto",
-            padding: `clamp(48px, 8vw, 100px) clamp(16px, 5vw, 60px) clamp(60px, 10vw, 120px)`,
+            padding: `clamp(48px, 8vw, 100px) clamp(16px, 5vw, 60px) calc(clamp(60px, 10vw, 120px) + env(safe-area-inset-bottom, 0px))`,
           }}
         >
           {/* Header */}
