@@ -19,6 +19,7 @@ import WindowLayer from "@/components/window/WindowLayer";
 import AppSwitcher from "@/components/layout/AppSwitcher";
 import ShellMascot from "@/components/mascot/ShellMascot";
 import ExternalLinkSheet from "@/components/ui/ExternalLinkSheet";
+import FullscreenHint from "@/components/ui/FullscreenHint";
 import { interceptExternalAnchors } from "@/lib/externalLink";
 
 // Plain-link route map for screen-reader, keyboard and text-only users, so
@@ -166,6 +167,7 @@ function Shell({ children }: { children: ReactNode }) {
           <ShellMascot variant="desktop" />
           <Dock />
           <CommandPalette />
+          <FullscreenHint />
         </>
       )}
     </div>
