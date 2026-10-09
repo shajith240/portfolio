@@ -50,6 +50,29 @@ export function mascotOnline() {
 const OFFLINE_REPLY = `I'm offline right now, but I'd love to hear from you: ${CONTACT_EMAIL}`;
 const BUSY_REPLY = `Lots of questions right now. Give me a minute, or email me at ${CONTACT_EMAIL}.`;
 
+/* While the answer is on its way: three dots rising and falling in a
+   wave, like a typing bubble in Messages. Reduced motion: the dots
+   pulse in place instead of moving. */
+function Thinking({ reduced }: { reduced: boolean }) {
+  return (
+    <span role="status" aria-label="Thinking" style={{ display: "inline-flex", alignItems: "center", gap: 4, height: 18, padding: "0 2px" }}>
+      {[0, 1, 2].map((i) => (
+        <motion.span
+          key={i}
+          aria-hidden
+          animate={reduced ? { opacity: [0.35, 1, 0.35] } : { y: [0, -4, 0], opacity: [0.45, 1, 0.45] }}
+          transition={{ duration: 1, ease: "easeInOut", repeat: Infinity, delay: i * 0.16 }}
+          style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(255, 255, 255, 0.85)", display: "block" }}
+        />
+      ))}
+    </span>
+  );
+}
+
+// The model often answers in a few hundred ms; showing the dots for at
+// least this long reads as considered, not canned.
+const MIN_THINK_MS = 800;
+
 export default function MascotChat({
   anchor,
   zIndex,
@@ -62,6 +85,9 @@ export default function MascotChat({
   setMessages,
   onClose,
   onAnswered,
+  initialQuestion = null,
+  onInitialSent,
+  onThinking,
 }: {
   anchor: ChatAnchor;
   zIndex: number;
@@ -74,6 +100,11 @@ export default function MascotChat({
   setMessages: (update: (prev: ChatMessage[]) => ChatMessage[]) => void;
   onClose: () => void;
   onAnswered: () => void;
+  /** Asked as soon as the panel opens (Spotlight's "Ask my AI"). */
+  initialQuestion?: string | null;
+  onInitialSent?: () => void;
+  /** Fired when a question goes out — the mascot strikes a thinking pose. */
+  onThinking?: () => void;
 }) {
   const reduced = useReducedMotion();
   const ref = useLiquidGlass<HTMLDivElement>({ radius: 20, bezel: 12, strength: 0.55, blur: 5, brightness: 0.8, tint: 0.42, press: false });
@@ -102,6 +133,8 @@ export default function MascotChat({
     if (!question || busy) return;
     setDraft("");
     setBusy(true);
+    onThinking?.();
+    const startedAt = performance.now();
     const history = [...messages, { role: "user" as const, content: question }];
     setMessages(() => [...history, { role: "assistant", content: "" }]);
     const write = (content: string) =>
@@ -132,10 +165,16 @@ export default function MascotChat({
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let answer = "";
+      let first = true;
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
         answer += decoder.decode(value, { stream: true });
+        if (first) {
+          first = false;
+          const wait = MIN_THINK_MS - (performance.now() - startedAt);
+          if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+        }
         write(answer);
       }
       if (!answer.trim()) write(OFFLINE_REPLY);
@@ -147,6 +186,14 @@ export default function MascotChat({
       abortRef.current = null;
     }
   };
+
+  // A question handed over from Spotlight: ask it once, on open.
+  useEffect(() => {
+    if (!initialQuestion) return;
+    onInitialSent?.();
+    send(initialQuestion);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuestion]);
 
   // Placement: phones get a sheet above the mascot; desktop sits beside
   // it, opening upward when the mascot is low (Dock) and downward when
@@ -253,7 +300,7 @@ export default function MascotChat({
               color: m.role === "user" ? "#fff" : "var(--text-primary)",
             }}
           >
-            {m.content || (i === messages.length - 1 && lastIsPending ? "…" : "")}
+            {m.content || (i === messages.length - 1 && lastIsPending ? <Thinking reduced={!!reduced} /> : "")}
           </div>
         ))}
       </div>

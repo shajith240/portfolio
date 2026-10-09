@@ -13,6 +13,7 @@ import { BOTTOM_RESERVE, TOP_BOUND, useWindowManager, type WindowState } from "@
 import { mascotSlotRect } from "@/lib/mascotSlot";
 import type { Rect } from "@/lib/widgetPositioning";
 import { useMascotBrain } from "@/lib/useMascotBrain";
+import { ASK_MASCOT_EVENT } from "@/lib/mascotEvents";
 import type { AttentionEvent } from "@/lib/mascotAttention";
 import { CHAT_HINT, GREETING_DESKTOP, GREETING_PHONE, SECTION_LINES, remarkPool, type MascotLine } from "@/data/mascotLines";
 
@@ -499,6 +500,28 @@ export default function ShellMascot({ variant }: { variant: "desktop" | "phone" 
     setChatOpen(true);
   };
 
+  // Spotlight's "Ask my AI": open the chat with that question.
+  const [pendingAsk, setPendingAsk] = useState<string | null>(null);
+  const openChatRef = useRef(openChat);
+  openChatRef.current = openChat;
+  useEffect(() => {
+    const onAsk = (e: Event) => {
+      const q = (e as CustomEvent<{ question?: string }>).detail?.question;
+      if (!q) return;
+      setPendingAsk(q);
+      openChatRef.current();
+    };
+    window.addEventListener(ASK_MASCOT_EVENT, onAsk);
+    return () => window.removeEventListener(ASK_MASCOT_EVENT, onAsk);
+  }, []);
+
+  // While an answer is on its way, the mascot glances up and aside —
+  // the universal "let me think" look. A real cursor move breaks it.
+  const thinkingPose = () => {
+    const a = anchorRef.current?.getBoundingClientRect();
+    if (a) brain.current?.look({ x: a.left - a.width * 0.6, y: a.top - a.height * 1.4 }, 2200);
+  };
+
   return (
     <>
       {!isPhone && (
@@ -563,6 +586,9 @@ export default function ShellMascot({ variant }: { variant: "desktop" | "phone" 
             setMessages={setChatMessages}
             onClose={closeChat}
             onAnswered={() => brain.current?.react("delighted", 900)}
+            initialQuestion={pendingAsk}
+            onInitialSent={() => setPendingAsk(null)}
+            onThinking={thinkingPose}
           />
         )}
       </AnimatePresence>

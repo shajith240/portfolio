@@ -795,3 +795,129 @@ body {
 .ext-btn-primary:hover {
   background: #2b95ff;
 }
+
+/* ── Spotlight (components/ui/CommandPalette.tsx) ──────────────
+   Tahoe shape: a glass capsule for the field, results in their own
+   glass card below. The capsule's glass comes from the refraction
+   engine; the results card is CSS glass so it can grow cheaply. */
+.sp-stack {
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(620px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+}
+.sp-capsule {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+  padding: 0 20px;
+  border-radius: 28px;
+}
+.sp-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font: inherit;
+  font-size: 19px;
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.95);
+}
+.sp-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+.sp-results {
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 6px;
+  border-radius: 22px;
+  background: linear-gradient(rgba(var(--backdrop-tint-rgb), 0.08), rgba(var(--backdrop-tint-rgb), 0.08)), rgba(24, 25, 32, 0.74);
+  backdrop-filter: blur(28px) saturate(1.7);
+  -webkit-backdrop-filter: blur(28px) saturate(1.7);
+  box-shadow:
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 48px rgba(0, 0, 0, 0.45);
+}
+.sp-results::-webkit-scrollbar {
+  display: none;
+}
+.sp-section + .sp-section {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 0.5px solid rgba(255, 255, 255, 0.08);
+}
+.sp-section-label {
+  padding: 8px 12px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.42);
+  user-select: none;
+}
+.sp-row {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  cursor: default;
+}
+.sp-row:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+.sp-row.is-active {
+  background: rgba(10, 132, 255, 0.88);
+}
+.sp-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: block;
+  object-fit: contain;
+}
+.sp-glyph {
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.sp-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.sp-label {
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sp-hint {
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sp-row.is-active .sp-label {
+  color: #fff;
+  font-weight: 500;
+}
+.sp-row.is-active .sp-hint {
+  color: rgba(255, 255, 255, 0.78);
+}

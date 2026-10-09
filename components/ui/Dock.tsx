@@ -22,7 +22,7 @@ import { openExternal } from "@/lib/externalLink";
    originally extracted for the old DSA section's slot. dsa.icns/
    dsa.png also exist but aren't used by any Dock slot. */
 
-const ICON_FILE: Record<string, string> = {
+export const ICON_FILE: Record<string, string> = {
   "/about": "contact",
   "/projects": "projects",
   "/skills": "skills",
