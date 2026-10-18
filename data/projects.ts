@@ -10,12 +10,45 @@ export interface Project {
   /** Screenshot path under /public, or '' when there isn't one yet
    *  (the Projects page then draws a designed cover tile instead). */
   image: string
+  /** Adaptive (HLS) video that replaces the cover: a master playlist and
+   *  poster under /public, built by scripts/encode-hls.sh. */
+  video?: { src: string; poster: string; duration: string }
+  /** A visible "How I built it" line, shown under the description. */
+  howBuilt?: string
+  /** Extra screenshots shown beneath the featured project. */
+  gallery?: { src: string; alt: string; caption: string; width: number; height: number }[]
 }
 
 export const PROJECTS: Project[] = [
   {
-    id: 1,
+    id: 7,
     type: 'featured',
+    title: 'Autopilot Reels',
+    sub: 'a self-running Instagram studio',
+    tech: ['Python', 'JavaScript', 'Cloudflare Workers', 'Durable Objects', 'systemd', 'FFmpeg', 'CLIP', 'Whisper', 'OCR', 'LLM agents', 'Instagram Graph API'],
+    description: 'A system that runs my Instagram page by itself: it scripts, voices, edits and renders short videos, then posts them 3×/day from the cloud while a monitoring agent fixes failures.',
+    howBuilt: 'Designed and built with AI coding agents. I architected the pipeline, directed the agents (Claude Code) and debugged it in production.',
+    github: '',
+    live: '',
+    image: '/project-photos/autopilot-dashboard.webp',
+    video: {
+      src: '/video/autopilot-v9/master.m3u8',
+      poster: '/video/autopilot-v9/poster.webp',
+      duration: '1:06',
+    },
+    gallery: [
+      {
+        src: '/project-photos/autopilot-dashboard.webp',
+        alt: 'Pixel-art studio dashboard with a desk per pipeline stage, a posting schedule and per-video progress bars',
+        caption: 'The live studio dashboard. Each desk is a pipeline stage (voice, clip scouting, judging, editing, mixing, rendering, posting) and the manager watches the line; the right side shows the posting schedule and per-video progress. Titles blurred for privacy.',
+        width: 1600,
+        height: 1000,
+      },
+    ],
+  },
+  {
+    id: 1,
+    type: 'image',
     title: 'Linted',
     sub: 'resume feedback community',
     tech: ['Next.js', 'React', 'TypeScript', 'Tailwind', 'Supabase'],

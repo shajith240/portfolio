@@ -281,24 +281,26 @@ function QuickLook({ node, onClose, onOpenProjects }: { node: FinderNode; onClos
               ))}
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
-              <a
-                href={node.project.github}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  flex: 1,
-                  textAlign: "center",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  padding: "8px 0",
-                  borderRadius: "8px",
-                  background: "rgba(255,255,255,0.08)",
-                  color: "var(--text-primary)",
-                  textDecoration: "none",
-                }}
-              >
-                GitHub →
-              </a>
+              {node.project.github && (
+                <a
+                  href={node.project.github}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    flex: 1,
+                    textAlign: "center",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    padding: "8px 0",
+                    borderRadius: "8px",
+                    background: "rgba(255,255,255,0.08)",
+                    color: "var(--text-primary)",
+                    textDecoration: "none",
+                  }}
+                >
+                  GitHub →
+                </a>
+              )}
               <button
                 onClick={onOpenProjects}
                 style={{

@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from 'framer-motion'
 import Image from 'next/image'
 import { PROJECTS, type Project } from '@/data/projects'
+import HlsVideo from '@/components/ui/HlsVideo'
 import { mascotTarget } from '@/lib/mascotTargets'
 
 /* Projects — one featured project, then the rest as a calm list.
@@ -233,6 +234,13 @@ function Actions({ project, size }: { project: Project; size: 'lg' | 'sm' }) {
 const Stack = ({ tech }: { tech: string[] }) =>
   tech.length > 0 ? <p className="pj-stack">{tech.join('  ·  ')}</p> : null
 
+const HowBuilt = ({ text }: { text?: string }) =>
+  text ? (
+    <p className="pj-how">
+      <span className="pj-how-label">How I built it</span> {text}
+    </p>
+  ) : null
+
 /* ─────────────────────────────────────────────────────────────────
    FeaturedProject — copy, then cover; side by side on desktop
    ───────────────────────────────────────────────────────────────── */
@@ -249,16 +257,40 @@ function FeaturedProject({ project }: { project: Project }) {
         </p>
         <h2 className="pj-featured-title">{project.title}</h2>
         <p className="pj-desc">{project.description}</p>
+        <HowBuilt text={project.howBuilt} />
         <Stack tech={project.tech} />
         <Actions project={project} size="lg" />
       </div>
       <div className="pj-cover">
-        <ProjectCover
-          project={project}
-          sizes="(min-width: 1024px) 640px, (min-width: 640px) 90vw, 100vw"
-          variant="featured"
-        />
+        {project.video ? (
+          <HlsVideo
+            src={project.video.src}
+            poster={project.video.poster}
+            duration={project.video.duration}
+            title={`${project.title}: video walkthrough`}
+          />
+        ) : (
+          <ProjectCover
+            project={project}
+            sizes="(min-width: 1024px) 640px, (min-width: 640px) 90vw, 100vw"
+            variant="featured"
+          />
+        )}
       </div>
+      {project.gallery?.map(shot => (
+        <figure key={shot.src} className="pj-shot">
+          <Image
+            src={shot.src}
+            alt={shot.alt}
+            width={shot.width}
+            height={shot.height}
+            sizes="(min-width: 1024px) 1000px, 100vw"
+            loading="lazy"
+            className="pj-shot-img"
+          />
+          <figcaption className="pj-shot-caption">{shot.caption}</figcaption>
+        </figure>
+      ))}
     </article>
   )
 }
@@ -281,6 +313,7 @@ function ProjectRow({ project }: { project: Project }) {
         <p className="pj-eyebrow">{sentence(project.sub)}</p>
         <h3 className="pj-row-title">{project.title}</h3>
         <p className="pj-desc">{project.description}</p>
+        <HowBuilt text={project.howBuilt} />
         <div className="pj-row-foot">
           <Stack tech={project.tech} />
           <Actions project={project} size="sm" />

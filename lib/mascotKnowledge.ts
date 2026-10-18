@@ -47,8 +47,9 @@ function projectsSection(): string[] {
   const lines = ["PROJECTS (from the Projects page)"];
   for (const p of PROJECTS) {
     const live = p.live ? `Live: ${shortUrl(p.live)}` : "No live demo";
-    lines.push(`- ${p.title} (${p.sub}): ${p.description}`);
-    lines.push(`  Stack: ${p.tech.join(", ")}. Code: ${shortUrl(p.github)}. ${live}.`);
+    const code = p.github ? `Code: ${shortUrl(p.github)}` : "Code not public";
+    lines.push(`- ${p.title} (${p.sub}): ${p.description}${p.howBuilt ? ` ${p.howBuilt}` : ""}`);
+    lines.push(`  Stack: ${p.tech.join(", ")}. ${code}. ${live}.`);
   }
 
   // The About page also names a few projects that have no entry (and so

@@ -13,6 +13,19 @@ const nextConfig: NextConfig = {
   // local /public asset. (placehold.co was allowed here for project
   // placeholders; projects without a screenshot now get a drawn cover
   // tile in app/projects/page.tsx instead.)
+
+  // Project videos (HLS ladders from scripts/encode-hls.sh). Each video
+  // version gets its own folder name, so the files never change in place:
+  // let browsers and the CDN keep them for a year instead of revalidating
+  // every segment on every play.
+  async headers() {
+    return [
+      {
+        source: "/video/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
